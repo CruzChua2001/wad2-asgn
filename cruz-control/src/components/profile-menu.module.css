@@ -1,0 +1,141 @@
+.root {
+  position: relative;
+}
+
+.trigger {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 4px 9px 4px 4px;
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line));
+  border-radius: 6px;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--surface-strong) 78%, transparent);
+  cursor: pointer;
+  transition: border-color .2s ease, background-color .2s ease, box-shadow .2s ease;
+}
+
+.trigger:hover,
+.trigger[aria-expanded="true"] {
+  border-color: var(--accent);
+  background: var(--surface-strong);
+  box-shadow: 0 6px 22px color-mix(in srgb, var(--ink) 8%, transparent);
+}
+
+.avatar,
+.identityAvatar {
+  display: grid;
+  place-items: center;
+  color: var(--page);
+  background: var(--accent);
+  font: 650 10px var(--font-geist-mono), monospace;
+  letter-spacing: .03em;
+}
+
+.avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 4px;
+}
+
+.triggerName {
+  min-width: 26px;
+  font-size: 11px;
+  font-weight: 650;
+  text-align: left;
+}
+
+.chevron {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: var(--muted);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.5;
+  transition: transform .2s ease;
+}
+
+.trigger[aria-expanded="true"] .chevron { transform: rotate(180deg); }
+
+.menu {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 10px);
+  right: 0;
+  width: min(330px, calc(100vw - 28px));
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--line));
+  border-radius: 12px;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--surface-strong) 97%, transparent);
+  box-shadow: 0 24px 65px color-mix(in srgb, var(--ink) 18%, transparent);
+  backdrop-filter: blur(18px);
+  animation: profileMenuIn .18s ease-out;
+}
+
+.identity {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+  padding: 15px;
+  border-bottom: 1px solid var(--line);
+}
+
+.identityAvatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 5px;
+  font-size: 12px;
+}
+
+.identity strong,
+.identity div > span,
+.repository strong,
+.repository small {
+  display: block;
+}
+
+.identity strong { margin-bottom: 3px; font-size: 12px; }
+.identity div > span { overflow: hidden; color: var(--muted); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.previewBadge { padding: 4px 6px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font: 650 7px var(--font-geist-mono), monospace; letter-spacing: .06em; text-transform: uppercase; }
+
+.section { padding: 13px 15px 14px; border-bottom: 1px solid var(--line); }
+.sectionHeading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; color: var(--muted); font: 650 8px var(--font-geist-mono), monospace; letter-spacing: .1em; text-transform: uppercase; }
+.sectionHeading strong { min-width: 19px; padding: 3px 5px; border-radius: 999px; color: var(--accent); background: color-mix(in srgb, var(--accent-soft) 20%, transparent); font-size: 8px; text-align: center; }
+.assetList { display: grid; gap: 7px; }
+.repository { display: grid; grid-template-columns: 28px minmax(0, 1fr) 8px; align-items: center; gap: 9px; padding: 9px; border: 1px solid color-mix(in srgb, var(--line) 82%, transparent); border-radius: 6px; background: color-mix(in srgb, var(--surface) 54%, transparent); }
+.assetIcon { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 4px; color: var(--accent); background: color-mix(in srgb, var(--accent-soft) 22%, transparent); font: 650 8px var(--font-geist-mono), monospace; }
+.repository strong { overflow: hidden; margin-bottom: 3px; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.repository small { color: var(--muted); font-size: 8px; }
+.statusDot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 7px color-mix(in srgb, var(--accent) 55%, transparent); }
+.websiteList { display: grid; gap: 8px; }
+.website { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 10px; }
+.website > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.website small { flex: 0 0 auto; padding: 3px 6px; border: 1px solid var(--line); color: var(--muted); background: var(--surface); font: 600 8px var(--font-geist-mono), monospace; text-transform: uppercase; }
+.signOut { width: 100%; min-height: 45px; display: flex; align-items: center; gap: 9px; padding: 0 15px; border: 0; color: var(--muted); background: transparent; cursor: pointer; font-size: 10px; text-align: left; transition: color .2s ease, background-color .2s ease; }
+.signOut:hover { color: var(--warm); background: color-mix(in srgb, var(--warm) 8%, transparent); }
+.signOut svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.5; }
+.loginLink { color: var(--muted); font-size: 12px; text-decoration: none; transition: color .2s ease; }
+.loginLink:hover { color: var(--accent); }
+
+@keyframes profileMenuIn {
+  from { opacity: 0; transform: translateY(-5px) scale(.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (max-width: 767px) {
+  .trigger { gap: 5px; padding-right: 6px; }
+  .triggerName { display: none; }
+}
+
+@media (max-width: 575px) {
+  .menu { position: fixed; top: 111px; right: 13px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu { animation: none; }
+  .chevron { transition: none; }
+}
