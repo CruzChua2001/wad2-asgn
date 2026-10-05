@@ -1,9 +1,53 @@
 @import "tailwindcss";
 
 :root {
-  --background: #e9e1d3;
-  --foreground: #26312e;
+  --page: #e9e1d3;
+  --surface: #f2ebe0;
+  --surface-strong: #fff8f0;
+  --surface-soft: #ede5d8;
+  --ink: #26312e;
+  --muted: #6f746b;
+  --line: #d2c9b9;
+  --accent: #2a6e60;
+  --accent-bright: #367f6f;
+  --accent-soft: #a8c4b5;
+  --warm: #b8733f;
+  --critical: #c85560;
+  --background: var(--page);
+  --foreground: var(--ink);
 }
+
+[data-theme="dark"] {
+  --page: #17201f;
+  --surface: #202b28;
+  --surface-strong: #25312e;
+  --surface-soft: #1b2623;
+  --ink: #efe6d9;
+  --muted: #adb6ae;
+  --line: #394640;
+  --accent: #79c5ab;
+  --accent-bright: #91d8be;
+  --accent-soft: #34584d;
+  --warm: #d7a36b;
+  --critical: #ff6b7a;
+  --background: var(--page);
+  --foreground: var(--ink);
+}
+
+/* Tooltip injected by react-globe.gl outside the React tree, so it must be global. */
+.globe-tooltip { display: grid; gap: 2px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 6px; color: var(--ink); background: var(--surface-strong); box-shadow: 0 8px 24px color-mix(in srgb, var(--ink) 16%, transparent); font: 500 10px var(--font-geist-mono), monospace; }
+.globe-tooltip strong { font-size: 11px; }
+.globe-tooltip span { color: var(--muted); }
+.exposure-globe-wrap { position: absolute; inset: 0; }
+.exposure-globe { position: absolute; inset: 0; cursor: grab; }
+.globe-zoom { position: absolute; z-index: 2; right: 12px; bottom: 12px; display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--line); border-radius: 7px; background: color-mix(in srgb, var(--surface-strong) 92%, transparent); box-shadow: 0 6px 18px color-mix(in srgb, var(--ink) 10%, transparent); backdrop-filter: blur(8px); }
+.globe-zoom button { width: 34px; height: 34px; display: grid; place-items: center; border: 0; color: var(--muted); background: transparent; cursor: pointer; transition: color .2s, background .2s; }
+.globe-zoom button + button { border-top: 1px solid var(--line); }
+.globe-zoom button:hover { color: var(--accent); background: color-mix(in srgb, var(--accent-soft) 18%, transparent); }
+.globe-zoom button:focus-visible { outline-offset: -2px; }
+.globe-zoom svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-width: 1.7; }
+.number-ticker { display: inline-block; font-variant-numeric: tabular-nums; }
+.exposure-globe:active { cursor: grabbing; }
 
 @theme inline {
   --color-background: var(--background);
@@ -28,15 +72,6 @@ a { color: inherit; }
 button { font: inherit; }
 
 .landing {
-  --page: #e9e1d3;
-  --surface: #f2ebe0;
-  --ink: #26312e;
-  --muted: #6f746b;
-  --line: #d2c9b9;
-  --accent: #2a6e60;
-  --accent-bright: #367f6f;
-  --accent-soft: #a8c4b5;
-  --warm: #b8733f;
   position: relative;
   min-height: 100svh;
   overflow: hidden;
@@ -46,17 +81,6 @@ button { font: inherit; }
     var(--page);
   color: var(--ink);
   transition: background-color .28s ease, color .28s ease;
-}
-.landing[data-theme="dark"] {
-  --page: #17201f;
-  --surface: #202b28;
-  --ink: #efe6d9;
-  --muted: #adb6ae;
-  --line: #394640;
-  --accent: #79c5ab;
-  --accent-bright: #91d8be;
-  --accent-soft: #34584d;
-  --warm: #d7a36b;
 }
 .interactive-signal-grid { --pointer-x: 50%; --pointer-y: 50%; position: absolute; z-index: -1; inset: 0; overflow: hidden; pointer-events: none; opacity: .45; }
 .signal-grid-layer { position: absolute; inset: 0; display: block; background-size: 56px 56px; }
@@ -144,6 +168,7 @@ button { font: inherit; }
 .terminal-typing-row { overflow: hidden; margin: 0 0 18px; color: #f1eee6; font-size: 14px; font-weight: 500; }
 .terminal-typed-text { display: inline-block; overflow: hidden; white-space: nowrap; }
 .terminal-mode { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 18px; color: #8ebda5; font-size: 10px; }
+.terminal-summary { margin-top: 16px; margin-bottom: 10px; padding-top: 14px; border-top: 1px solid rgba(220,231,223,.1); }
 .terminal-result, .terminal-explanation { display: grid; grid-template-columns: 16px minmax(0,1fr); gap: 8px; }
 .terminal-result-good { color: #a9cabb; }
 .terminal-result-mark { color: #8fc8aa; font-weight: 700; }
@@ -151,6 +176,23 @@ button { font: inherit; }
 .terminal-result-note .terminal-result-mark { color: #e1b96e; }
 .terminal-explanation { margin-top: 5px; color: #b7c3bc; }
 .terminal-explanation .terminal-result-mark { color: #91c5aa; }
+.live-terminal-body { min-height: 0; height: clamp(260px, 42vh, 360px); overflow-y: auto; padding: 18px 22px 20px; font-size: 11.5px; scrollbar-width: thin; scrollbar-color: #3c4d47 transparent; }
+.live-line { display: grid; grid-template-columns: 10ch 16px minmax(0, 1fr); gap: 8px; padding: 2px 0; color: #b7c3bc; line-height: 1.55; }
+.live-time { color: #6f8279; font-variant-numeric: tabular-nums; }
+.live-mark { font-weight: 700; text-align: center; }
+.live-text { overflow-wrap: anywhere; }
+.live-line-command { margin-bottom: 6px; color: #f1eee6; font-size: 12.5px; font-weight: 500; }
+.live-line-info { color: #a8b6ad; }
+.live-line-info .live-mark { color: #6f8279; }
+.live-line-ok { color: #a9cabb; }
+.live-line-ok .live-mark { color: #8fc8aa; }
+.live-line-warn { color: #e1c28b; }
+.live-line-warn .live-mark { color: #e1b96e; }
+.live-line-bad { color: #f0a29b; }
+.live-line-bad .live-mark { color: #ef8077; }
+.live-line-summary { margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(220,231,223,.1); color: #82c7a8; font-weight: 600; }
+.live-line-summary .live-mark { color: #82c7a8; }
+.live-cursor { display: inline-block; width: .6em; height: 1.1em; background: #82c7a8; animation: typing-cursor-blink .9s steps(2, start) infinite; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
 
 ::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
@@ -199,6 +241,9 @@ button { font: inherit; }
   .terminal-titlebar { padding: 0 11px; gap: 8px; }
   .terminal-window-title, .terminal-window-status { font-size: 7px; }
   .terminal-typing-row { font-size: 12px; }
+  .live-terminal-body { padding: 15px 14px 17px; font-size: 10.5px; }
+  .live-line { grid-template-columns: 14px minmax(0, 1fr); gap: 7px; }
+  .live-time { display: none; }
   .hero-actions { align-items: stretch; flex-direction: column; }
   .hero-actions .ripple-button { width: min(320px, 100%); }
   .hero-footnote { gap: 7px; font-size: 7px; letter-spacing: .05em; }

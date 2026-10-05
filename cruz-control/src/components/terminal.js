@@ -5,7 +5,19 @@ import { motion, useInView, useReducedMotion } from "motion/react";
 
 const TerminalSequenceContext = createContext({ active: true, reduceMotion: false });
 
-export function Terminal({ children, className = "", theme = "light", sequence = true, startOnView = true }) {
+export function Terminal({
+  children,
+  className = "",
+  theme = "light",
+  sequence = true,
+  startOnView = true,
+  title = "CRUZ CONTROL",
+  status = "DEMO",
+  label = "Illustrative Cruz Control scan output",
+  live = false,
+  bodyRef,
+  bodyClassName = "",
+}) {
   const terminalRef = useRef(null);
   const isInView = useInView(terminalRef, { once: true, amount: 0.2 });
   const reduceMotion = useReducedMotion();
@@ -22,14 +34,18 @@ export function Terminal({ children, className = "", theme = "light", sequence =
         ref={terminalRef}
         className={`magic-terminal ${className}`.trim()}
         data-theme={theme}
-        aria-label="Illustrative Cruz Control scan output"
+        aria-label={label}
       >
         <div className="terminal-titlebar" aria-hidden="true">
           <span className="terminal-window-dots"><i /><i /><i /></span>
-          <span className="terminal-window-title">CRUZ CONTROL</span>
-          <span className="terminal-window-status">DEMO</span>
+          <span className="terminal-window-title">{title}</span>
+          <span className="terminal-window-status">{status}</span>
         </div>
-        <div className="terminal-body">
+        <div
+          ref={bodyRef}
+          className={`terminal-body ${bodyClassName}`.trim()}
+          {...(live ? { role: "log", "aria-live": "polite", "aria-relevant": "additions" } : {})}
+        >
           {sequencedChildren}
         </div>
       </section>
