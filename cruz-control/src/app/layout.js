@@ -1,4 +1,6 @@
 import { Geist, Geist_Mono } from "next/font/google";
+import { AuthProvider } from "../components/auth-provider";
+import { THEME_INIT_SCRIPT } from "../lib/theme-script";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -21,9 +23,17 @@ export default function RootLayout({ children }) {
   return (
     <html
       lang="en"
+      data-theme="light"
+      // The inline script below may switch data-theme before hydration; keep the DOM's value.
+      suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
+      <body className="min-h-full flex flex-col">
+        <AuthProvider>{children}</AuthProvider>
+      </body>
     </html>
   );
 }

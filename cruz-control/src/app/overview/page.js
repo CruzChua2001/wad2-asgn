@@ -2,26 +2,28 @@
 
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { LuArrowRight, LuBot, LuCheck, LuCodeXml, LuGlobe, LuLink, LuRadar, LuShieldCheck, LuSparkle } from "react-icons/lu";
 import AnimatedThemeToggler from "../../components/animated-theme-toggler";
+import { useAuth } from "../../components/auth-provider";
 import LiveScanTerminal from "../../components/live-scan-terminal";
 import ProfileMenu from "../../components/profile-menu";
 import RippleButton from "../../components/ripple-button";
 import { buildPlaceholderResult, buildPlaceholderScript, PLACEHOLDER_NOTICE } from "../../lib/placeholder-scan";
+import { useTheme } from "../../lib/theme-store";
 import ScanResults from "./scan-results";
 import styles from "./overview.module.css";
 
-const THEME_STORAGE_KEY = "cruz-control-theme-v2";
 
-const ICON_PATHS = {
-  arrow: "M5 12h14m-5-5 5 5-5 5",
-  check: "m5 12 4 4L19 6",
-  code: "m8 9-3 3 3 3m8-6 3 3-3 3m-5-9-2 12",
-  globe: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0 0c2.2-2.45 3.33-5.45 3.4-9C15.33 8.45 14.2 5.45 12 3m0 18c-2.2-2.45-3.33-5.45-3.4-9C8.67 8.45 9.8 5.45 12 3M3.4 9h17.2M3.4 15h17.2",
-  link: "M10.5 13.5a4.25 4.25 0 0 0 6.01.01l2-2a4.25 4.25 0 0 0-6.01-6.01l-1.15 1.15m2.15 3.85a4.25 4.25 0 0 0-6.01-.01l-2 2a4.25 4.25 0 0 0 6.01 6.01l1.15-1.15",
-  radar: "M12 12 19.8 7.5M21 12a9 9 0 1 1-3.7-7.27M17.2 12a5.2 5.2 0 1 1-2.18-4.24M13.7 12a1.7 1.7 0 1 1-3.4 0 1.7 1.7 0 0 1 3.4 0Z",
-  shield: "M12 22s8-3.8 8-10V5l-8-3-8 3v7c0 6.2 8 10 8 10Zm-3.5-10 2.2 2.2 4.8-5",
-  spark: "m12 3 .8 3.2A4 4 0 0 0 15.8 9l3.2.8-3.2.8a4 4 0 0 0-3 2.8L12 17l-.8-3.6a4 4 0 0 0-3-2.8L5 9.8 8.2 9a4 4 0 0 0 3-2.8L12 3Z",
+const ICONS = {
+  arrow: LuArrowRight,
+  check: LuCheck,
+  code: LuCodeXml,
+  globe: LuGlobe,
+  link: LuLink,
+  radar: LuRadar,
+  shield: LuShieldCheck,
+  spark: LuSparkle,
 };
 
 const SAMPLE_TARGETS = {
@@ -42,33 +44,14 @@ const CHECKS = {
   ],
 };
 
-function subscribeToTheme(callback) {
-  window.addEventListener("storage", callback);
-  window.addEventListener("cruz-control-theme-change", callback);
-  return () => {
-    window.removeEventListener("storage", callback);
-    window.removeEventListener("cruz-control-theme-change", callback);
-  };
-}
-
-function getThemeSnapshot() {
-  return window.localStorage.getItem(THEME_STORAGE_KEY) || "light";
-}
-
-function getServerThemeSnapshot() {
-  return "light";
-}
-
 function BrandMark() {
   return <span className="brand-mark" aria-hidden="true"><span /><span /><span /><span /></span>;
 }
 
+// Same call sites as before; the glyphs now come from react-icons' Lucide set.
 function Icon({ name, size = 20 }) {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round">
-      <path d={ICON_PATHS[name]} />
-    </svg>
-  );
+  const Glyph = ICONS[name];
+  return <Glyph aria-hidden="true" size={size} strokeWidth={1.65} />;
 }
 
 function normalizeTarget(value, mode) {
@@ -118,7 +101,8 @@ function RadarField() {
 }
 
 export default function OverviewPage() {
-  const theme = useSyncExternalStore(subscribeToTheme, getThemeSnapshot, getServerThemeSnapshot);
+  const [theme, updateTheme] = useTheme();
+  const { status } = useAuth();
   const reduceMotion = useReducedMotion();
   const [mode, setMode] = useState("website");
   const [target, setTarget] = useState("");
@@ -147,11 +131,6 @@ export default function OverviewPage() {
     timers.push(setTimeout(() => setPhase("results"), elapsed + (scan.fast ? 350 : 1200)));
     return () => timers.forEach(clearTimeout);
   }, [phase, scan]);
-
-  function updateTheme(nextTheme) {
-    window.localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
-    window.dispatchEvent(new Event("cruz-control-theme-change"));
-  }
 
   function changeMode(nextMode) {
     setMode(nextMode);
@@ -206,13 +185,14 @@ export default function OverviewPage() {
       <RadarField />
 
       <header className={styles.header}>
-        <Link className="brand" href="/" aria-label="Cruz Control home">
+        {/* Signed-in users treat /overview as home; guests go back to the landing page. */}
+        <Link className="brand" href={status === "authenticated" ? "/overview" : "/"} aria-label="Cruz Control home">
           <BrandMark />
           <span>CRUZ CONTROL</span>
         </Link>
         <nav className={styles.primaryNav} aria-label="Primary navigation">
           <Link href="/overview" className={styles.navActive} aria-current="page">Overview</Link>
-          <Link href="/history">History</Link>
+          {status === "authenticated" && <Link href="/history">History</Link>}
           <Link href="/docs">Docs</Link>
           <Link href="/learn">Learn</Link>
         </nav>
@@ -357,9 +337,7 @@ export default function OverviewPage() {
       {/* Placeholder for the AI assistant. No behaviour yet; hand off to the AI team. */}
       <button type="button" className={styles.askCruz} aria-label="Ask Cruz, AI assistant (coming soon)" title="AI assistant coming soon">
         <span className={styles.askCruzPulse} aria-hidden="true" />
-        <svg aria-hidden="true" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 3v3M7 9h10a3 3 0 0 1 3 3v4a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-4a3 3 0 0 1 3-3Zm2 4.5h.01M15 13.5h.01M9.5 16.5h5" />
-        </svg>
+        <LuBot aria-hidden="true" size={17} strokeWidth={1.7} />
         <span>ASK CRUZ</span>
       </button>
     </main>

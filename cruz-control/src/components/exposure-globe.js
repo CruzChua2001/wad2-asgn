@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Globe from "react-globe.gl";
+import { LuMinus, LuPlus } from "react-icons/lu";
 import { MeshPhongMaterial } from "three";
 
 const PALETTES = {
@@ -160,10 +161,10 @@ export default function ExposureGlobe({ nodes, arcs, selectedId, onSelect, theme
     </div>
     <div className="globe-zoom" role="group" aria-label="Map zoom">
       <button type="button" onClick={() => zoom(0.75)} aria-label="Zoom in" title="Zoom in">
-        <svg aria-hidden="true" viewBox="0 0 16 16"><path d="M8 3.5v9M3.5 8h9" /></svg>
+        <LuPlus aria-hidden="true" />
       </button>
       <button type="button" onClick={() => zoom(1 / 0.75)} aria-label="Zoom out" title="Zoom out">
-        <svg aria-hidden="true" viewBox="0 0 16 16"><path d="M3.5 8h9" /></svg>
+        <LuMinus aria-hidden="true" />
       </button>
     </div>
     </div>

@@ -200,9 +200,9 @@ export default function ScanResults({ result, lines, theme, reduceMotion, onNewS
 
           <div className={styles.logDrawer}>
             <button type="button" className={styles.logBar} aria-expanded={logOpen} aria-controls="scan-log" onClick={() => setLogOpen((open) => !open)}>
-              <span className={styles.logLabel}><i aria-hidden="true" /> Live log</span>
+              <span className={styles.logLabel}><i aria-hidden="true" /> Scan logs</span>
               <span className={styles.logLast}>{lines.at(-1)?.text}</span>
-              <span className={styles.logChevron} aria-hidden="true">{logOpen ? "▼" : "▲"}</span>
+              <span className={styles.logChevron} aria-hidden="true">{logOpen ? "▲" : "▼"}</span>
             </button>
             {logOpen && (
               <ol id="scan-log" className={styles.logBody}>

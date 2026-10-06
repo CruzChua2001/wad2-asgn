@@ -45,16 +45,9 @@
 .globe-zoom button + button { border-top: 1px solid var(--line); }
 .globe-zoom button:hover { color: var(--accent); background: color-mix(in srgb, var(--accent-soft) 18%, transparent); }
 .globe-zoom button:focus-visible { outline-offset: -2px; }
-.globe-zoom svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-width: 1.7; }
+.globe-zoom svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-width: 2.5; }
 .number-ticker { display: inline-block; font-variant-numeric: tabular-nums; }
 .exposure-globe:active { cursor: grabbing; }
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
 
 /* Bootstrap's mobile-first breakpoints, exposed as Tailwind responsive variants. */
 @theme {
@@ -105,17 +98,11 @@ button { font: inherit; }
   justify-content: space-between;
   border-bottom: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
 }
-.brand { display: inline-flex; align-items: center; gap: 12px; color: var(--ink); text-decoration: none; font: 600 12px var(--font-geist-mono), monospace; letter-spacing: .12em; white-space: nowrap; }
-.brand sup { color: var(--accent); font-size: 8px; margin-left: 2px; }
+.brand { display: inline-flex; justify-self: start; align-items: center; gap: 12px; color: var(--ink); text-decoration: none; font: 600 12px var(--font-geist-mono), monospace; letter-spacing: .12em; white-space: nowrap; }
 .brand-mark { width: 24px; height: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 3px; transform: rotate(45deg); }
 .brand-mark span { border: 1px solid var(--accent); }
 .brand-mark span:nth-child(2), .brand-mark span:nth-child(3) { background: var(--accent); }
 .main-nav { display: flex; align-items: center; gap: 30px; }
-.main-nav > a { color: var(--muted); text-decoration: none; font-size: 12px; transition: color .2s; }
-.main-nav > a:hover { color: var(--accent); }
-.nav-action { min-height: 38px; display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 0 14px; border: 1px solid color-mix(in srgb, var(--accent) 38%, var(--line)); border-radius: 4px; color: var(--muted)!important; background: color-mix(in srgb, var(--surface) 44%, transparent); font-size: 12px; font-weight: 550; text-decoration: none; transition: color .2s, background-color .2s, border-color .2s; }
-.nav-action:hover { border-color: var(--accent); color: var(--accent)!important; background: var(--surface); }
-.nav-signup { color: var(--accent)!important; }
 .theme-toggle { display: inline-flex; align-items: center; gap: 7px; border: 0; padding: 8px 0; color: var(--muted); background: transparent; cursor: pointer; font-size: 12px; transition: color .2s; }
 .theme-toggle:hover { color: var(--accent); }
 .theme-toggle-icon { width: 15px; height: 15px; fill: none; stroke: var(--accent); stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.6; }
@@ -143,12 +130,14 @@ button { font: inherit; }
 .button-primary:hover { background: var(--accent-bright); }
 .button-secondary { border-color: var(--line); color: var(--ink); background: color-mix(in srgb, var(--surface) 55%, transparent); }
 .button-secondary:hover { border-color: var(--accent); background: var(--surface); }
+/* Navbar size of the hero buttons: same colours and hover, shorter and tighter. */
+.nav-action { min-height: 36px; gap: 8px; padding: 0 14px; }
+.nav-action:hover { transform: translateY(-1px); }
 .ripple-button { position: relative; isolation: isolate; overflow: hidden; cursor: pointer; }
 .ripple-content { position: relative; z-index: 1; }
 .ripple-layer { position: absolute; z-index: 0; inset: 0; overflow: hidden; border-radius: inherit; pointer-events: none; }
 .ripple-wave { position: absolute; display: block; border-radius: 50%; background: var(--ripple-color, rgba(255,255,255,.65)); opacity: 0; transform: translate(-50%,-50%) scale(0); animation: ripple-wave .68s ease-out; }
 @keyframes ripple-wave { 10% { opacity: .32; } 100% { opacity: 0; transform: translate(-50%,-50%) scale(1); } }
-.nav-login .ripple-wave, .nav-signup .ripple-wave { --ripple-color: color-mix(in srgb, var(--accent) 32%, transparent); }
 .button-secondary .ripple-wave { --ripple-color: color-mix(in srgb, var(--accent) 45%, transparent); }
 .hero-footnote { display: flex; align-items: center; gap: 11px; margin: 42px 0 0; color: var(--muted); font: 9px var(--font-geist-mono), monospace; letter-spacing: .1em; }
 .hero-footnote i { width: 3px; height: 3px; border-radius: 50%; background: var(--warm); }
@@ -197,13 +186,6 @@ button { font: inherit; }
 
 ::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
 
-.overview-stub { min-height: 100vh; display: grid; place-items: center; padding: 28px; color: #efe6d9; background: #17201f; }
-.overview-card { width: min(500px, 100%); padding: 32px; border: 1px solid #394640; background: #202b28; }
-.overview-card h1 { margin: 30px 0 12px; font-size: 32px; font-weight: 450; letter-spacing: -.05em; }
-.overview-card p { color: #adb6ae; font-size: 14px; line-height: 1.7; }
-.overview-card .brand { color: #efe6d9; }
-.overview-tag { color: #79c5ab; font: 9px var(--font-geist-mono), monospace; letter-spacing: .1em; }
-
 @media(max-width: 991px) {
   .site-header, .hero { width: calc(100% - 48px); }
   .hero { min-height: auto; padding: 54px 0 96px; }
@@ -215,7 +197,7 @@ button { font: inherit; }
 @media(max-width: 767px) {
   .site-header { width: calc(100% - 36px); height: 72px; }
   .main-nav { gap: 15px; }
-  .main-nav > a, .theme-toggle { font-size: 11px; }
+  .theme-toggle { font-size: 11px; }
   .nav-action { padding: 9px; }
   .hero { width: calc(100% - 44px); min-height: auto; padding: 46px 0 94px; }
   .hero-copy { max-width: 540px; }
@@ -229,7 +211,7 @@ button { font: inherit; }
   .brand { font-size: 10px; gap: 8px; letter-spacing: .08em; }
   .brand-mark { width: 20px; height: 20px; }
   .main-nav { gap: 9px; }
-  .main-nav > a, .theme-toggle { font-size: 10px; }
+  .theme-toggle { font-size: 10px; }
   .nav-action { padding: 8px 7px; }
   .theme-toggle { gap: 4px; }
   .theme-toggle-icon { width: 13px; height: 13px; }
