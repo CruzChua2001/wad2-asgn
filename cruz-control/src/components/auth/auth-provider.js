@@ -1,95 +1,85 @@
 "use client";
 
-import { createContext, useCallback, useContext, useMemo, useState, useSyncExternalStore } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
+import { createClient } from "@/lib/client";
 import AuthModal from "./auth-modal";
-import { PLACEHOLDER_PROFILE } from "@/lib/placeholder-profile";
-
-const SESSION_KEY = "cruz-control-session";
-const AUTH_CHANGE_EVENT = "cruz-control-auth-change";
-const STUB_DELAY_MS = 600;
 
 const AuthContext = createContext(null);
 
-function subscribeToSession(callback) {
-  window.addEventListener("storage", callback);
-  window.addEventListener(AUTH_CHANGE_EVENT, callback);
-  return () => {
-    window.removeEventListener("storage", callback);
-    window.removeEventListener(AUTH_CHANGE_EVENT, callback);
-  };
+const initialsFor = name => {
+  const letters = name.split(/\s+/).filter(word => word).map((word) => word[0]);
+
+  if (letters.length > 1) {
+    return (letters[0] + letters.at(-1)).toUpperCase();
+  }
+  return name.slice(0,2).toUpperCase(); 
 }
 
-function getSessionSnapshot() {
-  return window.localStorage.getItem(SESSION_KEY) ?? window.sessionStorage.getItem(SESSION_KEY) ?? "";
-}
-
-// null = "not read yet" (server render and hydration), so nothing renders as signed in or out too early.
-function getServerSessionSnapshot() {
-  return null;
-}
-
-function parseSession(raw) {
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return null;
+const toProfile = user => {
+  const name = user.user_metadata?.full_name || user.user_metadata?.name || user.email.split("@")[0];
+  return {
+    id: user.id,
+    email: user.email,
+    name,
+    initials: initialsFor(name)
   }
 }
 
-function clearSession() {
-  window.localStorage.removeItem(SESSION_KEY);
-  window.sessionStorage.removeItem(SESSION_KEY);
-}
+const friendlyErrorMsg = error => {
+  const message = {
+    invalid_credentials: "Email or password is incorrect.",
+    user_already_exists: "An account with this email already exists.",
+    weak_password: "Password is too weak. Use at least 8 characters.",
+    over_request_rate_limit: "Too many attempts. Please wait a minute and try again."
+  }
 
-function writeSession(user, remember) {
-  clearSession();
-  (remember ? window.localStorage : window.sessionStorage).setItem(SESSION_KEY, JSON.stringify(user));
-  window.dispatchEvent(new Event(AUTH_CHANGE_EVENT));
-}
-
-function initialsFor(name) {
-  const letters = name.split(/\s+/).filter(Boolean).map((word) => word[0]);
-  return (letters.length > 1 ? letters[0] + letters.at(-1) : name.slice(0, 2)).toUpperCase();
-}
-
-function buildUser({ name, email }) {
-  const displayName = name?.trim() || email.split("@")[0];
-  return { ...PLACEHOLDER_PROFILE, name: displayName, email, initials: initialsFor(displayName) };
-}
-
-function stubDelay() {
-  return new Promise((resolve) => setTimeout(resolve, STUB_DELAY_MS));
-}
-
-async function signIn({ email, remember, provider }) {
-  await stubDelay();
-  writeSession(provider ? PLACEHOLDER_PROFILE : buildUser({ email }), provider ? true : remember);
-}
-
-async function signUp({ name, email }) {
-  await stubDelay();
-  writeSession(buildUser({ name, email }), true);
-}
-
-async function signOut() {
-  clearSession();
-  window.dispatchEvent(new Event(AUTH_CHANGE_EVENT));
+  return new Error(message[error.code] ?? "Something went wrong. Please try again.");
 }
 
 export function AuthProvider({ children }) {
-  const raw = useSyncExternalStore(subscribeToSession, getSessionSnapshot, getServerSessionSnapshot);
-  const user = useMemo(() => parseSession(raw), [raw]);
-  const status = raw === null ? "loading" : user ? "authenticated" : "guest";
+  const [user, setUser] = useState(null);
+  const [status, setStatus] = useState("loading");
   const [authTab, setAuthTab] = useState(null);
 
-  const openAuth = useCallback((tab = "login") => setAuthTab(tab), []);
-  const closeAuth = useCallback(() => setAuthTab(null), []);
+  useEffect(() => {
+    const supabase = createClient();
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session ? toProfile(session.user) : null);
+      setStatus(session ? "authenticated" : "guest");
+    })
+    return () => data.subscription.unsubscribe();
+  }, [])
 
-  const value = useMemo(
-    () => ({ status, user, signIn, signUp, signOut, openAuth }),
-    [status, user, openAuth],
-  );
+  async function signIn({ email, password }) {
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw friendlyErrorMsg(error);
+  }
+
+  async function signUp({ name, email, password }) {
+    const supabase = createClient();
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { full_name: name } }
+    })
+    if (error) throw friendlyErrorMsg(error);
+  }
+
+  async function signOut() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+  }
+
+  function openAuth(tab = "login") {
+    setAuthTab(tab);
+  }
+
+  function closeAuth() {
+    setAuthTab(null);
+  }
+
+  const value = { status, user, signIn, signUp, signOut, openAuth };
 
   return (
     <AuthContext value={value}>

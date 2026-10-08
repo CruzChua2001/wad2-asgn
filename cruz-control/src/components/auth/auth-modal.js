@@ -68,6 +68,7 @@ export default function AuthModal({ initialTab, onClose }) {
   const [remember, setRemember] = useState(false);
   const [pending, setPending] = useState(null);
   const [resetNotice, setResetNotice] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
 
   // Focus management, Escape to close, and background scroll lock while the modal is open.
   useEffect(() => {
@@ -105,24 +106,31 @@ export default function AuthModal({ initialTab, onClose }) {
     };
   }, [onClose]);
 
-  async function complete(key, action) {
-    setPending(key);
-    await action();
-    onClose();
-    // Post-login: continue from the landing page to /overview; elsewhere, stay on the current page.
-    if (pathname === "/") router.replace("/overview");
+  async function complete(signInMethod, signInFunc) {
+    setPending(signInMethod);
+    setErrorMsg("");
+
+    try {
+      await signInFunc();
+      onClose();
+
+      if (pathname === "/") router.replace("/overview");
+    } catch (e) {
+      setErrorMsg(e.message);
+      setPending(null)
+    }
   }
 
   function handleLogin(event) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    complete("login", () => signIn({ email: String(form.get("email")), remember }));
+    complete("login", () => signIn({ email: String(form.get("email")), password: String(form.get("password")) }));
   }
 
   function handleSignup(event) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    complete("signup", () => signUp({ name: String(form.get("name")), email: String(form.get("email")) }));
+    complete("signup", () => signUp({ name: String(form.get("name")), email: String(form.get("email")), password: String(form.get("password")) }));
   }
 
   function handleProvider(provider) {
@@ -182,10 +190,10 @@ export default function AuthModal({ initialTab, onClose }) {
         aria-describedby="auth-modal-description"
       >
         <div className="relative border border-line rounded-lg text-ink bg-surface-strong shadow-[0 25px 50px -12px color-mix(in srgb, #000 28%, transparent)]">
-          <button 
-            type="button" 
+          <button
+            type="button"
             className="absolute top-3 right-3 grid place-items-center p-2 border-0 rounded-md text-muted bg-none cursor-pointer transition-colors duration-200 ease-[ease] hover:text-ink"
-            aria-label="Close" 
+            aria-label="Close"
             onClick={onClose}
           >
             <LuX className="auth-icon" aria-hidden="true" />
@@ -199,9 +207,9 @@ export default function AuthModal({ initialTab, onClose }) {
           </div>
 
           <div className="px-6 pb-6">
-            <div 
+            <div
               className="grid grid-cols-2 h-10 p-1 border border-line rounded-md bg-surface-soft"
-              role="tablist" 
+              role="tablist"
               aria-label="Account"
             >
               {TABS.map(({ value, label }) => (
@@ -221,6 +229,8 @@ export default function AuthModal({ initialTab, onClose }) {
                 </button>
               ))}
             </div>
+
+            {errorMsg && <p role="alert" className="mt-4 m-0 text-critical text-[13px]">{errorMsg}</p>}
 
             <div className="grid mt-6">
               <div {...panelProps("login")}>
