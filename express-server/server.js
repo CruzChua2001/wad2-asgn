@@ -5,6 +5,9 @@ const PORT = 5000;
 
 app.use(express.json());
 
+const scanRouter = require("./routes/scan");
+app.use("/api/scan", scanRouter);
+
 app.get('/', (req, res) => {
     res.send('Hello, world! Your Express server is up and running.');
 });
