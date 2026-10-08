@@ -1,0 +1,52 @@
+name: Deploy staging
+
+on:
+  push:
+    branches: [staging]
+    paths:
+      - "cruz-control/**"
+      - ".github/workflows/deploy-staging.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: true
+
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  STAGING_DOMAIN: cruz-control-wad2-staging.vercel.app
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: https://${{ env.STAGING_DOMAIN }}
+    defaults:
+      run:
+        working-directory: cruz-control
+    env:
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_FRONTEND_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: cruz-control/package-lock.json
+
+      - run: npm ci
+      - run: npm run lint
+
+      - run: npm install --global vercel@63.1.0
+      - run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+      - run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
+
+      - id: deploy
+        run: echo "url=$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }})" >> "$GITHUB_OUTPUT"
+
+      - run: vercel alias set "${{ steps.deploy.outputs.url }}" "$STAGING_DOMAIN" --token=${{ secrets.VERCEL_TOKEN }}
