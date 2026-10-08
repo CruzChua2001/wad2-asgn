@@ -49,4 +49,4 @@ jobs:
       - id: deploy
         run: echo "url=$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }})" >> "$GITHUB_OUTPUT"
 
-      - run: vercel alias set "${{ steps.deploy.outputs.url }}" "$STAGING_DOMAIN" --token=${{ secrets.VERCEL_TOKEN }}
+      - run: vercel alias set "${{ steps.deploy.outputs.url }}" "$STAGING_DOMAIN" --scope=${{ secrets.VERCEL_ORG_ID }} --token=${{ secrets.VERCEL_TOKEN }}
