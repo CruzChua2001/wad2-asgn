@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { LuChevronDown, LuLogOut } from "react-icons/lu";
-import { useAuth } from "@/components/auth-provider";
+import { useAuth } from "@/components/auth/auth-provider";
 import styles from "@/styles/overview/profile-menu.module.css";
 
 export default function ProfileMenu() {

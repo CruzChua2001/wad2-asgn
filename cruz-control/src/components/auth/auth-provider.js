@@ -2,14 +2,8 @@
 
 import { createContext, useCallback, useContext, useMemo, useState, useSyncExternalStore } from "react";
 import AuthModal from "./auth-modal";
-import { PLACEHOLDER_PROFILE } from "../lib/placeholder-profile";
+import { PLACEHOLDER_PROFILE } from "@/lib/placeholder-profile";
 
-// Single source of truth for auth: the landing redirect, the /overview navbar gating,
-// ProfileMenu and the login/signup modal all read from here.
-//
-// STUB: Supabase isn't connected, so the actions below make no network calls. They keep a
-// placeholder session in browser storage (localStorage when "Remember me" is on, otherwise
-// sessionStorage). Wiring Supabase in only changes this file.
 const SESSION_KEY = "cruz-control-session";
 const AUTH_CHANGE_EVENT = "cruz-control-auth-change";
 const STUB_DELAY_MS = 600;

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LuBot } from "react-icons/lu";
 import AnimatedThemeToggler from "@/components/animated-theme-toggler";
-import { useAuth } from "@/components/auth-provider";
+import { useAuth } from "@/components/auth/auth-provider";
 import { useTheme } from "@/lib/theme-store";
 import ProfileMenu from "./profile-menu";
 import { ScanProvider } from "./scan-context";

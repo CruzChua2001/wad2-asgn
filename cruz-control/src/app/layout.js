@@ -1,5 +1,5 @@
 import { Geist, Geist_Mono } from "next/font/google";
-import { AuthProvider } from "@/components/auth-provider";
+import { AuthProvider } from "@/components/auth/auth-provider";
 import { THEME_INIT_SCRIPT } from "@/lib/theme-script";
 import "@/styles/globals.css";
 
