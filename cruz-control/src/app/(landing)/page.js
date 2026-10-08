@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import AnimatedThemeToggler from "@/components/animated-theme-toggler";
-import { useAuth } from "@/components/auth-provider";
+import { useAuth } from "@/components/auth/auth-provider";
 import InteractiveSignalGrid from "./interactive-signal-grid";
 import RippleButton from "@/components/ripple-button";
 import ScanTerminal from "./scan-terminal";

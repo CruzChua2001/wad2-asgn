@@ -3,11 +3,12 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { LuChevronDown, LuLogOut } from "react-icons/lu";
-import { useAuth } from "@/components/auth-provider";
+import { useAuth } from "@/components/auth/auth-provider";
 import styles from "@/styles/overview/profile-menu.module.css";
 
 export default function ProfileMenu() {
   const { status, user: profile, signOut, openAuth } = useAuth();
+  const [projects, setProjects] = useState([])
   const [open, setOpen] = useState(false);
   const rootRef = useRef(null);
   const router = useRouter();
@@ -77,32 +78,17 @@ export default function ProfileMenu() {
 
           <div className={styles.section}>
             <div className={styles.sectionHeading}>
-              <span>Tracked repositories</span>
-              <strong>{profile.repositories.length}</strong>
+              <span>Recently Opened Projects</span>
+              <strong></strong>
             </div>
             <div className={styles.assetList}>
-              {profile.repositories.map((repository) => (
+              {/* {profile.repositories.map((repository) => (
                 <div className={styles.repository} key={repository.name}>
                   <span className={styles.assetIcon} aria-hidden="true">&lt;/&gt;</span>
                   <div><strong>{repository.name}</strong><small>{repository.detail}</small></div>
                   <span className={styles.statusDot} aria-label="Tracked" />
                 </div>
-              ))}
-            </div>
-          </div>
-
-          <div className={styles.section}>
-            <div className={styles.sectionHeading}>
-              <span>Tracked websites</span>
-              <strong>{profile.websites.length}</strong>
-            </div>
-            <div className={styles.websiteList}>
-              {profile.websites.map((website) => (
-                <div className={styles.website} key={website.name}>
-                  <span>{website.name}</span>
-                  <small>{website.cadence}</small>
-                </div>
-              ))}
+              ))} */}
             </div>
           </div>
 
