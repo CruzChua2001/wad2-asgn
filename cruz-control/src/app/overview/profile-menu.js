@@ -3,8 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { LuChevronDown, LuLogOut } from "react-icons/lu";
-import { useAuth } from "./auth-provider";
-import styles from "./profile-menu.module.css";
+import { useAuth } from "@/components/auth-provider";
+import styles from "@/styles/overview/profile-menu.module.css";
 
 export default function ProfileMenu() {
   const { status, user: profile, signOut, openAuth } = useAuth();

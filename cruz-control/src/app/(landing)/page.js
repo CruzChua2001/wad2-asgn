@@ -3,14 +3,14 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import AnimatedThemeToggler from "../components/animated-theme-toggler";
-import { useAuth } from "../components/auth-provider";
-import InteractiveSignalGrid from "../components/interactive-signal-grid";
-import RippleButton from "../components/ripple-button";
-import ScanTerminal from "../components/scan-terminal";
-import TextAnimate from "../components/text-animate";
-import TypingAnimation from "../components/typing-animation";
-import { useTheme } from "../lib/theme-store";
+import AnimatedThemeToggler from "@/components/animated-theme-toggler";
+import { useAuth } from "@/components/auth-provider";
+import InteractiveSignalGrid from "./interactive-signal-grid";
+import RippleButton from "@/components/ripple-button";
+import ScanTerminal from "./scan-terminal";
+import TextAnimate from "./text-animate";
+import TypingAnimation from "./typing-animation";
+import { useTheme } from "@/lib/theme-store";
 
 // TEMPORARY LOGO
 function BrandMark() {

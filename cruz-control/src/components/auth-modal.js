@@ -6,7 +6,7 @@ import { FaGithub } from "react-icons/fa6";
 import { FcGoogle } from "react-icons/fc";
 import { LuEye, LuEyeOff, LuLock, LuMail, LuUser, LuX } from "react-icons/lu";
 import { useAuth } from "./auth-provider";
-import styles from "./auth-modal.module.css";
+import styles from "@/styles/components/auth-modal.module.css";
 
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
