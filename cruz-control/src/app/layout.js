@@ -17,6 +17,9 @@ export const metadata = {
   title: "Cruz Control — Public Exposure, Made Clear",
   description:
     "Understand the public security signals around your website and projects, with clear findings and practical next steps.",
+  icons: {
+    icon: [{ url: "/favicon.ico", sizes: "48x48" }],
+  },
 };
 
 export default function RootLayout({ children }) {
