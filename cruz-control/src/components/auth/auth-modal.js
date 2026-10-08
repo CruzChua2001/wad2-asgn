@@ -6,7 +6,6 @@ import { FaGithub } from "react-icons/fa6";
 import { FcGoogle } from "react-icons/fc";
 import { LuEye, LuEyeOff, LuLock, LuMail, LuUser, LuX } from "react-icons/lu";
 import { useAuth } from "./auth-provider";
-import styles from "@/styles/components/auth-modal.module.css";
 
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
@@ -17,11 +16,11 @@ const TABS = [
 
 function TextField({ id, label, icon: FieldIcon, ...inputProps }) {
   return (
-    <div className={styles.field}>
-      <label htmlFor={id} className={styles.label}>{label}</label>
-      <div className={styles.inputWrap}>
-        <FieldIcon className={styles.fieldIcon} aria-hidden="true" />
-        <input id={id} className={styles.input} required {...inputProps} />
+    <div className="grid gap-2">
+      <label htmlFor={id} className="text-[14px] font-medium leading-none">{label}</label>
+      <div className="relative">
+        <FieldIcon className="absolute top-[50%] left-3 text-muted transform-[translateY(-50%)] pointer-events-none auth-field-icon" aria-hidden="true" />
+        <input id={id} className="auth-input" required {...inputProps} />
       </div>
     </div>
   );
@@ -29,10 +28,10 @@ function TextField({ id, label, icon: FieldIcon, ...inputProps }) {
 
 function PasswordField({ id, autoComplete, minLength, visible, onToggle, hint }) {
   return (
-    <div className={styles.field}>
-      <label htmlFor={id} className={styles.label}>Password</label>
-      <div className={styles.inputWrap}>
-        <LuLock className={styles.fieldIcon} aria-hidden="true" />
+    <div className="grid gap-2">
+      <label htmlFor={id} className="text-[14px] font-medium leading-none">Password</label>
+      <div className="relative">
+        <LuLock className="absolute top-[50%] left-3 text-muted transform-[translateY(-50%)] pointer-events-none auth-field-icon" aria-hidden="true" />
         <input
           id={id}
           name="password"
@@ -41,19 +40,19 @@ function PasswordField({ id, autoComplete, minLength, visible, onToggle, hint })
           placeholder="••••••••"
           required
           minLength={minLength}
-          className={`${styles.input} ${styles.inputWithToggle}`}
+          className="auth-input pr-10"
         />
         <button
           type="button"
-          className={styles.toggle}
+          className="auth-toggle"
           aria-label={visible ? "Hide password" : "Show password"}
           aria-pressed={visible}
           onClick={onToggle}
         >
-          {visible ? <LuEyeOff className={styles.icon} aria-hidden="true" /> : <LuEye className={styles.icon} aria-hidden="true" />}
+          {visible ? <LuEyeOff className="auth-icon" aria-hidden="true" /> : <LuEye className="auth-icon" aria-hidden="true" />}
         </button>
       </div>
-      {hint && <p className={styles.hint}>{hint}</p>}
+      {hint && <p className="m-0 text-muted text-[12px]">{hint}</p>}
     </div>
   );
 }
@@ -149,20 +148,22 @@ export default function AuthModal({ initialTab, onClose }) {
       "aria-labelledby": `auth-tab-${value}`,
       "data-state": active ? "active" : "inactive",
       inert: !active,
-      className: styles.panel,
+      className: "auth-panel",
     };
   }
 
   function socialSection() {
     return (
-      <div className={styles.social}>
-        <div className={styles.divider}><span>or</span></div>
-        <div className={styles.oauth}>
-          <button type="button" className={styles.outlineButton} disabled={busy} onClick={() => handleProvider("github")}>
-            <FaGithub className={styles.brandIcon} aria-hidden="true" /> {pending === "github" ? "Connecting…" : "GitHub"}
+      <div className="grid gap-5 mt-5">
+        <div className="relative h-px bg-line">
+          <span className="absolute -top-2.25 left-[50%] px-2 text-muted bg-surface-strong text-[11px] leading-4.5 tracking-widest uppercase transform-[translateX(-50%)]" >or</span>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <button type="button" className="auth-outlineButton" disabled={busy} onClick={() => handleProvider("github")}>
+            <FaGithub className="social-icon" aria-hidden="true" /> {pending === "github" ? "Connecting…" : "GitHub"}
           </button>
-          <button type="button" className={styles.outlineButton} disabled={busy} onClick={() => handleProvider("google")}>
-            <FcGoogle className={styles.brandIcon} aria-hidden="true" /> {pending === "google" ? "Connecting…" : "Google"}
+          <button type="button" className="auth-outlineButton" disabled={busy} onClick={() => handleProvider("google")}>
+            <FcGoogle className="social-icon" aria-hidden="true" /> {pending === "google" ? "Connecting…" : "Google"}
           </button>
         </div>
       </div>
@@ -170,37 +171,46 @@ export default function AuthModal({ initialTab, onClose }) {
   }
 
   return (
-    <div className={styles.overlay}>
-      <div className={styles.backdrop} aria-hidden="true" onClick={onClose} />
+    <div className="fixed inset-0 z-1000 flex py-6 px-4 overflow-y-auto text-ink">
+      <div className="fixed inset-0 bg-[color-mix(in_srgb,#0b1211 55%,transparent)] backdrop-blur-[6px] animate-auth-fade-in" aria-hidden="true" onClick={onClose} />
       <div
         ref={dialogRef}
-        className={styles.dialog}
+        className="relative w-full max-w-md m-auto animate-auth-dialog"
         role="dialog"
         aria-modal="true"
         aria-labelledby="auth-modal-title"
         aria-describedby="auth-modal-description"
       >
-        <div className={styles.card}>
-          <button type="button" className={styles.close} aria-label="Close" onClick={onClose}>
-            <LuX className={styles.icon} aria-hidden="true" />
+        <div className="relative border border-line rounded-lg text-ink bg-surface-strong shadow-[0 25px 50px -12px color-mix(in srgb, #000 28%, transparent)]">
+          <button 
+            type="button" 
+            className="absolute top-3 right-3 grid place-items-center p-2 border-0 rounded-md text-muted bg-none cursor-pointer transition-colors duration-200 ease-[ease] hover:text-ink"
+            aria-label="Close" 
+            onClick={onClose}
+          >
+            <LuX className="auth-icon" aria-hidden="true" />
           </button>
 
-          <div className={styles.header}>
-            <h2 id="auth-modal-title" className={styles.title}>Cruz Control</h2>
-            <p id="auth-modal-description" className={styles.description}>
+          <div className="grid gap-1 p-6 pr-12">
+            <h2 id="auth-modal-title" className="m-0 text-[24px] font-semibold leading-none tracking-[-.01em]">Cruz Control</h2>
+            <p id="auth-modal-description" className="mt-1 m-0 text-muted text-[14px] leading-[1.45]">
               Log in or create an account to save scans and track your websites and repositories.
             </p>
           </div>
 
-          <div className={styles.content}>
-            <div className={styles.tabList} role="tablist" aria-label="Account">
+          <div className="px-6 pb-6">
+            <div 
+              className="grid grid-cols-2 h-10 p-1 border border-line rounded-md bg-surface-soft"
+              role="tablist" 
+              aria-label="Account"
+            >
               {TABS.map(({ value, label }) => (
                 <button
                   key={value}
                   id={`auth-tab-${value}`}
                   type="button"
                   role="tab"
-                  className={styles.tab}
+                  className="auth-tab"
                   aria-selected={tab === value}
                   aria-controls={`auth-panel-${value}`}
                   tabIndex={tab === value ? 0 : -1}
@@ -212,28 +222,28 @@ export default function AuthModal({ initialTab, onClose }) {
               ))}
             </div>
 
-            <div className={styles.shell}>
+            <div className="grid mt-6">
               <div {...panelProps("login")}>
-                <form className={styles.form} onSubmit={handleLogin}>
+                <form className="grid gap-5" onSubmit={handleLogin}>
                   <TextField id="login-email" label="Email" icon={LuMail} name="email" type="email" autoComplete="email" placeholder="you@example.com" />
                   <PasswordField id="login-password" autoComplete="current-password" visible={showLoginPw} onToggle={() => setShowLoginPw((value) => !value)} />
 
-                  <div className={styles.row}>
-                    <label className={styles.remember}>
-                      <input type="checkbox" className={styles.checkbox} checked={remember} onChange={(event) => setRemember(event.target.checked)} />
+                  <div className="flex align-items-center justify-between gap-3">
+                    <label className="inline-flex align-items-center gap-2 text-muted text-[14px] font-medium cursor-pointer">
+                      <input type="checkbox" className="w-4 h-4 m-0 accent-accent cursor-pointer" checked={remember} onChange={(event) => setRemember(event.target.checked)} />
                       Remember me
                     </label>
-                    <button type="button" className={styles.textButton} onClick={() => setResetNotice(true)}>
+                    <button type="button" className="p-0 text-muted bg-none text-[14px] cursor-pointer transition-colors duration-200 ease-[ease] underline hover:text-ink" onClick={() => setResetNotice(true)}>
                       Forgot password?
                     </button>
                   </div>
                   {resetNotice && (
-                    <p role="status" className={styles.notice}>
+                    <p role="status" className="-mt-2 m-0 text-muted text-[12px]">
                       Password reset isn&apos;t available in this preview yet.
                     </p>
                   )}
 
-                  <button type="submit" className={styles.primaryButton} disabled={busy}>
+                  <button type="submit" className="auth-primaryButton" disabled={busy}>
                     {pending === "login" ? "Signing in…" : "Sign in"}
                   </button>
                 </form>
@@ -241,7 +251,7 @@ export default function AuthModal({ initialTab, onClose }) {
               </div>
 
               <div {...panelProps("signup")}>
-                <form className={styles.form} onSubmit={handleSignup}>
+                <form className="grid gap-[20px]" onSubmit={handleSignup}>
                   <TextField id="signup-name" label="Full name" icon={LuUser} name="name" type="text" autoComplete="name" placeholder="Your name" />
                   <TextField id="signup-email" label="Email" icon={LuMail} name="email" type="email" autoComplete="email" placeholder="you@example.com" />
                   <PasswordField
@@ -253,7 +263,7 @@ export default function AuthModal({ initialTab, onClose }) {
                     hint="At least 8 characters."
                   />
 
-                  <button type="submit" className={styles.primaryButton} disabled={busy}>
+                  <button type="submit" className="auth-primaryButton" disabled={busy}>
                     {pending === "signup" ? "Creating account…" : "Create account"}
                   </button>
                 </form>

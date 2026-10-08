@@ -34,6 +34,43 @@
   --foreground: var(--ink);
 }
 
+@theme inline {
+  --color-page: var(--page);
+  --color-surface: var(--surface);
+  --color-surface-strong: var(--surface-strong);
+  --color-surface-soft: var(--surface-soft);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-bright: var(--accent-bright);
+  --color-accent-soft: var(--accent-soft);
+  --color-warm: var(--warm);
+  --color-critical: var(--critical);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+}
+
+@theme {
+  /* Breakpoints - customise as bootstrap styling */
+  --breakpoint-sm: 36rem;
+  --breakpoint-md: 48rem;
+  --breakpoint-lg: 62rem;
+  --breakpoint-xl: 75rem;
+  --breakpoint-2xl: 87.5rem;
+
+  /* Animation pop up for auth modal */
+  --animate-auth-fade-in: fade-in .2s ease both;
+  @keyframes fade-in {
+    from { opacity: 0; }
+  }
+  
+  --animate-auth-dialog: dialog-in .32s cubic-bezier(.22, .61, .36, 1) both;
+  @keyframes dialog-in {
+    from { opacity: 0; transform: translateY(12px); }
+  }
+}
+
 /* Tooltip injected by react-globe.gl outside the React tree, so it must be global. */
 .globe-tooltip { display: grid; gap: 2px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 6px; color: var(--ink); background: var(--surface-strong); box-shadow: 0 8px 24px color-mix(in srgb, var(--ink) 16%, transparent); font: 500 10px var(--font-geist-mono), monospace; }
 .globe-tooltip strong { font-size: 11px; }
@@ -48,15 +85,6 @@
 .globe-zoom svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-width: 2.5; }
 .number-ticker { display: inline-block; font-variant-numeric: tabular-nums; }
 .exposure-globe:active { cursor: grabbing; }
-
-/* Bootstrap's mobile-first breakpoints, exposed as Tailwind responsive variants. */
-@theme {
-  --breakpoint-sm: 36rem;
-  --breakpoint-md: 48rem;
-  --breakpoint-lg: 62rem;
-  --breakpoint-xl: 75rem;
-  --breakpoint-2xl: 87.5rem;
-}
 
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
@@ -242,4 +270,142 @@ button { font: inherit; }
 @media(prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *:before, *:after { animation-duration: .01ms!important; animation-iteration-count: 1!important; transition-duration: .01ms!important; }
+}
+
+/* -------- Auth login popup -------- */
+.auth-icon,
+.auth-field-icon {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.social-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+}
+
+.auth-tab {
+  border: 0;
+  border-radius: 4px;
+  color: var(--muted);
+  background: transparent;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color .2s ease, background-color .2s ease, box-shadow .2s ease;
+}
+
+.auth-tab[aria-selected="true"] {
+  color: var(--ink);
+  font-weight: bold;
+  background: var(--surface-strong);
+  box-shadow: 0 1px 2px color-mix(in srgb, #000 10%, transparent);
+}
+
+.auth-panel {
+  grid-area: 1 / 1;
+  transition: opacity .22s ease, filter .22s ease;
+}
+
+.auth-panel[data-state="inactive"] {
+  opacity: 0;
+  filter: blur(8px);
+  pointer-events: none;
+}
+
+.auth-input {
+  width: 100%;
+  height: 36px;
+  padding: 8px 12px 8px 40px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  background: var(--page);
+  box-shadow: 0 1px 2px color-mix(in srgb, #000 5%, transparent);
+  font: inherit;
+  font-size: 14px;
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+
+.auth-input::placeholder { color: color-mix(in srgb, var(--muted) 70%, transparent); }
+
+.auth-input:focus-visible {
+  border-color: var(--accent);
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+
+.auth-toggle {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  display: grid;
+  place-items: center;
+  padding: 8px;
+  border-radius: 6px;
+  color: var(--muted);
+  cursor: pointer;
+  transform: translateY(-50%);
+  transition: color .2s;
+}
+
+.auth-toggle:hover { color: var(--ink); }
+
+.auth-primaryButton,
+.auth-outlineButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color .2s ease, opacity .2s ease;
+}
+
+.auth-primaryButton {
+  width: 100%;
+  border: 0;
+  color: var(--page);
+  background: var(--accent);
+}
+
+.auth-primaryButton:hover { background: color-mix(in srgb, var(--accent) 90%, transparent); }
+
+.auth-outlineButton {
+  border: 1px solid var(--line);
+  color: var(--ink);
+  background: var(--page);
+}
+
+.auth-outlineButton:hover { background: var(--surface-soft); }
+
+.auth-primaryButton:disabled,
+.auth-outlineButton:disabled {
+  opacity: .5;
+  pointer-events: none;
+}
+
+.auth-close:focus-visible,
+.auth-tab:focus-visible,
+.auth-toggle:focus-visible,
+.auth-textButton:focus-visible,
+.auth-primaryButton:focus-visible,
+.auth-outlineButton:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-panel, .auth-tab { transition: none; }
 }
