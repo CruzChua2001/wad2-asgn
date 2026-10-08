@@ -1,25 +1,13 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import styles from "./profile-menu.module.css";
+import { LuChevronDown, LuLogOut } from "react-icons/lu";
+import { useAuth } from "@/components/auth-provider";
+import styles from "@/styles/overview/profile-menu.module.css";
 
-const PLACEHOLDER_PROFILE = {
-  initials: "TK",
-  name: "tk",
-  email: "tk.liang.2024@smu.edu.sg",
-  repositories: [
-    { name: "kopiwerks-site", detail: "Public · checked 2h ago" },
-    { name: "cruz-control", detail: "Public · not scanned" },
-  ],
-  websites: [
-    { name: "kopiwerks.sg", cadence: "weekly" },
-    { name: "merlion-labs.io", cadence: "off" },
-  ],
-};
-
-export default function ProfileMenu({ profile = PLACEHOLDER_PROFILE, onSignOut }) {
+export default function ProfileMenu() {
+  const { status, user: profile, signOut, openAuth } = useAuth();
   const [open, setOpen] = useState(false);
   const rootRef = useRef(null);
   const router = useRouter();
@@ -48,14 +36,17 @@ export default function ProfileMenu({ profile = PLACEHOLDER_PROFILE, onSignOut }
 
   async function handleSignOut() {
     setOpen(false);
-    // Wait for the real session to end (e.g. Supabase signOut) before leaving the page.
-    if (onSignOut) await onSignOut();
+    // Wait for the session to end before leaving the page.
+    await signOut();
     // replace (not push) so Back doesn't return to a signed-in page.
     router.replace("/");
   }
 
+  // Session not read yet: show neither the menu nor Login, so neither flashes.
+  if (status === "loading") return null;
+
   if (!profile) {
-    return <Link href="/login" className={styles.loginLink}>Login</Link>;
+    return <button type="button" className={styles.loginLink} onClick={() => openAuth("login")}>Login</button>;
   }
 
   return (
@@ -70,9 +61,7 @@ export default function ProfileMenu({ profile = PLACEHOLDER_PROFILE, onSignOut }
       >
         <span className={styles.avatar} aria-hidden="true">{profile.initials}</span>
         <span className={styles.triggerName}>{profile.name}</span>
-        <svg className={styles.chevron} aria-hidden="true" viewBox="0 0 12 12">
-          <path d="m3 4.5 3 3 3-3" />
-        </svg>
+        <LuChevronDown className={styles.chevron} aria-hidden="true" />
       </button>
 
       {open && (
@@ -118,7 +107,7 @@ export default function ProfileMenu({ profile = PLACEHOLDER_PROFILE, onSignOut }
           </div>
 
           <button type="button" className={styles.signOut} onClick={handleSignOut}>
-            <svg aria-hidden="true" viewBox="0 0 20 20"><path d="M8 3H4v14h4M12 6l4 4-4 4m4-4H7" /></svg>
+            <LuLogOut aria-hidden="true" />
             Sign out
           </button>
         </section>

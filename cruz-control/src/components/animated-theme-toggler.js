@@ -1,6 +1,7 @@
 "use client";
 
 import { flushSync } from "react-dom";
+import { LuMoon, LuSun } from "react-icons/lu";
 
 export default function AnimatedThemeToggler({ theme, onThemeChange }) {
   function toggleTheme(event) {
@@ -50,13 +51,9 @@ export default function AnimatedThemeToggler({ theme, onThemeChange }) {
       aria-label={`Switch to ${isLight ? "dark" : "light"} mode`}
       title={`Switch to ${isLight ? "dark" : "light"} mode`}
     >
-      <svg aria-hidden="true" viewBox="0 0 24 24" className="theme-toggle-icon">
-        {isLight ? (
-          <path d="M12 3v2m0 14v2M5.64 5.64l1.42 1.42m9.88 9.88 1.42 1.42M3 12h2m14 0h2M5.64 18.36l1.42-1.42m9.88-9.88 1.42-1.42M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z" />
-        ) : (
-          <path d="M20.5 15.5A8.5 8.5 0 0 1 8.5 3.5 8.5 8.5 0 1 0 20.5 15.5Z" />
-        )}
-      </svg>
+      {isLight
+        ? <LuSun aria-hidden="true" className="theme-toggle-icon" />
+        : <LuMoon aria-hidden="true" className="theme-toggle-icon" />}
       <span>{isLight ? "Dark mode" : "Light mode"}</span>
     </button>
   );

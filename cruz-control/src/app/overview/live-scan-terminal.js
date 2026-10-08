@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { AnimatedSpan, Terminal } from "./terminal";
+import { AnimatedSpan, Terminal } from "@/components/terminal";
 
 const MARKS = { command: "", info: "›", ok: "✓", warn: "!", bad: "✕", summary: "■" };
 

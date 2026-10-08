@@ -1,13 +1,14 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { motion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import { useState } from "react";
-import NumberTicker from "../../components/number-ticker";
-import RippleButton from "../../components/ripple-button";
-import styles from "./scan-results.module.css";
+import NumberTicker from "./number-ticker";
+import { useTheme } from "@/lib/theme-store";
+import { useScan } from "../scan-context";
+import styles from "@/styles/overview/scan-results.module.css";
 
-const ExposureGlobe = dynamic(() => import("../../components/exposure-globe"), {
+const ExposureGlobe = dynamic(() => import("./exposure-globe"), {
   ssr: false,
   loading: () => <div className={styles.globeLoading}>Loading infrastructure map…</div>,
 });
@@ -15,16 +16,6 @@ const ExposureGlobe = dynamic(() => import("../../components/exposure-globe"), {
 const SEVERITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };
 const SEVERITY_LABELS = { critical: "Critical", high: "High", medium: "Medium", low: "Low" };
 const STATUS_LABELS = { healthy: "Healthy", attention: "Needs attention", critical: "Critical" };
-
-// Secondary navbar for completed scan
-const RESULT_TABS = [
-  { id: "vulnerabilities", label: "Vulnerabilities" },
-  { id: "repository", label: "Repository", requiresRepository: true },
-  { id: "fix-guide", label: "Fix Guide" },
-  { id: "checklist", label: "Checklist" },
-  { id: "report-card", label: "Report Card" },
-  { id: "compare", label: "Compare" },
-];
 
 function scoreTone(value) {
   if (value >= 80) return "good";
@@ -55,26 +46,12 @@ function ScoreRing({ score, reduceMotion }) {
   );
 }
 
-function ResultTabs({ hasRepository, findingsCount }) {
-  const tabs = RESULT_TABS.filter((tab) => !tab.requiresRepository || hasRepository);
-  return (
-    <nav className={styles.tabs} aria-label="Scan result sections">
-      {tabs.map((tab) => (
-        <button
-          key={tab.id}
-          type="button"
-          className={tab.id === "vulnerabilities" ? styles.tabActive : ""}
-          aria-current={tab.id === "vulnerabilities" ? "page" : undefined}
-        >
-          {tab.label}
-          {tab.id === "vulnerabilities" && <span className={styles.tabCount}>{findingsCount}</span>}
-        </button>
-      ))}
-    </nav>
-  );
-}
-
-export default function ScanResults({ result, lines, theme, reduceMotion, onNewScan }) {
+// The scan layout only renders this tab once a finished scan exists.
+export default function VulnerabilitiesTab() {
+  const { scan, lines } = useScan();
+  const { result } = scan;
+  const [theme] = useTheme();
+  const reduceMotion = Boolean(useReducedMotion());
   const findings = [...result.findings].sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
   const [selectedFindingId, setSelectedFindingId] = useState(findings[0]?.id);
   const [selectedNodeId, setSelectedNodeId] = useState(findings[0]?.nodeId || result.nodes[0]?.id);
@@ -100,29 +77,7 @@ export default function ScanResults({ result, lines, theme, reduceMotion, onNewS
     : { initial: { opacity: 0, y: 14 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.45, delay, ease: [0.22, 1, 0.36, 1] } });
 
   return (
-    <div className={styles.results}>
-      <motion.header className={styles.resultsHead} {...reveal(0)}>
-        <div>
-          <h1>{result.domain}</h1>
-          <p className={styles.meta}>
-            Scanned just now · {result.sample ? "Sample data" : "Public sources"}
-            {result.linkedRepository && <> · Linked to {result.linkedRepository.replace("github.com/", "")}</>}
-          </p>
-        </div>
-        <RippleButton className={styles.newScan} type="button" onClick={onNewScan}>+ New scan</RippleButton>
-      </motion.header>
-
-      <motion.div {...reveal(0.04)}>
-        <ResultTabs hasRepository={Boolean(result.linkedRepository)} findingsCount={findings.length} />
-      </motion.div>
-
-      {result.sample && (
-        <motion.p className={styles.sampleNotice} role="note" {...reveal(0.07)}>
-          <strong>Placeholder results</strong>
-          <span>The scanning backend isn&apos;t connected yet. Every value on this page is sample data for layout review, not real findings about {result.domain}.</span>
-        </motion.p>
-      )}
-
+    <>
       <motion.dl className={styles.stats} {...reveal(0.1)}>
         {result.stats.map((stat, index) => (
           <div key={stat.label}>
@@ -200,9 +155,9 @@ export default function ScanResults({ result, lines, theme, reduceMotion, onNewS
 
           <div className={styles.logDrawer}>
             <button type="button" className={styles.logBar} aria-expanded={logOpen} aria-controls="scan-log" onClick={() => setLogOpen((open) => !open)}>
-              <span className={styles.logLabel}><i aria-hidden="true" /> Live log</span>
+              <span className={styles.logLabel}><i aria-hidden="true" /> Scan logs</span>
               <span className={styles.logLast}>{lines.at(-1)?.text}</span>
-              <span className={styles.logChevron} aria-hidden="true">{logOpen ? "▼" : "▲"}</span>
+              <span className={styles.logChevron} aria-hidden="true">{logOpen ? "▲" : "▼"}</span>
             </button>
             {logOpen && (
               <ol id="scan-log" className={styles.logBody}>
@@ -269,6 +224,6 @@ export default function ScanResults({ result, lines, theme, reduceMotion, onNewS
           </motion.section>
         </div>
       </div>
-    </div>
+    </>
   );
 }

@@ -8,9 +8,9 @@
 
 .tabs { display: flex; gap: 2px; margin: 0 0 16px; padding: 4px; overflow-x: auto; border: 1px solid var(--line); border-radius: 9px; background: color-mix(in srgb, var(--surface) 70%, transparent); scrollbar-width: none; }
 .tabs::-webkit-scrollbar { display: none; }
-.tabs button { position: relative; flex: 0 0 auto; display: inline-flex; align-items: center; gap: 7px; min-height: 34px; padding: 0 13px; border: 1px solid transparent; border-radius: 6px; color: var(--muted); background: transparent; cursor: pointer; font-size: 12px; font-weight: 550; white-space: nowrap; transition: color .2s, background .2s, border-color .2s; }
-.tabs button:hover { color: var(--accent); background: color-mix(in srgb, var(--surface-strong) 70%, transparent); }
-.tabs button.tabActive { border-color: color-mix(in srgb, var(--accent) 25%, var(--line)); color: var(--ink); background: var(--surface-strong); box-shadow: 0 2px 8px color-mix(in srgb, var(--ink) 6%, transparent); }
+.tabs a { position: relative; text-decoration: none; flex: 0 0 auto; display: inline-flex; align-items: center; gap: 7px; min-height: 34px; padding: 0 13px; border: 1px solid transparent; border-radius: 6px; color: var(--muted); background: transparent; cursor: pointer; font-size: 12px; font-weight: 550; white-space: nowrap; transition: color .2s, background .2s, border-color .2s; }
+.tabs a:hover { color: var(--accent); background: color-mix(in srgb, var(--surface-strong) 70%, transparent); }
+.tabs a.tabActive { border-color: color-mix(in srgb, var(--accent) 25%, var(--line)); color: var(--ink); background: var(--surface-strong); box-shadow: 0 2px 8px color-mix(in srgb, var(--ink) 6%, transparent); }
 .tabCount { min-width: 18px; padding: 1px 6px; border-radius: 999px; color: var(--warm); background: color-mix(in srgb, var(--warm) 15%, transparent); font: 650 10px var(--font-geist-mono), monospace; text-align: center; }
 
 .sampleNotice { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: 0 0 16px; padding: 10px 13px; border: 1px dashed color-mix(in srgb, var(--warm) 60%, var(--line)); border-radius: 8px; color: var(--muted); background: color-mix(in srgb, var(--warm) 8%, transparent); font-size: 12px; line-height: 1.5; }

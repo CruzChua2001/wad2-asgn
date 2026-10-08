@@ -1,39 +1,31 @@
 "use client";
 
 import Link from "next/link";
-import { useSyncExternalStore } from "react";
-import AnimatedThemeToggler from "../components/animated-theme-toggler";
-import InteractiveSignalGrid from "../components/interactive-signal-grid";
-import RippleButton from "../components/ripple-button";
-import ScanTerminal from "../components/scan-terminal";
-import TextAnimate from "../components/text-animate";
-import TypingAnimation from "../components/typing-animation";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import AnimatedThemeToggler from "@/components/animated-theme-toggler";
+import { useAuth } from "@/components/auth-provider";
+import InteractiveSignalGrid from "./interactive-signal-grid";
+import RippleButton from "@/components/ripple-button";
+import ScanTerminal from "./scan-terminal";
+import TextAnimate from "./text-animate";
+import TypingAnimation from "./typing-animation";
+import { useTheme } from "@/lib/theme-store";
 
-const THEME_STORAGE_KEY = "cruz-control-theme-v2";
-
-function subscribeToTheme(callback) {
-  window.addEventListener("storage", callback);
-  window.addEventListener("cruz-control-theme-change", callback);
-  return () => {
-    window.removeEventListener("storage", callback);
-    window.removeEventListener("cruz-control-theme-change", callback);
-  };
-}
-
-function getThemeSnapshot() {
-  return window.localStorage.getItem(THEME_STORAGE_KEY) || "light";
-}
-
-function getServerThemeSnapshot() {
-  return "light";
-}
-
+// TEMPORARY LOGO
 function BrandMark() {
   return <span className="brand-mark" aria-hidden="true"><span /><span /><span /><span /></span>;
 }
 
 export default function Home() {
-  const theme = useSyncExternalStore(subscribeToTheme, getThemeSnapshot, getServerThemeSnapshot);
+  const [theme, updateTheme] = useTheme();
+  const { status, openAuth } = useAuth();
+  const router = useRouter();
+
+  // Signed-in users skip the landing page; signing out sends them back here as guests.
+  useEffect(() => {
+    if (status === "authenticated") router.replace("/overview");
+  }, [status, router]);
 
   function moveGridSpotlight(event) {
     const grid = event.currentTarget.querySelector(".interactive-signal-grid");
@@ -49,10 +41,7 @@ export default function Home() {
     grid?.style.setProperty("--pointer-y", "50%");
   }
 
-  function updateTheme(nextTheme) {
-    window.localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
-    window.dispatchEvent(new Event("cruz-control-theme-change"));
-  }
+  if (status !== "guest") return null;
 
   return (
     <main className="landing" data-theme={theme} onPointerMove={moveGridSpotlight} onPointerLeave={resetGridSpotlight}>
@@ -63,8 +52,8 @@ export default function Home() {
           <span>CRUZ CONTROL</span>
         </Link>
         <nav className="main-nav" aria-label="Main navigation">
-          <RippleButton className="nav-action nav-signup" href="/signup">Sign up</RippleButton>
-          <RippleButton className="nav-action nav-login" href="/login">Login</RippleButton>
+          <RippleButton className="button button-secondary nav-action" onClick={() => openAuth("signup")}>Sign up</RippleButton>
+          <RippleButton className="button button-primary nav-action" onClick={() => openAuth("login")}>Login</RippleButton>
           <AnimatedThemeToggler theme={theme} onThemeChange={updateTheme} />
         </nav>
       </header>
@@ -85,7 +74,7 @@ export default function Home() {
           </TypingAnimation>
           <div className="hero-actions">
             <RippleButton className="button button-primary" href="/overview">Explore as guest <span aria-hidden="true">↗</span></RippleButton>
-            <RippleButton className="button button-secondary" href="/signup">Create an account</RippleButton>
+            <RippleButton className="button button-secondary" onClick={() => openAuth("signup")}>Create an account</RippleButton>
           </div>
           <p className="hero-footnote"><span>PUBLIC DATA ONLY</span><i /> <span>NON-INTRUSIVE</span><i /> <span>BUILT FOR LEARNING</span></p>
         </div>

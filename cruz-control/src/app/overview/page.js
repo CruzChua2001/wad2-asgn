@@ -1,27 +1,25 @@
 "use client";
 
-import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import AnimatedThemeToggler from "../../components/animated-theme-toggler";
-import LiveScanTerminal from "../../components/live-scan-terminal";
-import ProfileMenu from "../../components/profile-menu";
-import RippleButton from "../../components/ripple-button";
-import { buildPlaceholderResult, buildPlaceholderScript, PLACEHOLDER_NOTICE } from "../../lib/placeholder-scan";
-import ScanResults from "./scan-results";
-import styles from "./overview.module.css";
+import { useMemo, useState } from "react";
+import { LuArrowRight, LuCheck, LuCodeXml, LuGlobe, LuLink, LuRadar, LuShieldCheck, LuSparkle } from "react-icons/lu";
+import LiveScanTerminal from "./live-scan-terminal";
+import RippleButton from "@/components/ripple-button";
+import { PLACEHOLDER_NOTICE } from "@/lib/placeholder-scan";
+import { useTheme } from "@/lib/theme-store";
+import { useScan } from "./scan-context";
+import styles from "@/styles/overview/overview.module.css";
 
-const THEME_STORAGE_KEY = "cruz-control-theme-v2";
 
-const ICON_PATHS = {
-  arrow: "M5 12h14m-5-5 5 5-5 5",
-  check: "m5 12 4 4L19 6",
-  code: "m8 9-3 3 3 3m8-6 3 3-3 3m-5-9-2 12",
-  globe: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0 0c2.2-2.45 3.33-5.45 3.4-9C15.33 8.45 14.2 5.45 12 3m0 18c-2.2-2.45-3.33-5.45-3.4-9C8.67 8.45 9.8 5.45 12 3M3.4 9h17.2M3.4 15h17.2",
-  link: "M10.5 13.5a4.25 4.25 0 0 0 6.01.01l2-2a4.25 4.25 0 0 0-6.01-6.01l-1.15 1.15m2.15 3.85a4.25 4.25 0 0 0-6.01-.01l-2 2a4.25 4.25 0 0 0 6.01 6.01l1.15-1.15",
-  radar: "M12 12 19.8 7.5M21 12a9 9 0 1 1-3.7-7.27M17.2 12a5.2 5.2 0 1 1-2.18-4.24M13.7 12a1.7 1.7 0 1 1-3.4 0 1.7 1.7 0 0 1 3.4 0Z",
-  shield: "M12 22s8-3.8 8-10V5l-8-3-8 3v7c0 6.2 8 10 8 10Zm-3.5-10 2.2 2.2 4.8-5",
-  spark: "m12 3 .8 3.2A4 4 0 0 0 15.8 9l3.2.8-3.2.8a4 4 0 0 0-3 2.8L12 17l-.8-3.6a4 4 0 0 0-3-2.8L5 9.8 8.2 9a4 4 0 0 0 3-2.8L12 3Z",
+const ICONS = {
+  arrow: LuArrowRight,
+  check: LuCheck,
+  code: LuCodeXml,
+  globe: LuGlobe,
+  link: LuLink,
+  radar: LuRadar,
+  shield: LuShieldCheck,
+  spark: LuSparkle,
 };
 
 const SAMPLE_TARGETS = {
@@ -42,33 +40,10 @@ const CHECKS = {
   ],
 };
 
-function subscribeToTheme(callback) {
-  window.addEventListener("storage", callback);
-  window.addEventListener("cruz-control-theme-change", callback);
-  return () => {
-    window.removeEventListener("storage", callback);
-    window.removeEventListener("cruz-control-theme-change", callback);
-  };
-}
-
-function getThemeSnapshot() {
-  return window.localStorage.getItem(THEME_STORAGE_KEY) || "light";
-}
-
-function getServerThemeSnapshot() {
-  return "light";
-}
-
-function BrandMark() {
-  return <span className="brand-mark" aria-hidden="true"><span /><span /><span /><span /></span>;
-}
-
+// Same call sites as before; the glyphs now come from react-icons' Lucide set.
 function Icon({ name, size = 20 }) {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round">
-      <path d={ICON_PATHS[name]} />
-    </svg>
-  );
+  const Glyph = ICONS[name];
+  return <Glyph aria-hidden="true" size={size} strokeWidth={1.65} />;
 }
 
 function normalizeTarget(value, mode) {
@@ -95,63 +70,20 @@ function normalizeTarget(value, mode) {
   return { valid: true, normalized: `github.com/${repository}`, message: `Ready to inspect the public repository ${repository}.` };
 }
 
-function formatLogTime(date) {
-  const pad = (value) => String(value).padStart(2, "0");
-  return `[${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}]`;
-}
-
-function RadarField() {
-  return (
-    <div className={styles.radarField} aria-hidden="true">
-      <div className={styles.radarHalo} />
-      <div className={`${styles.radarRing} ${styles.radarRingOuter}`} />
-      <div className={`${styles.radarRing} ${styles.radarRingMiddle}`} />
-      <div className={`${styles.radarRing} ${styles.radarRingInner}`} />
-      <div className={styles.radarAxisX} />
-      <div className={styles.radarAxisY} />
-      <div className={styles.radarSweep} />
-      <span className={`${styles.radarNode} ${styles.radarNodeOne}`} />
-      <span className={`${styles.radarNode} ${styles.radarNodeTwo}`} />
-      <span className={`${styles.radarNode} ${styles.radarNodeThree}`} />
-    </div>
-  );
-}
-
+// Scan form and live terminal. Finished scans move to /overview/scan (see scan-context.js).
 export default function OverviewPage() {
-  const theme = useSyncExternalStore(subscribeToTheme, getThemeSnapshot, getServerThemeSnapshot);
+  const [theme] = useTheme();
   const reduceMotion = useReducedMotion();
+  const { phase, scan, lines, startScan, resetScan } = useScan();
   const [mode, setMode] = useState("website");
   const [target, setTarget] = useState("");
   const [linkRepository, setLinkRepository] = useState(false);
   const [repository, setRepository] = useState("");
   const [submissionMessage, setSubmissionMessage] = useState("");
-  const [phase, setPhase] = useState("idle");
-  const [scan, setScan] = useState(null);
-  const [lines, setLines] = useState([]);
 
   const targetStatus = useMemo(() => normalizeTarget(target, mode), [target, mode]);
   const repositoryStatus = useMemo(() => normalizeTarget(repository, "repository"), [repository]);
   const canSubmit = targetStatus.valid && (!linkRepository || repositoryStatus.valid);
-
-  // Stream the PLACEHOLDER scan script into the terminal, then reveal results.
-  useEffect(() => {
-    if (phase !== "scanning" || !scan) return undefined;
-    const timers = [];
-    let elapsed = 0;
-    scan.script.forEach((step, index) => {
-      elapsed += scan.fast ? 70 : step.delay;
-      timers.push(setTimeout(() => {
-        setLines((current) => [...current, { ...step, id: index, time: formatLogTime(new Date()) }]);
-      }, elapsed));
-    });
-    timers.push(setTimeout(() => setPhase("results"), elapsed + (scan.fast ? 350 : 1200)));
-    return () => timers.forEach(clearTimeout);
-  }, [phase, scan]);
-
-  function updateTheme(nextTheme) {
-    window.localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
-    window.dispatchEvent(new Event("cruz-control-theme-change"));
-  }
 
   function changeMode(nextMode) {
     setMode(nextMode);
@@ -172,25 +104,16 @@ export default function OverviewPage() {
       setSubmissionMessage(`Target checked: ${targetStatus.normalized}. Repository scanning isn't available in this preview yet, so no request was sent.`);
       return;
     }
-    const domain = targetStatus.normalized;
-    const linkedRepository = linkRepository ? repositoryStatus.normalized : null;
     setSubmissionMessage("");
-    setLines([]);
-    setScan({
-      domain,
+    startScan(targetStatus.normalized, {
+      linkedRepository: linkRepository ? repositoryStatus.normalized : null,
       fast: Boolean(reduceMotion),
-      script: buildPlaceholderScript(domain, { linkedRepository }),
-      result: buildPlaceholderResult(domain, { linkedRepository }),
     });
-    setPhase("scanning");
     window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
   }
 
-  // Used by both "Cancel scan" and "+ New scan": return to the empty pre-scan form.
-  function resetScan() {
-    setPhase("idle");
-    setLines([]);
-    setScan(null);
+  function cancelScan() {
+    resetScan();
     window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
   }
 
@@ -202,27 +125,6 @@ export default function OverviewPage() {
   const entrance = reduceMotion ? {} : { initial: { opacity: 0, y: 18 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.48, ease: [0.22, 1, 0.36, 1] } };
 
   return (
-    <main className={styles.page} data-theme={theme}>
-      <RadarField />
-
-      <header className={styles.header}>
-        <Link className="brand" href="/" aria-label="Cruz Control home">
-          <BrandMark />
-          <span>CRUZ CONTROL</span>
-        </Link>
-        <nav className={styles.primaryNav} aria-label="Primary navigation">
-          <Link href="/overview" className={styles.navActive} aria-current="page">Overview</Link>
-          <Link href="/history">History</Link>
-          <Link href="/docs">Docs</Link>
-          <Link href="/learn">Learn</Link>
-        </nav>
-        <div className={styles.headerActions} aria-label="Account and display controls">
-          <AnimatedThemeToggler theme={theme} onThemeChange={updateTheme} />
-          <ProfileMenu />
-        </div>
-      </header>
-
-      <section className={`${styles.content} ${phase === "results" ? styles.contentWide : ""}`.trim()}>
         <AnimatePresence mode="wait" initial={false}>
         {phase === "idle" && (
         <motion.div key="idle" {...viewTransition}>
@@ -327,10 +229,11 @@ export default function OverviewPage() {
         </motion.div>
         )}
 
-        {phase === "scanning" && scan && (
+        {/* Also shown once finished, while moving to /overview/scan or after pressing Back from it. */}
+        {phase !== "idle" && scan && (
           <motion.div key="scanning" className={styles.scanning} {...viewTransition}>
             <div className={styles.scanningIntro}>
-              <h1>Scanning <em>{scan.domain}</em></h1>
+              <h1>{phase === "scanning" ? "Scanning" : "Scanned"} <em>{scan.domain}</em></h1>
             </div>
             <p className={styles.sampleBanner} role="note"><strong>Sample data</strong><span>{PLACEHOLDER_NOTICE}</span></p>
             <LiveScanTerminal lines={lines} theme={theme} domain={scan.domain} sample />
@@ -341,27 +244,17 @@ export default function OverviewPage() {
               </div>
             </div>
             <div className={styles.scanActions}>
-              <button type="button" className={styles.ghostButton} onClick={resetScan}>Cancel scan</button>
+              {phase === "scanning" ? (
+                <button type="button" className={styles.ghostButton} onClick={cancelScan}>Cancel scan</button>
+              ) : (
+                <>
+                  <button type="button" className={styles.ghostButton} onClick={cancelScan}>+ New scan</button>
+                  <RippleButton className={styles.scanButton} href="/overview/scan">View results <Icon name="arrow" size={17} /></RippleButton>
+                </>
+              )}
             </div>
           </motion.div>
         )}
-
-        {phase === "results" && scan && (
-          <motion.div key="results" {...viewTransition}>
-            <ScanResults result={scan.result} lines={lines} theme={theme} reduceMotion={Boolean(reduceMotion)} onNewScan={resetScan} />
-          </motion.div>
-        )}
         </AnimatePresence>
-      </section>
-
-      {/* Placeholder for the AI assistant. No behaviour yet; hand off to the AI team. */}
-      <button type="button" className={styles.askCruz} aria-label="Ask Cruz, AI assistant (coming soon)" title="AI assistant coming soon">
-        <span className={styles.askCruzPulse} aria-hidden="true" />
-        <svg aria-hidden="true" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 3v3M7 9h10a3 3 0 0 1 3 3v4a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-4a3 3 0 0 1 3-3Zm2 4.5h.01M15 13.5h.01M9.5 16.5h5" />
-        </svg>
-        <span>ASK CRUZ</span>
-      </button>
-    </main>
   );
 }

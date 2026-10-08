@@ -53,7 +53,7 @@
   stroke: var(--muted);
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-width: 1.5;
+  stroke-width: 3; /* 24-unit Lucide viewBox: same weight as the old 1.5 on a 12-unit box */
   transition: transform .2s ease;
 }
 
@@ -117,8 +117,8 @@
 .website small { flex: 0 0 auto; padding: 3px 6px; border: 1px solid var(--line); color: var(--muted); background: var(--surface); font: 600 8px var(--font-geist-mono), monospace; text-transform: uppercase; }
 .signOut { width: 100%; min-height: 45px; display: flex; align-items: center; gap: 9px; padding: 0 15px; border: 0; color: var(--muted); background: transparent; cursor: pointer; font-size: 10px; text-align: left; transition: color .2s ease, background-color .2s ease; }
 .signOut:hover { color: var(--warm); background: color-mix(in srgb, var(--warm) 8%, transparent); }
-.signOut svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.5; }
-.loginLink { color: var(--muted); font-size: 12px; text-decoration: none; transition: color .2s ease; }
+.signOut svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
+.loginLink { padding: 0; border: 0; color: var(--muted); background: none; font-size: 12px; cursor: pointer; transition: color .2s ease; }
 .loginLink:hover { color: var(--accent); }
 
 @keyframes profileMenuIn {

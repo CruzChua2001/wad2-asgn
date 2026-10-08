@@ -1,4 +1,4 @@
-import { AnimatedSpan, Terminal, TypingAnimation } from "./terminal";
+import { AnimatedSpan, Terminal, TypingAnimation } from "@/components/terminal";
 
 export default function ScanTerminal({ theme }) {
   return (
