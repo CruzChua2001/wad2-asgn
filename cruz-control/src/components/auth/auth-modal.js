@@ -14,7 +14,7 @@ const TABS = [
   { value: "signup", label: "Sign Up" },
 ];
 
-function TextField({ id, label, icon: FieldIcon, ...inputProps }) {
+const TextField = ({ id, label, icon: FieldIcon, ...inputProps }) => {
   return (
     <div className="grid gap-2">
       <label htmlFor={id} className="text-[14px] font-medium leading-none">{label}</label>
@@ -26,7 +26,7 @@ function TextField({ id, label, icon: FieldIcon, ...inputProps }) {
   );
 }
 
-function PasswordField({ id, autoComplete, minLength, visible, onToggle, hint }) {
+const PasswordField = ({ id, autoComplete, minLength, visible, onToggle, hint }) => {
   return (
     <div className="grid gap-2">
       <label htmlFor={id} className="text-[14px] font-medium leading-none">Password</label>
@@ -57,15 +57,14 @@ function PasswordField({ id, autoComplete, minLength, visible, onToggle, hint })
   );
 }
 
-export default function AuthModal({ initialTab, onClose }) {
-  const { signIn, signUp } = useAuth();
+const AuthModal = ({ initialTab, onClose }) => {
+  const { signIn, signUp, signInWithProvider } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const dialogRef = useRef(null);
   const [tab, setTab] = useState(initialTab);
   const [showLoginPw, setShowLoginPw] = useState(false);
   const [showSignupPw, setShowSignupPw] = useState(false);
-  const [remember, setRemember] = useState(false);
   const [pending, setPending] = useState(null);
   const [resetNotice, setResetNotice] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -78,7 +77,7 @@ export default function AuthModal({ initialTab, onClose }) {
     document.body.style.overflow = "hidden";
     dialog?.querySelector('[role="tabpanel"][data-state="active"] input')?.focus();
 
-    function handleKeyDown(event) {
+    const handleKeyDown = event => {
       if (event.key === "Escape") {
         event.preventDefault();
         onClose();
@@ -106,7 +105,7 @@ export default function AuthModal({ initialTab, onClose }) {
     };
   }, [onClose]);
 
-  async function complete(signInMethod, signInFunc) {
+  const complete = async (signInMethod, signInFunc) => {
     setPending(signInMethod);
     setErrorMsg("");
 
@@ -121,28 +120,36 @@ export default function AuthModal({ initialTab, onClose }) {
     }
   }
 
-  function handleLogin(event) {
+  const handleLogin = event => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     complete("login", () => signIn({ email: String(form.get("email")), password: String(form.get("password")) }));
   }
 
-  function handleSignup(event) {
+  const handleSignup = event => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     complete("signup", () => signUp({ name: String(form.get("name")), email: String(form.get("email")), password: String(form.get("password")) }));
   }
 
-  function handleProvider(provider) {
-    complete(provider, () => signIn({ provider }));
+  const handleProvider = async provider => {
+    setPending(provider);
+    setErrorMsg("");
+    try {
+      await signInWithProvider(provider);
+    } catch (e) {
+      setErrorMsg(e.message);
+      setPending(null);
+    }
   }
 
-  // Tab pattern: arrow keys move between the two tabs (roving tabindex).
-  function handleTabKeyDown(event) {
+  // Tab between "Log In" and "Sign Up"
+  const handleTabKeyDown = event => {
     if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
     event.preventDefault();
+
     const next = tab === "login" ? "signup" : "login";
-    setTab(next);
+    setTab(tab === "login" ? "signup" : "login");
     document.getElementById(`auth-tab-${next}`)?.focus();
   }
 
@@ -160,7 +167,7 @@ export default function AuthModal({ initialTab, onClose }) {
     };
   }
 
-  function socialSection() {
+  const socialSection = _ => {
     return (
       <div className="grid gap-5 mt-5">
         <div className="relative h-px bg-line">
@@ -176,6 +183,53 @@ export default function AuthModal({ initialTab, onClose }) {
         </div>
       </div>
     );
+  }
+
+  const signInForm = _ => {
+    return (
+      <form className="grid gap-5" onSubmit={handleLogin}>
+        <TextField id="login-email" label="Email" icon={LuMail} name="email" type="email" autoComplete="email" placeholder="you@example.com" />
+        <PasswordField id="login-password" autoComplete="current-password" visible={showLoginPw} onToggle={() => setShowLoginPw((value) => !value)} />
+
+        <button type="submit" className="auth-primaryButton" disabled={busy}>
+          {pending === "login" ? "Signing in…" : "Sign in"}
+        </button>
+
+        {resetNotice && (
+          <p role="status" className="-mt-2 m-0 text-muted text-[12px]">
+            Password reset isn&apos;t available in this preview yet.
+          </p>
+        )}
+
+        <div className="flex justify-center">
+          <button type="button" className="p-0 text-muted bg-none text-[14px] cursor-pointer transition-colors duration-200 ease-[ease] underline hover:text-ink" onClick={() => setResetNotice(true)}>
+            Forgot password?
+          </button>
+        </div>
+
+      </form>
+    )
+  }
+
+  const signUpForm = _ => {
+    return (
+      <form className="grid gap-5" onSubmit={handleSignup}>
+        <TextField id="signup-name" label="Full name" icon={LuUser} name="name" type="text" autoComplete="name" placeholder="Your name" />
+        <TextField id="signup-email" label="Email" icon={LuMail} name="email" type="email" autoComplete="email" placeholder="you@example.com" />
+        <PasswordField
+          id="signup-password"
+          autoComplete="new-password"
+          minLength={8}
+          visible={showSignupPw}
+          onToggle={() => setShowSignupPw((value) => !value)}
+          hint="At least 8 characters."
+        />
+
+        <button type="submit" className="auth-primaryButton" disabled={busy}>
+          {pending === "signup" ? "Creating account…" : "Create account"}
+        </button>
+      </form>
+    )
   }
 
   return (
@@ -234,49 +288,12 @@ export default function AuthModal({ initialTab, onClose }) {
 
             <div className="grid mt-6">
               <div {...panelProps("login")}>
-                <form className="grid gap-5" onSubmit={handleLogin}>
-                  <TextField id="login-email" label="Email" icon={LuMail} name="email" type="email" autoComplete="email" placeholder="you@example.com" />
-                  <PasswordField id="login-password" autoComplete="current-password" visible={showLoginPw} onToggle={() => setShowLoginPw((value) => !value)} />
-
-                  <div className="flex align-items-center justify-between gap-3">
-                    <label className="inline-flex align-items-center gap-2 text-muted text-[14px] font-medium cursor-pointer">
-                      <input type="checkbox" className="w-4 h-4 m-0 accent-accent cursor-pointer" checked={remember} onChange={(event) => setRemember(event.target.checked)} />
-                      Remember me
-                    </label>
-                    <button type="button" className="p-0 text-muted bg-none text-[14px] cursor-pointer transition-colors duration-200 ease-[ease] underline hover:text-ink" onClick={() => setResetNotice(true)}>
-                      Forgot password?
-                    </button>
-                  </div>
-                  {resetNotice && (
-                    <p role="status" className="-mt-2 m-0 text-muted text-[12px]">
-                      Password reset isn&apos;t available in this preview yet.
-                    </p>
-                  )}
-
-                  <button type="submit" className="auth-primaryButton" disabled={busy}>
-                    {pending === "login" ? "Signing in…" : "Sign in"}
-                  </button>
-                </form>
+                {signInForm()}
                 {socialSection()}
               </div>
 
               <div {...panelProps("signup")}>
-                <form className="grid gap-[20px]" onSubmit={handleSignup}>
-                  <TextField id="signup-name" label="Full name" icon={LuUser} name="name" type="text" autoComplete="name" placeholder="Your name" />
-                  <TextField id="signup-email" label="Email" icon={LuMail} name="email" type="email" autoComplete="email" placeholder="you@example.com" />
-                  <PasswordField
-                    id="signup-password"
-                    autoComplete="new-password"
-                    minLength={8}
-                    visible={showSignupPw}
-                    onToggle={() => setShowSignupPw((value) => !value)}
-                    hint="At least 8 characters."
-                  />
-
-                  <button type="submit" className="auth-primaryButton" disabled={busy}>
-                    {pending === "signup" ? "Creating account…" : "Create account"}
-                  </button>
-                </form>
+                {signUpForm()}
                 {socialSection()}
               </div>
             </div>
@@ -286,3 +303,6 @@ export default function AuthModal({ initialTab, onClose }) {
     </div>
   );
 }
+
+export default AuthModal;
+

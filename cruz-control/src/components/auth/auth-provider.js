@@ -36,7 +36,7 @@ const friendlyErrorMsg = error => {
   return new Error(message[error.code] ?? "Something went wrong. Please try again.");
 }
 
-export function AuthProvider({ children }) {
+export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [status, setStatus] = useState("loading");
   const [authTab, setAuthTab] = useState(null);
@@ -50,13 +50,13 @@ export function AuthProvider({ children }) {
     return () => data.subscription.unsubscribe();
   }, [])
 
-  async function signIn({ email, password }) {
+  const signIn = async ({ email, password }) => {
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw friendlyErrorMsg(error);
   }
 
-  async function signUp({ name, email, password }) {
+  const signUp = async ({ name, email, password }) => {
     const supabase = createClient();
     const { error } = await supabase.auth.signUp({
       email,
@@ -66,20 +66,29 @@ export function AuthProvider({ children }) {
     if (error) throw friendlyErrorMsg(error);
   }
 
-  async function signOut() {
+  const signOut = async _ => {
     const supabase = createClient();
     await supabase.auth.signOut();
   }
 
-  function openAuth(tab = "login") {
+  const signInWithProvider = async provider => {
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: { redirectTo: `${window.location.origin}/overview` }
+    })
+    if (error) throw friendlyErrorMsg(error);
+  }
+
+  const openAuth = (tab = "login") => {
     setAuthTab(tab);
   }
 
-  function closeAuth() {
+  const closeAuth = _ => {
     setAuthTab(null);
   }
 
-  const value = { status, user, signIn, signUp, signOut, openAuth };
+  const value = { status, user, signIn, signUp, signOut, openAuth, signInWithProvider };
 
   return (
     <AuthContext value={value}>
@@ -89,7 +98,7 @@ export function AuthProvider({ children }) {
   );
 }
 
-export function useAuth() {
+export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) throw new Error("useAuth must be used inside <AuthProvider>.");
   return context;
