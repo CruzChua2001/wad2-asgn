@@ -6,8 +6,8 @@ import { LuBot } from "react-icons/lu";
 import AnimatedThemeToggler from "@/components/animated-theme-toggler";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useTheme } from "@/lib/theme-store";
-import ProfileMenu from "./profile-menu";
-import { ScanProvider } from "./scan-context";
+import ProfileMenu from "./overview/profile-menu";
+import { ScanProvider } from "./overview/scan-context";
 import styles from "@/styles/overview/overview.module.css";
 
 function BrandMark() {
@@ -37,6 +37,7 @@ export default function OverviewLayout({ children }) {
   const { status } = useAuth();
   const pathname = usePathname();
   const showingResults = pathname.startsWith("/overview/scan");
+  const navProps = href => pathname.startsWith(href) ? { className: styles.navActive, "aria-current": "page" } : {};
 
   return (
     <ScanProvider>
@@ -50,10 +51,11 @@ export default function OverviewLayout({ children }) {
             <span>CRUZ CONTROL</span>
           </Link>
           <nav className={styles.primaryNav} aria-label="Primary navigation">
-            <Link href="/overview" className={styles.navActive} aria-current="page">Overview</Link>
-            {status === "authenticated" && <Link href="/history">History</Link>}
-            <Link href="/docs">Docs</Link>
-            <Link href="/learn">Learn</Link>
+            {status === "authenticated" && <Link href="/project" {...navProps("/project")}>Project</Link>}
+            <Link href="/overview" aria-current="page" {...navProps("/overview")}>Overview</Link>
+            {status === "authenticated" && <Link href="/history" {...navProps("/history")}>History</Link>}
+            <Link href="/docs" {...navProps("/docs")}>Docs</Link>
+            <Link href="/learn" {...navProps("/learn")}>Learn</Link>
           </nav>
           <div className={styles.headerActions} aria-label="Account and display controls">
             <AnimatedThemeToggler theme={theme} onThemeChange={updateTheme} />
