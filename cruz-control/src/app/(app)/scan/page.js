@@ -5,7 +5,6 @@ import { useMemo, useState } from "react";
 import { LuArrowRight, LuCheck, LuCodeXml, LuGlobe, LuLink, LuRadar, LuShieldCheck, LuSparkle } from "react-icons/lu";
 import LiveScanTerminal from "./live-scan-terminal";
 import RippleButton from "@/components/ripple-button";
-import { PLACEHOLDER_NOTICE } from "@/lib/placeholder-scan";
 import { useTheme } from "@/lib/theme-store";
 import { useScan } from "./scan-context";
 import styles from "@/styles/overview/overview.module.css";
@@ -73,7 +72,7 @@ function normalizeTarget(value, mode) {
 export default function OverviewPage() {
   const [theme] = useTheme();
   const reduceMotion = useReducedMotion();
-  const { phase, scan, lines, startScan, resetScan } = useScan();
+  const { phase, scan, lines, startScan, resetScan, progress } = useScan();
   const [mode, setMode] = useState("website");
   const [target, setTarget] = useState("");
   const [linkRepository, setLinkRepository] = useState(false);
@@ -119,7 +118,6 @@ export default function OverviewPage() {
   const viewTransition = reduceMotion
     ? { initial: false, animate: { opacity: 1 }, exit: { opacity: 0 }, transition: { duration: 0 } }
     : { initial: { opacity: 0, y: 16 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: -12 }, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } };
-  const progress = scan ? Math.round((lines.length / scan.script.length) * 100) : 0;
 
   const entrance = reduceMotion ? {} : { initial: { opacity: 0, y: 18 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.48, ease: [0.22, 1, 0.36, 1] } };
 
@@ -234,8 +232,8 @@ export default function OverviewPage() {
             <div className={styles.scanningIntro}>
               <h1>{phase === "scanning" ? "Scanning" : "Scanned"} <em>{scan.domain}</em></h1>
             </div>
-            <p className={styles.sampleBanner} role="note"><strong>Sample data</strong><span>{PLACEHOLDER_NOTICE}</span></p>
-            <LiveScanTerminal lines={lines} theme={theme} domain={scan.domain} sample />
+
+            <LiveScanTerminal lines={lines} theme={theme} domain={scan.domain} sample={false} />
             <div className={styles.scanProgress}>
               <div className={styles.progressMeta}><span>Checks in progress</span><strong>{progress}%</strong></div>
               <div className={styles.progressTrack} role="progressbar" aria-label="Scan progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>
@@ -248,7 +246,7 @@ export default function OverviewPage() {
               ) : (
                 <>
                   <button type="button" className={styles.ghostButton} onClick={cancelScan}>+ New scan</button>
-                  <RippleButton className={styles.scanButton} href="/scan/results">View results <Icon name="arrow" size={17} /></RippleButton>
+                  <RippleButton className={styles.scanButton} href={`/scan/${scan.id}`}>View results <Icon name="arrow" size={17} /></RippleButton>
                 </>
               )}
             </div>

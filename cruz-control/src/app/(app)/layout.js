@@ -6,14 +6,19 @@ import { LuBot } from "react-icons/lu";
 import AnimatedThemeToggler from "@/components/animated-theme-toggler";
 import { useTheme } from "@/lib/theme-store";
 import ProfileMenu from "./scan/profile-menu";
-import { ScanProvider } from "./scan/scan-context";
+import { ScanProvider, useScan } from "./scan/scan-context";
 import styles from "@/styles/overview/overview.module.css";
 
-function BrandMark() {
+const BrandMark = _ => {
   return <span className="brand-mark" aria-hidden="true"><span /><span /><span /><span /></span>;
 }
 
-function RadarField() {
+const ScanLink = ({children, ...props}) => {
+  const { resetScan } = useScan();
+  return <Link href="/scan" onClick={resetScan} {...props}>{children}</Link>;
+}
+
+const RadarField = _ => {
   return (
     <div className={styles.radarField} aria-hidden="true">
       <div className={styles.radarHalo} />
@@ -42,12 +47,12 @@ export default function OverviewLayout({ children }) {
         <RadarField />
 
         <header className={styles.header}>
-          <Link className="brand" href="/scan" aria-label="Cruz Control home">
+           <ScanLink className="brand" aria-label="Cruz Control home">
             <BrandMark />
             <span>CRUZCONTROL</span>
-          </Link>
+          </ScanLink>
           <nav className={styles.primaryNav} aria-label="Primary navigation">
-            <Link href="/scan" {...navProps("/scan")}>Scan</Link>
+            <ScanLink {...navProps("/scan")}>Scan</ScanLink>
             <Link href="/project" {...navProps("/project")}>Projects</Link>
             <Link href="/learn" {...navProps("/learn")}>Learn</Link>
           </nav>
