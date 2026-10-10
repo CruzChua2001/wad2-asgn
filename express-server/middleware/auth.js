@@ -7,7 +7,18 @@ const signedInUser = async (req, res, next) => {
         return res.status(401).json({ error: "Please log in first." });
     }
     req.user = data.user;
+
     next();
 };
 
-module.exports = { signedInUser };
+const optionalUser = async (req, res, next) => {
+    const token = req.headers.authorization?.replace("Bearer ", "");
+    if (token) {
+        const { data } = await supabase.auth.getUser(token);
+        req.user = data.user;
+    }
+
+    next();
+}
+
+module.exports = { signedInUser, optionalUser };
