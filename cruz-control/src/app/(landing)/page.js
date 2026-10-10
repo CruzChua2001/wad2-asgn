@@ -24,7 +24,7 @@ export default function Home() {
 
   // Signed-in users skip the landing page; signing out sends them back here as guests.
   useEffect(() => {
-    if (status === "authenticated") router.replace("/overview");
+    if (status === "authenticated") router.replace("/scan");
   }, [status, router]);
 
   function moveGridSpotlight(event) {
@@ -49,7 +49,7 @@ export default function Home() {
       <header className="site-header">
         <Link className="brand" href="/" aria-label="Cruz Control home">
           <BrandMark />
-          <span>CRUZ CONTROL</span>
+          <span>CRUZCONTROL</span>
         </Link>
         <nav className="main-nav" aria-label="Main navigation">
           <RippleButton className="button button-secondary nav-action" onClick={() => openAuth("signup")}>Sign up</RippleButton>
@@ -73,7 +73,7 @@ export default function Home() {
             Scan any website or public GitHub repository for security issues, then get clear explanations and practical fixes before or after deployment.
           </TypingAnimation>
           <div className="hero-actions">
-            <RippleButton className="button button-primary" href="/overview">Explore as guest <span aria-hidden="true">↗</span></RippleButton>
+            <RippleButton className="button button-primary" href="/scan">Explore as guest <span aria-hidden="true">↗</span></RippleButton>
             <RippleButton className="button button-secondary" onClick={() => openAuth("signup")}>Create an account</RippleButton>
           </div>
           <p className="hero-footnote"><span>PUBLIC DATA ONLY</span><i /> <span>NON-INTRUSIVE</span><i /> <span>BUILT FOR LEARNING</span></p>

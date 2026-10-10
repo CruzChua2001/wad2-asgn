@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { buildPlaceholderResult, buildPlaceholderScript } from "@/lib/placeholder-scan";
 
-// The current scan lives in the /overview layout, so it survives switching between result tabs.
 const ScanContext = createContext(null);
 
 function formatLogTime(date) {
@@ -31,7 +30,7 @@ export function ScanProvider({ children }) {
     });
     timers.push(setTimeout(() => {
       setPhase("results");
-      router.push("/overview/scan");
+      router.push("/scan/results");
     }, elapsed + (scan.fast ? 350 : 1200)));
     return () => timers.forEach(clearTimeout);
   }, [phase, scan, router]);
@@ -64,6 +63,6 @@ export function ScanProvider({ children }) {
 
 export function useScan() {
   const context = useContext(ScanContext);
-  if (!context) throw new Error("useScan must be used inside the /overview layout.");
+  if (!context) throw new Error("useScan must be used inside the /scan layout.");
   return context;
 }

@@ -70,7 +70,6 @@ function normalizeTarget(value, mode) {
   return { valid: true, normalized: `github.com/${repository}`, message: `Ready to inspect the public repository ${repository}.` };
 }
 
-// Scan form and live terminal. Finished scans move to /overview/scan (see scan-context.js).
 export default function OverviewPage() {
   const [theme] = useTheme();
   const reduceMotion = useReducedMotion();
@@ -249,7 +248,7 @@ export default function OverviewPage() {
               ) : (
                 <>
                   <button type="button" className={styles.ghostButton} onClick={cancelScan}>+ New scan</button>
-                  <RippleButton className={styles.scanButton} href="/overview/scan">View results <Icon name="arrow" size={17} /></RippleButton>
+                  <RippleButton className={styles.scanButton} href="/scan/results">View results <Icon name="arrow" size={17} /></RippleButton>
                 </>
               )}
             </div>

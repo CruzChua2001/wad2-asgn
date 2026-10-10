@@ -4,10 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LuBot } from "react-icons/lu";
 import AnimatedThemeToggler from "@/components/animated-theme-toggler";
-import { useAuth } from "@/components/auth/auth-provider";
 import { useTheme } from "@/lib/theme-store";
-import ProfileMenu from "./profile-menu";
-import { ScanProvider } from "./scan-context";
+import ProfileMenu from "./scan/profile-menu";
+import { ScanProvider } from "./scan/scan-context";
 import styles from "@/styles/overview/overview.module.css";
 
 function BrandMark() {
@@ -31,12 +30,11 @@ function RadarField() {
   );
 }
 
-// Shared shell for /overview and every /overview/scan/* tab. It stays mounted while those pages change.
 export default function OverviewLayout({ children }) {
   const [theme, updateTheme] = useTheme();
-  const { status } = useAuth();
   const pathname = usePathname();
-  const showingResults = pathname.startsWith("/overview/scan");
+  const showingResults = pathname.startsWith("/scan/results");
+  const navProps = href => pathname.startsWith(href) ? { className: styles.navActive, "aria-current": "page" } : {};
 
   return (
     <ScanProvider>
@@ -44,16 +42,14 @@ export default function OverviewLayout({ children }) {
         <RadarField />
 
         <header className={styles.header}>
-          {/* Signed-in users treat /overview as home; guests go back to the landing page. */}
-          <Link className="brand" href={status === "authenticated" ? "/overview" : "/"} aria-label="Cruz Control home">
+          <Link className="brand" href="/scan" aria-label="Cruz Control home">
             <BrandMark />
-            <span>CRUZ CONTROL</span>
+            <span>CRUZCONTROL</span>
           </Link>
           <nav className={styles.primaryNav} aria-label="Primary navigation">
-            <Link href="/overview" className={styles.navActive} aria-current="page">Overview</Link>
-            {status === "authenticated" && <Link href="/history">History</Link>}
-            <Link href="/docs">Docs</Link>
-            <Link href="/learn">Learn</Link>
+            <Link href="/scan" {...navProps("/scan")}>Scan</Link>
+            <Link href="/project" {...navProps("/project")}>Projects</Link>
+            <Link href="/learn" {...navProps("/learn")}>Learn</Link>
           </nav>
           <div className={styles.headerActions} aria-label="Account and display controls">
             <AnimatedThemeToggler theme={theme} onThemeChange={updateTheme} />

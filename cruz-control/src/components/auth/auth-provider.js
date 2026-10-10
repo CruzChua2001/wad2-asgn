@@ -75,7 +75,7 @@ export const AuthProvider = ({ children }) => {
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: `${window.location.origin}/overview` }
+      options: { redirectTo: `${window.location.origin}/scan` }
     })
     if (error) throw friendlyErrorMsg(error);
   }
