@@ -3,9 +3,12 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "motion/react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+
 import RippleButton from "@/components/ripple-button";
 import { useScan } from "../scan-context";
+import { useAuth } from "@/components/auth/auth-provider";
+import api from "@/lib/api";
 import styles from "@/styles/overview/scan-results.module.css";
 
 // Secondary navbar for completed scan. Each tab is its own page under /overview/scan.
@@ -43,6 +46,9 @@ export default function ScanResultsLayout({ children }) {
   const reduceMotion = useReducedMotion();
   const { phase, scan, resetScan } = useScan();
   const ready = phase === "results" && scan;
+  const { status, openAuth } = useAuth();
+  const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   // The scan only lives in memory for now, so a refresh or direct link has nothing to show.
   useEffect(() => {
@@ -57,6 +63,24 @@ export default function ScanResultsLayout({ children }) {
     resetScan();
   }
 
+  const saveToProject = async _ => {
+    if (status !== "authenticated") return openAuth("login");
+    setSaveError("");
+
+    try {
+      let data = {
+        name: result.domain,
+        domain: result.domain,
+        githubRepo: result.linkedRepository?.replace("github.com/", "")
+      }
+
+      await api.post("/api/project", data);
+      setSaved(true);
+    } catch (e) {
+      setSaveError(e.response?.data?.error ?? "Could not save to project.");
+    }
+  } 
+
   const reveal = (delay = 0) => (reduceMotion
     ? {}
     : { initial: { opacity: 0, y: 14 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.45, delay, ease: [0.22, 1, 0.36, 1] } });
@@ -70,8 +94,16 @@ export default function ScanResultsLayout({ children }) {
             Scanned just now · {result.sample ? "Sample data" : "Public sources"}
             {result.linkedRepository && <> · Linked to {result.linkedRepository.replace("github.com/", "")}</>}
           </p>
+
+          {saveError && <p role="alert" className="text-critical text-sm">{saveError}</p>}
         </div>
-        <RippleButton className={styles.newScan} type="button" onClick={newScan}>+ New scan</RippleButton>
+
+        <div className="flex items-center gap-2">
+          {saved 
+            ? <Link href="/project" className={styles.newScan}>Saved · View project</Link>
+            : <button className={styles.newScan} onClick={saveToProject}>Save to project</button>}
+          <RippleButton className={styles.newScan} type="button" onClick={newScan}>+ New scan</RippleButton>
+        </div>
       </motion.header>
 
       <motion.div {...reveal(0.04)}>
