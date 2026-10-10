@@ -9,7 +9,7 @@ import { useAuth } from "@/components/auth/auth-provider";
 import LoginRequired from "@/components/auth/login-required";
 import ProjectModal from "./project-modal";
 import MemberModal from "./member-modal";
-import { useScan } from "../overview/scan-context";
+import { useScan } from "../scan/scan-context";
 
 const ProjectPage = _ => {
     const { status, user } = useAuth();
@@ -68,7 +68,7 @@ const ProjectPage = _ => {
     const scanProject = project => {
         if (!project.domain) return;
         startScan(project.domain, { linkedRepository: project.github_repo ? `github.com/${project.github_repo}` : null, fast: false });
-        router.push("/overview");
+        router.push("/scan");
     };
 
     const createProject = async event => {

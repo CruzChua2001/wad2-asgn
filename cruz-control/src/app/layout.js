@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "Cruz Control — Public Exposure, Made Clear",
+  title: "CruzControl — Public Exposure, Made Clear",
   description:
     "Understand the public security signals around your website and projects, with clear findings and practical next steps.",
   icons: {

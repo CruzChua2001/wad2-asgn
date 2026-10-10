@@ -11,14 +11,13 @@ import { useAuth } from "@/components/auth/auth-provider";
 import api from "@/lib/api";
 import styles from "@/styles/overview/scan-results.module.css";
 
-// Secondary navbar for completed scan. Each tab is its own page under /overview/scan.
 const RESULT_TABS = [
-  { href: "/overview/scan", label: "Vulnerabilities", showsCount: true },
-  { href: "/overview/scan/repository", label: "Repository", requiresRepository: true },
-  { href: "/overview/scan/fix-guide", label: "Fix Guide" },
-  { href: "/overview/scan/checklist", label: "Checklist" },
-  { href: "/overview/scan/report-card", label: "Report Card" },
-  { href: "/overview/scan/compare", label: "Compare" },
+  { href: "/scan/results", label: "Vulnerabilities", showsCount: true },
+  { href: "/scan/results/repository", label: "Repository", requiresRepository: true },
+  { href: "/scan/results/fix-guide", label: "Fix Guide" },
+  { href: "/scan/results/checklist", label: "Checklist" },
+  { href: "/scan/results/report-card", label: "Report Card" },
+  { href: "/scan/results/compare", label: "Compare" },
 ];
 
 function ResultTabs({ hasRepository, findingsCount }) {
@@ -52,14 +51,14 @@ export default function ScanResultsLayout({ children }) {
 
   // The scan only lives in memory for now, so a refresh or direct link has nothing to show.
   useEffect(() => {
-    if (!ready) router.replace("/overview");
+    if (!ready) router.replace("/scan");
   }, [ready, router]);
 
   if (!ready) return null;
   const { result } = scan;
 
   function newScan() {
-    router.push("/overview");
+    router.push("/scan");
     resetScan();
   }
 

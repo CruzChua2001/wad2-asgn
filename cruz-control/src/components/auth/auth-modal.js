@@ -113,7 +113,7 @@ const AuthModal = ({ initialTab, onClose }) => {
       await signInFunc();
       onClose();
 
-      if (pathname === "/") router.replace("/overview");
+      if (pathname === "/") router.replace("/scan");
     } catch (e) {
       setErrorMsg(e.message);
       setPending(null)
