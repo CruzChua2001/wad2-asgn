@@ -19,11 +19,15 @@ const TARGETS = [
     { key: "githubRepo", label: "GitHub repository", icon: LuCodeXml, placeholder: "github.com/repo" },
 ];
 
-const ProjectModal = ({ modalRef, form, updateField, onSubmit, error, loading }) => {
+const ProjectModal = ({ editing, modalRef, form, updateField, onSubmit, error, loading }) => {
     const [shown, setShown] = useState({ domain: true, githubRepo: false });
 
+    const isShown = key => {
+        return shown[key] || Boolean(form[key]);
+    }
+
     const toggleTarget = key => {
-        const next = { ...shown, [key]: !shown[key] };
+        const next = { domain: isShown("domain"), githubRepo: isShown("githubRepo"), [key]: !isShown(key) };
         if (!next.domain && !next.githubRepo) return; 
         setShown(next);
         if (!next[key]) updateField({ target: { name: key, value: "" } });
@@ -34,8 +38,12 @@ const ProjectModal = ({ modalRef, form, updateField, onSubmit, error, loading })
             <form onSubmit={onSubmit} className="grid gap-5 p-8">
                 <div className="flex items-start justify-between gap-4">
                     <div className="grid gap-1">
-                        <span className="font-mono text-[11px] tracking-[0.18em] text-muted">NEW PROJECT</span>
-                        <h2 className="text-2xl font-semibold">Track a site or repo</h2>
+                        <span className="font-mono text-[11px] tracking-[0.18em] text-muted">
+                            {editing ? "EDIT PROJECT" : "NEW PROJECT"}
+                        </span>
+                        <h2 className="text-2xl font-semibold">
+                            {editing ? "Update your project" : "Track a site or repo"}
+                        </h2>
                         <p className="text-sm text-muted">Add a domain, a GitHub repository, or both. We&apos;ll scan it straight away.</p>
                     </div>
                     <button type="button" aria-label="Close" onClick={() => modalRef.current.close()} className="p-2 rounded-lg text-muted hover:text-ink hover:bg-surface-soft">
@@ -69,7 +77,9 @@ const ProjectModal = ({ modalRef, form, updateField, onSubmit, error, loading })
 
                 <div className="flex gap-3 pt-5 border-t border-line">
                     <button type="button" className="auth-outlineButton flex-1" onClick={() => modalRef.current.close()}>Cancel</button>
-                    <button type="submit" className="auth-primaryButton flex-1" disabled={loading}>{loading ? "Creating..." : "Create & scan"}</button>
+                    <button type="submit" className="auth-primaryButton flex-1" disabled={loading}>
+                        {loading ? "Saving..." : editing ? "Save Changes" : "Create & scan"}
+                    </button>
                 </div>
             </form>
         </dialog>
