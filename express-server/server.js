@@ -12,9 +12,11 @@ app.use(express.json());
 
 const scanRouter = require("./routes/scan");
 const projectRouter = require("./routes/projectRouter");
+const inviteRouter = require("./routes/inviteRouter");
 
 app.use("/api/scan", scanRouter);
 app.use("/api/project", projectRouter);
+app.use("/api/invite", inviteRouter);
 
 app.get('/', (req, res) => {
     res.send('Hello, world! Your Express server is up and running.');
