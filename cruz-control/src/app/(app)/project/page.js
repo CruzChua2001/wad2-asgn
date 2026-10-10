@@ -1,32 +1,40 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { useAuth } from "@/components/auth/auth-provider";
 import { useRouter } from "next/navigation";
-import { useScan } from "../overview/scan-context";
+import { LuUserPlus } from "react-icons/lu";
 
 import api from "@/lib/api";
+import { useAuth } from "@/components/auth/auth-provider";
 import LoginRequired from "@/components/auth/login-required";
 import ProjectModal from "./project-modal";
+import MemberModal from "./member-modal";
+import { useScan } from "../overview/scan-context";
 
 const ProjectPage = _ => {
-    const { status } = useAuth();
+    const { status, user } = useAuth();
     const router = useRouter();
     const { startScan } = useScan();
     const popupModalRef = useRef(null);
+    const memberRef = useRef(null);
     const [projects, setProjects] = useState([]);
     const [error, setError] = useState("");
     const [form, setForm] = useState({ name: "", domain: "", githubRepo: "" });
     const [loading, setLoading] = useState(false);
     const [editingId, setEditingId] = useState(null);
+    const [memberProject, setMemberProject] = useState(null);
+    const [invites, setInvites] = useState([]);
 
     useEffect(() => {
         if (status !== "authenticated") return;
 
         const getAllProjects = async _ => {
             try {
-                const response = await api.get("/api/project");
-                setProjects(response.data);
+                const projectResponse = await api.get("/api/project");
+                setProjects(projectResponse.data);
+
+                const inviteResponse = await api.get("/api/invite");
+                setInvites(inviteResponse.data);
             } catch (e) {
                 setError(e.response?.data?.error ?? "Could not load projects.")
             }
@@ -50,6 +58,11 @@ const ProjectPage = _ => {
         setForm({ name: project?.name ?? "", domain: project?.domain ?? "", githubRepo: project?.github_repo ?? "" });
         setError("");
         popupModalRef.current.showModal();
+    }
+
+    const openMemberModal = project => {
+        setMemberProject(project);
+        memberRef.current.showModal();
     }
 
     const scanProject = project => {
@@ -93,20 +106,92 @@ const ProjectPage = _ => {
         }
     }
 
+    const acceptInvite = async invite => {
+        try {
+            await api.post(`/api/invite/${invite.id}/accept`);
+            setInvites(invites.filter(i => i.id !== invite.id));
+            
+            const response = await api.get("/api/project");
+            setProjects(response.data);
+        } catch (e) {   
+            setError(e.response?.data?.error ?? "Could not accept the invite.");
+        }
+    }
+
+    const declineInvite = async invite => {
+        try {
+            await api.delete(`/api/invite/${invite.id}`);
+            setInvites(invites.filter(i => i.id !== invite.id));
+        } catch (e) {   
+            setError(e.response?.data?.error ?? "Could not decline the invite.");
+        }
+    }
+
     return (
         <div className="grid gap-4">
+
+
+            {invites.length > 0 && (
+                <>
+                <div className="flex gap-3">
+                    <h1 className="text-2xl">My Invitations</h1>
+                    <span className="bg-accent rounded-full px-3 py-1 text-background">{invites.length}</span>
+                </div>
+                
+
+                <ul className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(260px,1fr))]">
+                    {invites.map(invite => (
+                        <li key={invite.id} className="grid gap-3 p-5 border border-dashed border-accent rounded-2xl bg-surface shadow-sm">
+                            <div>
+                                <h3 className="font-semibold">{invite.projects?.name}</h3>
+                                <span className="text-xs text-accent capitalize">Invited as {invite.role}</span>
+                            </div>
+
+                            <dl className="grid grid-cols-[90px_1fr] gap-y-1 text-sm">
+                                <dt className="text-muted">Domain</dt>
+                                <dd className="font-mono">{invite.projects?.domain ?? <i className="text-muted">none</i>}</dd>
+                                <dt className="text-muted">Repository</dt>
+                                <dd className="font-mono break-all">{invite.projects?.github_repo ?? <i className="text-muted">none</i>}</dd>
+                            </dl>
+
+                            <div className="flex gap-2 justify-end text-sm">
+                                <button type="button" onClick={() => declineInvite(invite)} className="text-muted hover:text-critical cursor-pointer">Decline</button>
+                                <button type="button" onClick={() => acceptInvite(invite)} className="h-8 px-3 rounded-full border border-accent text-accent text-xs font-semibold hover:bg-accent-soft/20 cursor-pointer">Accept</button>
+                            </div>
+                        </li>
+                    ))}
+                </ul>  
+                </>
+            )}
+
+             
 
             <h1 className="text-2xl font-semibold">My Projects</h1>
 
             <ProjectModal editing={Boolean(editingId)} modalRef={popupModalRef} form={form} updateField={updateField} onSubmit={createProject} error={error} loading={loading} />
+            <MemberModal project={memberProject} modalRef={memberRef} />
 
             {error && <p role="alert" className="text-critical">{error}</p>}
 
             <ul className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(260px,1fr))]">
                 {projects.map(p => (
                     <li key={p.id} className="grid gap-3 p-5 border border-line rounded-2xl bg-surface shadow-sm">
-                        <h3 className="font-semibold">{p.name}</h3>
-                        <span className="text-xs text-muted capitalize -mt-3">Project {p.role}</span>
+                        <div className="flex items-start justify-between gap-2">
+                            <div>
+                                <h3 className="font-semibold">{p.name}</h3>
+                                <span className="text-xs text-muted capitalize">Project {p.role}</span>
+                            </div>
+                            {p.role === "owner" && (
+                                <button 
+                                    aria-label={`Manage members of ${p.name}`} 
+                                    className="p-1.5 rounded-lg text-muted hover:text-accent hover:bg-line cursor-pointer transition-colors duration-200 ease-[ease]"
+                                    onClick={() => openMemberModal(p)}    
+                                >
+                                    <LuUserPlus size={18} />
+                                </button>
+                            )}
+                        </div>
+                        
                         <dl className="grid grid-cols-[90px_1fr] gap-y-1 text-sm">
                             <dt className="text-muted">Domain</dt>
                             <dd className="font-mono">{p.domain ?? <i className="text-muted">none</i>}</dd>
@@ -116,7 +201,7 @@ const ProjectPage = _ => {
 
                         <button
                             disabled
-                            className="h-9 rounded-lg border border-line text-sm font-semibold tesxt-muted disabled:opacity-60 disabled:cursor-not-allowed"
+                            className="h-9 rounded-lg border border-line text-sm font-semibold text-muted disabled:opacity-60 disabled:cursor-not-allowed"
                         >
                             View results
                         </button>
@@ -132,7 +217,9 @@ const ProjectPage = _ => {
                                 </button>
                                 <div className="flex gap-3">
                                     <button onClick={() => openModal(p)} className="text-muted hover:text-ink cursor-pointer">Edit</button>
-                                    <button onClick={() => deleteProject(p)} className="text-muted hover:text-critical cursor-pointer">Delete</button>
+                                    {p.created_by === user?.id && (
+                                        <button onClick={() => deleteProject(p)} className="text-muted hover:text-critical cursor-pointer">Delete</button>
+                                    )}
                                 </div>
                             </div>
                         )}
