@@ -102,9 +102,12 @@ export default function ScanResultsLayout({ children }) {
         </div>
 
         <div className="flex items-center gap-2">
-          {saved 
+          {!result.projectId && (
+            saved 
             ? <Link href="/project" className={styles.newScan}>Saved · View project</Link>
-            : <button className={styles.newScan} onClick={saveToProject}>Save to project</button>}
+            : <button className={styles.newScan} onClick={saveToProject}>Save to project</button>
+          )}
+          
 
           {result.scannedAgo !== "just now" && (
             <button className={styles.newScan} onClick={rescan}>Re-scan</button>
