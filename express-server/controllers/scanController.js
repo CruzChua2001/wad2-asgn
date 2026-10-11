@@ -6,6 +6,13 @@ const { checkOpenPorts } = require("../checks/domain/open-ports");
 const { checkCves } = require("../checks/domain/cves");
 const { checkGeolocation } = require("../checks/domain/geolocation");
 
+const { checkRepo } = require("../lib/github");
+const { checkRepoInfo } = require("../checks/github/repo");
+const { checkRepoFiles } = require("../checks/github/files");
+const { checkDependencies } = require("../checks/github/deps");
+
+const cacheLimit = _ => new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString()
+
 const scanDomain = async (hostname, domain) => {
     const [dns, subdomains] = await Promise.all([
         checkDns(hostname, domain), 
@@ -45,38 +52,88 @@ const scanDomain = async (hostname, domain) => {
     }
 }
 
-const createScan = async (req, res) => {
-    const { domain, force } = req.body;
-    const check = checkWebsite(domain);
+const getRepoScanId = async (repo, force) => {
+    const info = await checkRepoInfo(repo);
+    if (info.checks.repo !== "ok") return null;
 
-    if (!check.isValid) {
-        return res.status(400).json({ error: check.reason });
+    const sha = info.records.commitSha;
+    
+    // Check for cache result in database
+    // - within the 12 hour limit
+    // - compare with the commit SHA (if not additional commit, use the cache)
+    if (!force) {
+        const { data } = await supabase.from("repo_scans").select("id").eq("github_repo", repo).eq("commit_sha", sha).gte("created_at", cacheLimit())
+            .order("created_at", { ascending: false }).limit(1).maybeSingle();
+        if (data) return data.id;
+    }
+
+    // Fetch new result
+    const [files, deps] = await Promise.all([
+        checkRepoFiles(repo, sha),
+        checkDependencies(repo, sha)
+    ])
+
+    const result = {
+        repo,
+        records: { ...info.records, ...files.records, ...deps.records },
+        checks: { ...info.checks, ...files.checks, ...deps.checks }
+    }
+
+    const { data, error } = await supabase.from("repo_scans").insert({ github_repo: repo, commit_sha: sha, result }).select("id").single();
+    if (error) throw error;
+
+    return data.id
+}
+
+const getDomainScanId = async (site, force) => {
+    if (!force) {
+        const { data } = await supabase.from("domain_scans").select("id").eq("domain", site.hostname).gte("created_at", cacheLimit())
+            .order("created_at", { ascending: false }).limit(1).maybeSingle();
+        if (data) return data.id;
+    }
+
+    const result = await scanDomain(site.hostname, site.domain);
+
+    const { data, error } = await supabase.from("domain_scans").insert({ domain: site.hostname, result }).select("id").single();
+    if (error) throw error;
+
+    return data.id;
+}
+
+const createScan = async (req, res) => {
+    const { domain, githubRepo, force } = req.body;
+    
+    if (!domain && !githubRepo) {
+        return res.status(400).json({ error: "Enter a website or a GitHub repository." });
+    }
+
+    const site = domain ? checkWebsite(domain) : null;
+    const repo = githubRepo ? checkRepo(githubRepo) : null;
+
+    if (site && !site.isValid) {
+        return res.status(400).json({ error: site.reason });
+    }
+    if (repo && !repo.isValid) {
+        return res.status(400).json({ error: repo.reason });
     }
 
     try {
-        let domainScan = null;
-        
-        // Find cache result from database if user does not require force
-        // Cache result for 12 hours
-        if (!force) {
-            const cacheLimit = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
+        const [domainScanId, repoScanId] = await Promise.all([
+            site ? getDomainScanId(site, force) : null,
+            repo ? getRepoScanId(repo.repo, force) : null
+        ])
 
-            const { data } = await supabase.from("domain_scans").select("id").eq("domain", check.hostname).gte("created_at", cacheLimit)
-                .order("created_at", {ascending: false}).limit(1).maybeSingle();
-            domainScan = data;
+        if (repo && !repoScanId) {
+            return res.status(400).json({ error: "We couldn't find that GitHub repository. Check that it's public and spelled correctly." });
         }
 
-        if (!domainScan) {
-            const result = await scanDomain(check.hostname, check.domain);
+        const newScan = {
+            domain_scan_id: domainScanId,
+            repo_scan_id: repoScanId,
+            user_id: req.user?.id ?? null
+        };
 
-            const { data, error } = await supabase.from("domain_scans").insert({ domain: check.hostname, result }).select("id").single();
-            if (error) throw error;
-
-            domainScan = data;
-        }
-
-        let newScan = { domain_scan_id: domainScan.id, user_id: req.user?.id ?? null }
-        const { data: scan, error } = await supabase.from("scans").insert(newScan).select("id").single();
+        const { data:scan, error } = await supabase.from("scans").insert(newScan).select("id").single();
         if (error) throw error;
 
         res.status(201).json({ id: scan.id });
