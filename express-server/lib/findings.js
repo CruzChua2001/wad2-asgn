@@ -18,22 +18,53 @@ const getDomainFindings = result => {
     const findings = [];
 
     // Known vulnerabilities (CVE) in software on server
-    for (let cve of records.cves ?? []) {
-        let severity = "medium";
+    let exploited = [];
+    let serious = [];
+    let other = []
 
-        if (cve.kev) {
-            severity = "critical";
-        } else if (cve.cvss >= 7) {
-            severity = "high";
+    if (records.cves) {
+        for (let cve of records.cves) {
+            if (cve.kev) {
+                exploited.push(cve.id);
+            } else if (cve.cvss >= 7) {
+                serious.push(cve.id);
+            } else {
+                other.push(cve.id);
+            }
         }
+    }
 
+    if (exploited.length > 0) {
         findings.push({
-            severity,
-            title: `Known vulnerability ${cve.id}`,
-            explain: (cve.kev ? "Attackers are already using this bug in real attacks. " : "") + cve.summary,
-            fix: "Update the software on this server to the latest version.",
+            severity: "critical",
+            title: `${exploited.length} known bug(s) attackers are already using`,
+            explain: "Your servers run software with bugs that are being used in real attacks right now.",
+            fix: "Update the software on these servers to the latest version as soon as possible.",
             source: "domain",
-        })
+            cves: exploited,
+        });
+    }
+
+    if (serious.length > 0) {
+        findings.push({
+            severity: "high",
+            title: `${serious.length} serious known bug(s) in server software`,
+            explain: "Your servers run software versions with publicly known, high-risk bugs.",
+            fix: "Update the software on these servers to the latest version.",
+            source: "domain",
+            cves: serious,
+        });
+    }
+
+    if (other.length > 0) {
+        findings.push({
+            severity: "medium",
+            title: `${other.length} smaller known bug(s) in server software`,
+            explain: "Your servers run software versions with publicly known bugs that are less likely to be used in attacks.",
+            fix: "Plan to update the software on these servers.",
+            source: "domain",
+            cves: other,
+        });
     }
 
     // Risky open ports, one finding per port

@@ -233,7 +233,7 @@ export default function OverviewPage() {
               <h1>{phase === "scanning" ? "Scanning" : "Scanned"} <em>{scan.domain ?? scan.githubRepo}</em></h1>
             </div>
 
-            <LiveScanTerminal lines={lines} theme={theme} domain={scan.domain ?? scan.githubRepo} sample={false} />
+            <LiveScanTerminal lines={lines} theme={theme} domain={scan.domain ?? scan.githubRepo} />
             <div className={styles.scanProgress}>
               <div className={styles.progressMeta}><span>Checks in progress</span><strong>{progress}%</strong></div>
               <div className={styles.progressTrack} role="progressbar" aria-label="Scan progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>

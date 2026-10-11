@@ -12,7 +12,7 @@ import api from "@/lib/api";
 import styles from "@/styles/overview/scan-results.module.css";
 
 const RESULT_TABS = [
-  { href: "", label: "Vulnerabilities", showsCount: true },
+  { href: "", label: "Overview", showsCount: true },
   { href: "/repository", label: "Repository", requiresRepository: true },
   { href: "/fix-guide", label: "Fix Guide" },
   { href: "/checklist", label: "Checklist" },
@@ -67,9 +67,9 @@ export default function ScanResultsLayout({ children }) {
 
     try {
       let data = {
-        name: result.domain,
+        name: result.title,
         domain: result.domain,
-        githubRepo: result.linkedRepository?.replace("github.com/", "")
+        githubRepo: result.linkedRepository
       }
 
       await api.post("/api/project", data);
@@ -87,10 +87,10 @@ export default function ScanResultsLayout({ children }) {
     <div className={styles.results}>
       <motion.header className={styles.resultsHead} {...reveal(0)}>
         <div>
-          <h1>{result.domain}</h1>
+          <h1>{result.title}</h1>
           <p className={styles.meta}>
-            Scanned just now · {result.sample ? "Sample data" : "Public sources"}
-            {result.linkedRepository && <> · Linked to {result.linkedRepository.replace("github.com/", "")}</>}
+            Scanned just now · Public sources
+            {result.domain && result.linkedRepository && <> · Linked to {result.linkedRepository}</>}
           </p>
 
           {saveError && <p role="alert" className="text-critical text-sm">{saveError}</p>}
@@ -107,13 +107,6 @@ export default function ScanResultsLayout({ children }) {
       <motion.div {...reveal(0.04)}>
         <ResultTabs hasRepository={Boolean(result.linkedRepository)} findingsCount={result.findings.length} />
       </motion.div>
-
-      {result.sample && (
-        <motion.p className={styles.sampleNotice} role="note" {...reveal(0.07)}>
-          <strong>Placeholder results</strong>
-          <span>The scanning backend isn&apos;t connected yet. Every value on this page is sample data for layout review, not real findings about {result.domain}.</span>
-        </motion.p>
-      )}
 
       {children}
     </div>

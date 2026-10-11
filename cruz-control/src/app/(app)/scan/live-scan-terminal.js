@@ -6,7 +6,7 @@ import { AnimatedSpan, Terminal } from "@/components/terminal";
 const MARKS = { command: "", info: "›", ok: "✓", warn: "!", bad: "✕", summary: "■" };
 
 // Only rendered while a scan is in progress; the results view replays the log separately.
-export default function LiveScanTerminal({ lines, theme, domain, sample = true }) {
+export default function LiveScanTerminal({ lines, theme, domain }) {
   const bodyRef = useRef(null);
 
   // Keep the newest line in view as output streams in.
@@ -23,7 +23,7 @@ export default function LiveScanTerminal({ lines, theme, domain, sample = true }
       startOnView={false}
       title="CRUZ CONTROL"
       status="RUNNING"
-      label={`Scan output for ${domain}${sample ? " (sample data)" : ""}`}
+      label={`Scan output for ${domain}`}
       live
       bodyRef={bodyRef}
       bodyClassName="live-terminal-body"

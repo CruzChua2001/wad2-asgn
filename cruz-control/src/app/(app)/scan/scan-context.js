@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useMemo, useState, useRef } from "react";
 import { DOMAIN_STEPS, REPO_STEPS } from "./scan-steps";
 import api from "@/lib/api";
-import { buildPlaceholderResult } from "@/lib/placeholder-scan";
+import { toResult } from "./scan-result";
 
 const ScanContext = createContext(null);
 
@@ -75,7 +75,7 @@ export function ScanProvider({ children }) {
     try {
       const { data } = await api.get(`/api/scan/${id}`);
 
-      setResult(buildPlaceholderResult(data.domain_scans?.domain ?? data.repo_scans.github_repo));
+      setResult(toResult(data));
     } catch (e) {
       setResult({ error: e.response?.data?.error ?? "Could not load this scan." });
     }
