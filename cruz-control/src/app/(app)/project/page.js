@@ -66,9 +66,26 @@ const ProjectPage = _ => {
     }
 
     const scanProject = project => {
-        startScan({ domain: project.domain, githubRepo: project.github_repo })
+        startScan({ domain: project.domain, githubRepo: project.github_repo, projectId: project.id, force: true })
         router.push("/scan");
     };
+
+    const viewScanResult = async project => {
+        setError("");
+
+        try {
+            const response = await api.get(`/api/project/${project.id}/scan`);
+
+            if (response.data.length === 0) {
+                setError("This project has no scans yet. Please Re-scan first.");
+                return;
+            }
+
+            router.push(`/scan/${response.data[0].id}`);
+        } catch (e) {
+            setError(e.response?.data?.error ?? "Could not load scan history");
+        }
+    }
 
     const createProject = async event => {
         event.preventDefault();
@@ -199,8 +216,8 @@ const ProjectPage = _ => {
                         </dl>
 
                         <button
-                            disabled
-                            className="h-9 rounded-lg border border-line text-sm font-semibold text-muted disabled:opacity-60 disabled:cursor-not-allowed"
+                            onClick={() => viewScanResult(p)}
+                            className="h-9 rounded-lg border border-line text-sm font-semibold text-ink cursor-pointer hover:bg-accent transition-colors duration-200 ease-[ease]"
                         >
                             View results
                         </button>
@@ -209,7 +226,7 @@ const ProjectPage = _ => {
                             <div className="flex text-sm justify-between">
                                 <button 
                                     onClick={() => scanProject(p)}
-                                    className="h-8 px-3 rounded-full border border-accent text-accent text-xs font-semibold hover:bg-accent-soft/20 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                    className="h-8 px-3 rounded-full border border-accent text-accent text-xs font-semibold hover:bg-accent-soft/20 cursor-pointer"
                                 >
                                     Re-scan
                                 </button>

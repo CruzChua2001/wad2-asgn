@@ -1,7 +1,7 @@
 const express = require("express");
 const { signedInUser } = require("../middleware/auth");
 const { projectMember, projectOwner, projectCreator } = require("../middleware/projectRole");
-const { getProjects, createProject, updateProjectById, deleteProjectById } = require("../controllers/projectController");
+const { getProjects, createProject, updateProjectById, deleteProjectById, getScansByProjectId } = require("../controllers/projectController");
 const { getMembersByProjectId, inviteMember, removeMemberById, cancelInviteById } = require("../controllers/memberController");
 
 const router = express.Router();
@@ -9,6 +9,7 @@ const router = express.Router();
 router.use(signedInUser);
 router.get("/", getProjects);
 router.post("/", createProject);
+router.get("/:id/scan", projectMember, getScansByProjectId);
 router.put("/:id", projectOwner, updateProjectById);
 router.delete("/:id", projectOwner, deleteProjectById);
 
