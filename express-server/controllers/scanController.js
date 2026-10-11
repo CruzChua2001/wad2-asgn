@@ -1,10 +1,10 @@
 const { supabase } = require("../lib/supabase");
 const { checkWebsite } = require("../lib/domain");
-const { checkDns } = require("../checks/dns");
-const { checkSubdomains } = require("../checks/subdomains");
-const { checkOpenPorts } = require("../checks/open-ports");
-const { checkCves } = require("../checks/cves");
-const { checkGeolocation } = require("../checks/geolocation");
+const { checkDns } = require("../checks/domain/dns");
+const { checkSubdomains } = require("../checks/domain/subdomains");
+const { checkOpenPorts } = require("../checks/domain/open-ports");
+const { checkCves } = require("../checks/domain/cves");
+const { checkGeolocation } = require("../checks/domain/geolocation");
 
 const scanDomain = async (hostname, domain) => {
     const [dns, subdomains] = await Promise.all([

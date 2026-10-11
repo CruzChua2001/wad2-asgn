@@ -1,4 +1,4 @@
-const { githubGet } = require("../lib/github");
+const { githubGet } = require("../../lib/github");
 
 // get all sentitive files, e.g. .env .pems
 const SENSITIVE_FILES = [/^\.env$/, /^\.env\.(local|development|production|staging)$/, /\.pem$/, /\.key$/, /^id_rsa$/, /^id_ed25519$/, /^credentials\.json$/, /\.p12$/];

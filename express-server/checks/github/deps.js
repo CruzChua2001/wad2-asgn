@@ -1,4 +1,4 @@
-const { githubGet } = require("../lib/github");
+const { githubGet } = require("../../lib/github");
 
 const checkDependencies = async (repo, sha) => {
     const file = await githubGet(`/repos/${repo}/contents/package.json?ref=${sha}`);

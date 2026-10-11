@@ -1,4 +1,4 @@
-const { githubGet } = require("../lib/github");
+const { githubGet } = require("../../lib/github");
 
 const checkRepoInfo = async repo => {
     const { status, data } = await githubGet(`/repos/${repo}`);
