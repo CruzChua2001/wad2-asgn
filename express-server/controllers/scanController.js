@@ -11,6 +11,8 @@ const { checkRepoInfo } = require("../checks/github/repo");
 const { checkRepoFiles } = require("../checks/github/files");
 const { checkDependencies } = require("../checks/github/deps");
 
+const { getDomainFindings, getRepoFindings, getScore } = require("../lib/findings");
+
 const cacheLimit = _ => new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString()
 
 const scanDomain = async (hostname, domain) => {
@@ -169,7 +171,12 @@ const getScanById = async (req, res) => {
         }
     }
 
-    res.json(scan);
+    const findings = [
+        ...(scan.domain_scans ? getDomainFindings(scan.domain_scans.result) : []),
+        ...(scan.repo_scans ? getRepoFindings(scan.repo_scans.result) : [])
+    ].map((finding, idx) => ({ id: idx, ...finding }));
+
+    res.json({ ...scan, findings, ...getScore(findings) });
 }
 
 module.exports = { createScan, getScanById }
