@@ -1,0 +1,1 @@
+grant select, insert, update, delete on public.projects, public.project_members, public.project_invites to service_role;
