@@ -61,7 +61,10 @@ export const AuthProvider = ({ children }) => {
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: name } }
+      options: {
+        data: { full_name: name },
+        emailRedirectTo: `${window.location.origin}/scan`
+      }
     })
     if (error) throw friendlyErrorMsg(error);
   }
