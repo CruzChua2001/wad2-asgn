@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useMemo, useState, useRef } from "react";
-import { DOMAIN_STEPS } from "./scan-steps";
+import { DOMAIN_STEPS, REPO_STEPS } from "./scan-steps";
 import api from "@/lib/api";
 import { buildPlaceholderResult } from "@/lib/placeholder-scan";
 
@@ -23,7 +23,7 @@ export function ScanProvider({ children }) {
   const timerRef = useRef(null);
   const abortRef = useRef(null);
 
-  const startScan = useCallback(async (domain, { linkedRepository }) => {
+  const startScan = useCallback(async ({domain, githubRepo}) => {
     const addLine = (kind, text) => {
       setLines((current) => [...current, { id:current.length, kind, text, time: formatLogTime(new Date()) }]);
     }
@@ -32,19 +32,21 @@ export function ScanProvider({ children }) {
     // Switch page to the terminal view
     setLines([]);
     setProgress(0);
-    setScan({ domain, linkedRepository });
+    setScan({ domain, githubRepo });
     setPhase("scanning");
-    addLine("command", `$ cruz scan ${domain}`);
+    addLine("command", `$ cruz scan ${[domain, githubRepo].filter(Boolean).join(" ")}`);
 
     // Fake progress
     // Every 2 seconds, prints the hardcoded line
+    const steps = [...(domain ? DOMAIN_STEPS : []), ...(githubRepo ? REPO_STEPS : [])];
     let step = 0;
 
     timerRef.current = setInterval(() => {
-      if (step < DOMAIN_STEPS.length) {
-        addLine("info", DOMAIN_STEPS[step]);
+      if (step < steps.length) {
+        addLine("info", steps[step]);
         step++;
       }
+
       setProgress((current) => Math.min(current+8, 90));
     }, 2000);
 
@@ -52,11 +54,11 @@ export function ScanProvider({ children }) {
     abortRef.current = new AbortController();
 
     try {
-      const { data } = await api.post("/api/scan", { domain }, { signal: abortRef.current.signal });
+      const { data } = await api.post("/api/scan", { domain, githubRepo }, { signal: abortRef.current.signal });
       clearInterval(timerRef.current);
       addLine("summary", "Done. Opening your results now...");
       setProgress(100);
-      setScan({ domain, linkedRepository, id: data.id });
+      setScan({ domain, githubRepo, id: data.id });
       setPhase("results");
 
       router.push(`/scan/${data.id}`);
@@ -73,7 +75,7 @@ export function ScanProvider({ children }) {
     try {
       const { data } = await api.get(`/api/scan/${id}`);
 
-      setResult(buildPlaceholderResult(data.domain_scans.domain));
+      setResult(buildPlaceholderResult(data.domain_scans?.domain ?? data.repo_scans.github_repo));
     } catch (e) {
       setResult({ error: e.response?.data?.error ?? "Could not load this scan." });
     }

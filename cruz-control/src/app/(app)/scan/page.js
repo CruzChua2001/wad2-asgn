@@ -98,15 +98,15 @@ export default function OverviewPage() {
   function handleSubmit(event) {
     event.preventDefault();
     if (!canSubmit) return;
+
+    setSubmissionMessage("")
+
     if (mode === "repository") {
-      setSubmissionMessage(`Target checked: ${targetStatus.normalized}. Repository scanning isn't available in this preview yet, so no request was sent.`);
-      return;
+      startScan({ githubRepo: targetStatus.normalized });
+    } else {
+      startScan({ domain: targetStatus.normalized, githubRepo: linkRepository ? repositoryStatus.normalized : null })
     }
-    setSubmissionMessage("");
-    startScan(targetStatus.normalized, {
-      linkedRepository: linkRepository ? repositoryStatus.normalized : null,
-      fast: Boolean(reduceMotion),
-    });
+
     window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
   }
 
@@ -230,10 +230,10 @@ export default function OverviewPage() {
         {phase !== "idle" && scan && (
           <motion.div key="scanning" className={styles.scanning} {...viewTransition}>
             <div className={styles.scanningIntro}>
-              <h1>{phase === "scanning" ? "Scanning" : "Scanned"} <em>{scan.domain}</em></h1>
+              <h1>{phase === "scanning" ? "Scanning" : "Scanned"} <em>{scan.domain ?? scan.githubRepo}</em></h1>
             </div>
 
-            <LiveScanTerminal lines={lines} theme={theme} domain={scan.domain} sample={false} />
+            <LiveScanTerminal lines={lines} theme={theme} domain={scan.domain ?? scan.githubRepo} sample={false} />
             <div className={styles.scanProgress}>
               <div className={styles.progressMeta}><span>Checks in progress</span><strong>{progress}%</strong></div>
               <div className={styles.progressTrack} role="progressbar" aria-label="Scan progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>
