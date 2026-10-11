@@ -10,6 +10,24 @@ const getRating = score => {
     return "At risk";
 }
 
+const lastScanTime = date => {
+    const minutes = Math.floor((Date.now() - new Date(date).getTime()) / 60000);
+
+    if (minutes < 1) {
+        return "just now"
+    } 
+    if (minutes < 60) {
+        return `${minutes} minute(s) ago`;
+    }
+
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) {
+        return `${hours} hour(s) ago`;
+    }
+
+    return new Date(date).toLocaleDateString();
+}
+
 const getHostName = (ip, domainScan) => {
     const records = domainScan.result.records;
 
@@ -141,6 +159,7 @@ export const toResult = data => {
     let summary = "No serious issues found.";
     const arcs = [];
     let stats = []
+     let scannedAt = null;
 
     if (data.domain_scans) {
         domain = data.domain_scans.domain;
@@ -180,6 +199,15 @@ export const toResult = data => {
     }
     stats.push({ label: "Issues found", value: findings.length })
 
+    if (data.domain_scans) {
+        scannedAt = data.domain_scans.created_at;
+    }
+    if (data.repo_scans) {
+        if (!scannedAt || new Date(data.repo_scans.created_at) < new Date(scannedAt)) {
+            scannedAt = data.repo_scans.created_at;
+        }
+    }
+
     return {
         title: domain || linkedRepository,
         domain: domain,
@@ -192,7 +220,10 @@ export const toResult = data => {
         nodes: servers,
         arcs,
         findings,
-        stats
+        stats,
+        scannedAt: scannedAt,
+        scannedAgo: lastScanTime(scannedAt),
+        projectId: data.project_id
     }
 }
 

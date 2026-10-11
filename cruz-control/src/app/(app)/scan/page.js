@@ -78,6 +78,7 @@ export default function OverviewPage() {
   const [linkRepository, setLinkRepository] = useState(false);
   const [repository, setRepository] = useState("");
   const [submissionMessage, setSubmissionMessage] = useState("");
+  const [forceScan, setForceScan] = useState(false);
 
   const targetStatus = useMemo(() => normalizeTarget(target, mode), [target, mode]);
   const repositoryStatus = useMemo(() => normalizeTarget(repository, "repository"), [repository]);
@@ -102,9 +103,9 @@ export default function OverviewPage() {
     setSubmissionMessage("")
 
     if (mode === "repository") {
-      startScan({ githubRepo: targetStatus.normalized });
+      startScan({ githubRepo: targetStatus.normalized, force: forceScan });
     } else {
-      startScan({ domain: targetStatus.normalized, githubRepo: linkRepository ? repositoryStatus.normalized : null })
+      startScan({ domain: targetStatus.normalized, githubRepo: linkRepository ? repositoryStatus.normalized : null, force: forceScan })
     }
 
     window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
@@ -189,6 +190,14 @@ export default function OverviewPage() {
                   )}
                 </div>
               )}
+
+              <div className="mt-3">
+                <label className={styles.checkLabel}>
+                  <input type="checkbox" checked={forceScan} onChange={event => setForceScan(event.target.checked)} />
+                  <span className={styles.fakeCheckbox}><Icon name="check" size={12} /></span>
+                  <span>Run a fresh scan (ignore saved results from the last 12 hours)</span>
+                </label>
+              </div>
 
               {submissionMessage && <p className={styles.integrationNotice} role="status"><Icon name="shield" size={16} /> {submissionMessage}</p>}
             </form>

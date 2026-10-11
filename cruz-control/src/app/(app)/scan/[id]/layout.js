@@ -43,7 +43,7 @@ export default function ScanResultsLayout({ children }) {
   const router = useRouter();
   const reduceMotion = useReducedMotion();
   const { id } = useParams();
-  const { result, loadResult, resetScan } = useScan();
+  const { result, loadResult, resetScan, startScan } = useScan();
   const { status, openAuth } = useAuth();
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState("");
@@ -59,6 +59,11 @@ export default function ScanResultsLayout({ children }) {
   function newScan() {
     router.push("/scan");
     resetScan();
+  }
+
+  const rescan = _ => {
+    startScan({ domain: result.domain, githubRepo: result.linkedRepository, projectId: result.projectId, force: true });
+    router.push("/scan");
   }
 
   const saveToProject = async _ => {
@@ -89,7 +94,7 @@ export default function ScanResultsLayout({ children }) {
         <div>
           <h1>{result.title}</h1>
           <p className={styles.meta}>
-            Scanned just now · Public sources
+            Scanned {result.scannedAgo} · Public sources
             {result.domain && result.linkedRepository && <> · Linked to {result.linkedRepository}</>}
           </p>
 
@@ -100,6 +105,11 @@ export default function ScanResultsLayout({ children }) {
           {saved 
             ? <Link href="/project" className={styles.newScan}>Saved · View project</Link>
             : <button className={styles.newScan} onClick={saveToProject}>Save to project</button>}
+
+          {result.scannedAgo !== "just now" && (
+            <button className={styles.newScan} onClick={rescan}>Re-scan</button>
+          )}
+
           <RippleButton className={styles.newScan} type="button" onClick={newScan}>+ New scan</RippleButton>
         </div>
       </motion.header>

@@ -66,7 +66,7 @@ const ProjectPage = _ => {
     }
 
     const scanProject = project => {
-        startScan({ domain: project.domain, githubRepo: project.github_repo, projectId: project.id })
+        startScan({ domain: project.domain, githubRepo: project.github_repo, projectId: project.id, force: true })
         router.push("/scan");
     };
 

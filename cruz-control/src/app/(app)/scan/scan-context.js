@@ -23,7 +23,7 @@ export function ScanProvider({ children }) {
   const timerRef = useRef(null);
   const abortRef = useRef(null);
 
-  const startScan = useCallback(async ({domain, githubRepo, projectId}) => {
+  const startScan = useCallback(async ({domain, githubRepo, projectId, force}) => {
     const addLine = (kind, text) => {
       setLines((current) => [...current, { id:current.length, kind, text, time: formatLogTime(new Date()) }]);
     }
@@ -54,7 +54,7 @@ export function ScanProvider({ children }) {
     abortRef.current = new AbortController();
 
     try {
-      const { data } = await api.post("/api/scan", { domain, githubRepo, projectId }, { signal: abortRef.current.signal });
+      const { data } = await api.post("/api/scan", { domain, githubRepo, projectId, force }, { signal: abortRef.current.signal });
       clearInterval(timerRef.current);
       addLine("summary", "Done. Opening your results now...");
       setProgress(100);
