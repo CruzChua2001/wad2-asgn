@@ -48,8 +48,7 @@ function ScoreRing({ score, reduceMotion }) {
 
 // The scan layout only renders this tab once a finished scan exists.
 export default function VulnerabilitiesTab() {
-  const { scan, lines } = useScan();
-  const { result } = scan;
+  const { result, lines } = useScan();
   const [theme] = useTheme();
   const reduceMotion = Boolean(useReducedMotion());
   const findings = [...result.findings].sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);

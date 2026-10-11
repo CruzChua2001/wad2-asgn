@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useParams } from "next/navigation";
 import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useState } from "react";
 
@@ -12,30 +12,29 @@ import api from "@/lib/api";
 import styles from "@/styles/overview/scan-results.module.css";
 
 const RESULT_TABS = [
-  { href: "/scan/results", label: "Vulnerabilities", showsCount: true },
-  { href: "/scan/results/repository", label: "Repository", requiresRepository: true },
-  { href: "/scan/results/fix-guide", label: "Fix Guide" },
-  { href: "/scan/results/checklist", label: "Checklist" },
-  { href: "/scan/results/report-card", label: "Report Card" },
-  { href: "/scan/results/compare", label: "Compare" },
+  { href: "", label: "Vulnerabilities", showsCount: true },
+  { href: "/repository", label: "Repository", requiresRepository: true },
+  { href: "/fix-guide", label: "Fix Guide" },
+  { href: "/checklist", label: "Checklist" },
+  { href: "/report-card", label: "Report Card" },
+  { href: "/compare", label: "Compare" },
 ];
 
 function ResultTabs({ hasRepository, findingsCount }) {
   const pathname = usePathname();
+  const { id } = useParams();
   const tabs = RESULT_TABS.filter((tab) => !tab.requiresRepository || hasRepository);
   return (
     <nav className={styles.tabs} aria-label="Scan result sections">
-      {tabs.map((tab) => (
-        <Link
-          key={tab.href}
-          href={tab.href}
-          className={tab.href === pathname ? styles.tabActive : ""}
-          aria-current={tab.href === pathname ? "page" : undefined}
-        >
-          {tab.label}
-          {tab.showsCount && <span className={styles.tabCount}>{findingsCount}</span>}
-        </Link>
-      ))}
+      {tabs.map((tab) => {
+        const href = `/scan/${id}${tab.href}`;
+        return (
+          <Link key={href} href={href} className={href === pathname ? styles.tabActive : ""} aria-current={href === pathname ? "page" : undefined}>
+            {tab.label}
+            {tab.showsCount && <span className={styles.tabCount}>{findingsCount}</span>}
+          </Link>
+        )
+      })}
     </nav>
   );
 }
@@ -43,19 +42,19 @@ function ResultTabs({ hasRepository, findingsCount }) {
 export default function ScanResultsLayout({ children }) {
   const router = useRouter();
   const reduceMotion = useReducedMotion();
-  const { phase, scan, resetScan } = useScan();
-  const ready = phase === "results" && scan;
+  const { id } = useParams();
+  const { result, loadResult, resetScan } = useScan();
   const { status, openAuth } = useAuth();
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState("");
 
-  // The scan only lives in memory for now, so a refresh or direct link has nothing to show.
   useEffect(() => {
-    if (!ready) router.replace("/scan");
-  }, [ready, router]);
+    loadResult(id);
+  }, [id, loadResult]);
 
-  if (!ready) return null;
-  const { result } = scan;
+  if (!result) return <p className="text-muted">Loading scan...</p>;
+
+  if (result.error) return <p role="alert" className="text-critical">{result.error}</p>;
 
   function newScan() {
     router.push("/scan");

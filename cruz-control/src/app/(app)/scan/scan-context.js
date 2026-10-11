@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useMemo, useState, useRef } from "react";
 import { DOMAIN_STEPS } from "./scan-steps";
 import api from "@/lib/api";
+import { buildPlaceholderResult } from "@/lib/placeholder-scan";
 
 const ScanContext = createContext(null);
 
@@ -18,6 +19,7 @@ export function ScanProvider({ children }) {
   const [scan, setScan] = useState(null);
   const [lines, setLines] = useState([]);
   const [progress, setProgress] = useState(0);
+  const [result, setResult] = useState(null);
   const timerRef = useRef(null);
   const abortRef = useRef(null);
 
@@ -65,6 +67,18 @@ export function ScanProvider({ children }) {
     }
   }, [router])
 
+  const loadResult = useCallback(async (id) => {
+    setResult(null);
+
+    try {
+      const { data } = await api.get(`/api/scan/${id}`);
+
+      setResult(buildPlaceholderResult(data.domain_scans.domain));
+    } catch (e) {
+      setResult({ error: e.response?.data?.error ?? "Could not load this scan." });
+    }
+  }, []);
+
   // Used by "Cancel scan" and "+ New scan": back to the empty pre-scan form.
   const resetScan = useCallback(() => {
     setPhase("idle");
@@ -75,8 +89,8 @@ export function ScanProvider({ children }) {
   }, []);
 
   const value = useMemo(
-    () => ({ phase, scan, lines, progress, startScan, resetScan }),
-    [phase, scan, lines, progress, startScan, resetScan],
+    () => ({ phase, scan, lines, progress, startScan, resetScan, result, loadResult }),
+    [phase, scan, lines, progress, startScan, resetScan, result, loadResult],
   );
 
   return <ScanContext value={value}>{children}</ScanContext>;

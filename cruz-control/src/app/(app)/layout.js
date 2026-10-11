@@ -38,7 +38,7 @@ const RadarField = _ => {
 export default function OverviewLayout({ children }) {
   const [theme, updateTheme] = useTheme();
   const pathname = usePathname();
-  const showingResults = pathname.startsWith("/scan/results");
+  const showingResults = pathname.startsWith("/scan/");
   const navProps = href => pathname.startsWith(href) ? { className: styles.navActive, "aria-current": "page" } : {};
 
   return (
