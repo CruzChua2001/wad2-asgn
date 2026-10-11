@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useParams } from "next/navigation";
 import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useState } from "react";
 
@@ -12,30 +12,29 @@ import api from "@/lib/api";
 import styles from "@/styles/overview/scan-results.module.css";
 
 const RESULT_TABS = [
-  { href: "/scan/results", label: "Vulnerabilities", showsCount: true },
-  { href: "/scan/results/repository", label: "Repository", requiresRepository: true },
-  { href: "/scan/results/fix-guide", label: "Fix Guide" },
-  { href: "/scan/results/checklist", label: "Checklist" },
-  { href: "/scan/results/report-card", label: "Report Card" },
-  { href: "/scan/results/compare", label: "Compare" },
+  { href: "", label: "Overview", showsCount: true },
+  { href: "/repository", label: "Repository", requiresRepository: true },
+  { href: "/fix-guide", label: "Fix Guide" },
+  { href: "/checklist", label: "Checklist" },
+  { href: "/report-card", label: "Report Card" },
+  { href: "/compare", label: "Compare" },
 ];
 
 function ResultTabs({ hasRepository, findingsCount }) {
   const pathname = usePathname();
+  const { id } = useParams();
   const tabs = RESULT_TABS.filter((tab) => !tab.requiresRepository || hasRepository);
   return (
     <nav className={styles.tabs} aria-label="Scan result sections">
-      {tabs.map((tab) => (
-        <Link
-          key={tab.href}
-          href={tab.href}
-          className={tab.href === pathname ? styles.tabActive : ""}
-          aria-current={tab.href === pathname ? "page" : undefined}
-        >
-          {tab.label}
-          {tab.showsCount && <span className={styles.tabCount}>{findingsCount}</span>}
-        </Link>
-      ))}
+      {tabs.map((tab) => {
+        const href = `/scan/${id}${tab.href}`;
+        return (
+          <Link key={href} href={href} className={href === pathname ? styles.tabActive : ""} aria-current={href === pathname ? "page" : undefined}>
+            {tab.label}
+            {tab.showsCount && <span className={styles.tabCount}>{findingsCount}</span>}
+          </Link>
+        )
+      })}
     </nav>
   );
 }
@@ -43,19 +42,19 @@ function ResultTabs({ hasRepository, findingsCount }) {
 export default function ScanResultsLayout({ children }) {
   const router = useRouter();
   const reduceMotion = useReducedMotion();
-  const { phase, scan, resetScan } = useScan();
-  const ready = phase === "results" && scan;
+  const { id } = useParams();
+  const { result, loadResult, resetScan } = useScan();
   const { status, openAuth } = useAuth();
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState("");
 
-  // The scan only lives in memory for now, so a refresh or direct link has nothing to show.
   useEffect(() => {
-    if (!ready) router.replace("/scan");
-  }, [ready, router]);
+    loadResult(id);
+  }, [id, loadResult]);
 
-  if (!ready) return null;
-  const { result } = scan;
+  if (!result) return <p className="text-muted">Loading scan...</p>;
+
+  if (result.error) return <p role="alert" className="text-critical">{result.error}</p>;
 
   function newScan() {
     router.push("/scan");
@@ -68,9 +67,9 @@ export default function ScanResultsLayout({ children }) {
 
     try {
       let data = {
-        name: result.domain,
+        name: result.title,
         domain: result.domain,
-        githubRepo: result.linkedRepository?.replace("github.com/", "")
+        githubRepo: result.linkedRepository
       }
 
       await api.post("/api/project", data);
@@ -88,10 +87,10 @@ export default function ScanResultsLayout({ children }) {
     <div className={styles.results}>
       <motion.header className={styles.resultsHead} {...reveal(0)}>
         <div>
-          <h1>{result.domain}</h1>
+          <h1>{result.title}</h1>
           <p className={styles.meta}>
-            Scanned just now · {result.sample ? "Sample data" : "Public sources"}
-            {result.linkedRepository && <> · Linked to {result.linkedRepository.replace("github.com/", "")}</>}
+            Scanned just now · Public sources
+            {result.domain && result.linkedRepository && <> · Linked to {result.linkedRepository}</>}
           </p>
 
           {saveError && <p role="alert" className="text-critical text-sm">{saveError}</p>}
@@ -108,13 +107,6 @@ export default function ScanResultsLayout({ children }) {
       <motion.div {...reveal(0.04)}>
         <ResultTabs hasRepository={Boolean(result.linkedRepository)} findingsCount={result.findings.length} />
       </motion.div>
-
-      {result.sample && (
-        <motion.p className={styles.sampleNotice} role="note" {...reveal(0.07)}>
-          <strong>Placeholder results</strong>
-          <span>The scanning backend isn&apos;t connected yet. Every value on this page is sample data for layout review, not real findings about {result.domain}.</span>
-        </motion.p>
-      )}
 
       {children}
     </div>

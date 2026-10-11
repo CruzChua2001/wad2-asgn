@@ -66,8 +66,7 @@ const ProjectPage = _ => {
     }
 
     const scanProject = project => {
-        if (!project.domain) return;
-        startScan(project.domain, { linkedRepository: project.github_repo ? `github.com/${project.github_repo}` : null, fast: false });
+        startScan({ domain: project.domain, githubRepo: project.github_repo })
         router.push("/scan");
     };
 
@@ -210,7 +209,6 @@ const ProjectPage = _ => {
                             <div className="flex text-sm justify-between">
                                 <button 
                                     onClick={() => scanProject(p)}
-                                    disabled={!p.domain}
                                     className="h-8 px-3 rounded-full border border-accent text-accent text-xs font-semibold hover:bg-accent-soft/20 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                                 >
                                     Re-scan

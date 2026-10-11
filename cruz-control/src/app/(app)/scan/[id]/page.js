@@ -47,20 +47,41 @@ function ScoreRing({ score, reduceMotion }) {
 }
 
 // The scan layout only renders this tab once a finished scan exists.
-export default function VulnerabilitiesTab() {
-  const { scan, lines } = useScan();
-  const { result } = scan;
+export default function OverviewTab() {
+  const { result, lines } = useScan();
   const [theme] = useTheme();
   const reduceMotion = Boolean(useReducedMotion());
   const findings = [...result.findings].sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
   const [selectedFindingId, setSelectedFindingId] = useState(findings[0]?.id);
   const [selectedNodeId, setSelectedNodeId] = useState(findings[0]?.nodeId || result.nodes[0]?.id);
   const [logOpen, setLogOpen] = useState(false);
+  const [showAllServers, setShowAllServers] = useState(false);
+
+  let shownNodes = result.nodes;
+  if (!showAllServers) {
+    shownNodes = result.nodes.slice(0, 6);
+  }
 
   const selectedNode = result.nodes.find((node) => node.id === selectedNodeId) || result.nodes[0];
-  const selectedFinding = findings.find((finding) => finding.id === selectedFindingId && finding.nodeId === selectedNode.id)
-    || findings.find((finding) => finding.nodeId === selectedNode.id);
+  let selectedFinding = findings.find((finding) => finding.id === selectedFindingId);
   const statusCounts = result.nodes.reduce((counts, node) => ({ ...counts, [node.status]: (counts[node.status] || 0) + 1 }), {});
+
+  let repoInfo = null;
+  if (result.repo) {
+    repoInfo = result.repo.records.repo;
+  }
+
+  let repoChecks = []
+  if (result.repo && result.repo.records.basics) {
+    const records = result.repo.records;
+    repoChecks = [
+      { label: "No secret files committed", passed: records.sensitiveFiles.length === 0 },
+      { label: "No packages with known bugs", passed: records.dependencies.length === 0 },
+      { label: "Has a security policy (SECURITY.md)", passed: records.basics.securityPolicy },
+      { label: "Dependabot is set up", passed: records.basics.dependabot },
+      { label: "Has a lockfile", passed: records.basics.lockfile },
+    ];
+  }
 
   function selectNode(nodeId) {
     setSelectedNodeId(nodeId);
@@ -88,6 +109,7 @@ export default function VulnerabilitiesTab() {
       </motion.dl>
 
       <div className={styles.grid}>
+        {result.nodes.length > 0 && (
         <motion.section className={styles.mapCard} aria-labelledby="map-title" {...reveal(0.15)}>
           <div className={styles.cardHead}>
             <h2 id="map-title">Where your servers are</h2>
@@ -98,7 +120,7 @@ export default function VulnerabilitiesTab() {
             </div>
           </div>
 
-          <div className={styles.globeStage}>
+          <div className={`${styles.globeStage} flex-none h-75 md:h-[clamp(300px,38vh,380px)]`}>
             <ExposureGlobe
               nodes={result.nodes}
               arcs={result.arcs}
@@ -111,7 +133,7 @@ export default function VulnerabilitiesTab() {
           </div>
 
           <div className={styles.nodeList} role="group" aria-label="Servers">
-            {result.nodes.map((node) => (
+            {shownNodes.map((node) => (
               <button
                 key={node.id}
                 type="button"
@@ -124,6 +146,12 @@ export default function VulnerabilitiesTab() {
                 <span><strong>{node.host}</strong><small>{node.city}, {node.country} · {node.service}</small></span>
               </button>
             ))}
+
+            {result.nodes.length > 6 && (
+              <button className="text-sm text-accent font-semibold mt-2 cursor-pointer" onClick={() => setShowAllServers(!showAllServers)}>
+                {showAllServers ? "Show fewer servers" : `Show all ${result.nodes.length} servers`}
+              </button>
+            )}
           </div>
 
           <section className={styles.inspector} aria-labelledby="details-title" aria-live="polite">
@@ -168,6 +196,32 @@ export default function VulnerabilitiesTab() {
             )}
           </div>
         </motion.section>
+        )}
+
+        {result.nodes.length === 0 && repoInfo && (
+          <motion.section className={`${styles.card} self-start`} aria-labelledby="repo-title" {...reveal(0.15)}>
+            <div className={styles.cardHead}>
+              <h2 id="repo-title">Repository</h2>
+            </div>
+            <dl className={styles.kv}>
+              <div><dt>Name</dt><dd>{repoInfo.name}</dd></div>
+              <div><dt>About</dt><dd>{repoInfo.description || "No description"}</dd></div>
+              <div><dt>Branch</dt><dd>{repoInfo.defaultBranch}</dd></div>
+              <div><dt>Last push</dt><dd>{new Date(repoInfo.pushedAt).toLocaleDateString()}</dd></div>
+              <div><dt>Stars</dt><dd>{repoInfo.stars}</dd></div>
+            </dl>
+
+            <ul className="mt-4 mb-4 flex flex-col gap-2 text-sm">
+              {repoChecks.map((check) => (
+                <li key={check.label} className={check.passed ? "text-ink" : "text-critical"}>
+                  {check.passed ? "✓" : "✕"} {check.label}
+                </li>
+              ))}
+            </ul>
+
+            <a href={repoInfo.url} target="_blank" rel="noreferrer" className="text-sm text-accent font-semibold mt-2">Open on GitHub</a>
+          </motion.section>
+        )}
 
         <div className={styles.sideColumn}>
           <motion.section className={`${styles.card} ${styles.scoreCard}`} aria-labelledby="score-title" {...reveal(0.2)}>
@@ -177,23 +231,6 @@ export default function VulnerabilitiesTab() {
             </div>
             <div className={styles.scoreBody}>
               <ScoreRing score={result.score} reduceMotion={reduceMotion} />
-              <div className={styles.breakdown}>
-                {result.breakdown.map((item, index) => (
-                  <div key={item.label}>
-                    <div className={styles.breakdownLabel}>
-                      <span>{item.label}</span>
-                      <strong data-tone={scoreTone(item.value)}><NumberTicker value={item.value} delay={0.35 + index * 0.08} /></strong>
-                    </div>
-                    <div className={styles.bar} data-tone={scoreTone(item.value)}>
-                      <motion.span
-                        initial={reduceMotion ? false : { width: 0 }}
-                        animate={{ width: `${item.value}%` }}
-                        transition={{ duration: 0.8, delay: 0.35 + index * 0.08 }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
             </div>
             <p className={styles.scoreSummary}>{result.summary} Higher is safer.</p>
           </motion.section>
@@ -216,7 +253,12 @@ export default function VulnerabilitiesTab() {
                     <span className={styles.severity}>{SEVERITY_LABELS[finding.severity]}</span>
                     <strong>{finding.title}</strong>
                     <small>{result.nodes.find((node) => node.id === finding.nodeId)?.host} · {finding.source}</small>
-                    {finding.id === selectedFinding?.id && <span className={styles.findingWhy}>{finding.why}</span>}
+                    {finding.id === selectedFinding?.id && (
+                      <span className={styles.findingWhy}>
+                        {finding.why}
+                        <br /><strong>What to do:</strong> {finding.fix}
+                      </span>
+                    )}
                   </button>
                 </li>
               ))}

@@ -10,7 +10,7 @@ const PORT = 3001;
 
 app.use(express.json());
 
-const scanRouter = require("./routes/scan");
+const scanRouter = require("./routes/scanRouter");
 const projectRouter = require("./routes/projectRouter");
 const inviteRouter = require("./routes/inviteRouter");
 
