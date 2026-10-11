@@ -83,4 +83,15 @@ const deleteProjectById = async (req, res) => {
     res.status(204).end();
 }
 
-module.exports = { getProjects, createProject, updateProjectById, deleteProjectById };
+const getScansByProjectId = async (req, res) => {
+    const { data, error } = await supabase.from("scans").select("id, created_at").eq("project_id", req.params.id).order("created_at", { ascending: false });
+
+    if (error) {
+        console.error("Load project scans failed:", error);
+        return res.status(500).json({ error: "Could not load scan history. Please try again." });
+    }
+
+    res.json(data);
+}
+
+module.exports = { getProjects, createProject, updateProjectById, deleteProjectById, getScansByProjectId };

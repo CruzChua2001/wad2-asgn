@@ -103,7 +103,7 @@ const getDomainScanId = async (site, force) => {
 }
 
 const createScan = async (req, res) => {
-    const { domain, githubRepo, force } = req.body;
+    const { domain, githubRepo, force , projectId} = req.body;
     
     if (!domain && !githubRepo) {
         return res.status(400).json({ error: "Enter a website or a GitHub repository." });
@@ -119,6 +119,18 @@ const createScan = async (req, res) => {
         return res.status(400).json({ error: repo.reason });
     }
 
+    if (projectId) {
+        if(!req.user) {
+            return res.status(401).json({ error: "Please log in first." });
+        }
+
+        const { data:member } = await supabase.from("project_members").select("role").eq("project_id", projectId).eq("user_id", req.user.id).maybeSingle();
+
+        if (!member || member.role !== "owner") {
+            return res.status(403).json({ error: "Only project owners can scan this project." });
+        }
+    }
+
     try {
         const [domainScanId, repoScanId] = await Promise.all([
             site ? getDomainScanId(site, force) : null,
@@ -130,6 +142,7 @@ const createScan = async (req, res) => {
         }
 
         const newScan = {
+            project_id: projectId || null,
             domain_scan_id: domainScanId,
             repo_scan_id: repoScanId,
             user_id: req.user?.id ?? null
