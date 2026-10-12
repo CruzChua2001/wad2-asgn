@@ -12,6 +12,7 @@ const { checkRepoFiles } = require("../checks/github/files");
 const { checkDependencies } = require("../checks/github/deps");
 
 const { getDomainFindings, getRepoFindings, getScore } = require("../lib/findings");
+const { isCdnIp } = require("../lib/cdn");
 
 const cacheLimit = _ => new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString()
 
@@ -66,10 +67,18 @@ async function* scanDomainSteps(hostname, domain) {
     yield ev("ok", `Ports: ${openPortCount(ports)} open across ${ips.length} server(s).`, "open-ports");
     yield ev("ok", "Server locations mapped.", "geolocation");
 
-    // Collect known vulns from ips and look up their details (CVE database)
+    // Flag CDN edge IPs as their ports/CVEs are shared infrastructure so they must not become findings or dock the score (still keep them geolocated though)
+    const ispByIp = new Map((geolocations.records.geo ?? []).map(g => [g.ip, g.isp]));
+    const cdnIps = new Set(
+        (ports.records.ports ?? [])
+            .filter(p => isCdnIp({ isp: ispByIp.get(p.ip), tags: p.tags }))
+            .map(p => p.ip)
+    );
+    
     const cveIds = [];
 
     for (let port of ports.records.ports) {
+        if (cdnIps.has(port.ip)) continue;
         cveIds.push(...(port.vulns ?? []));
     }
 
@@ -79,7 +88,7 @@ async function* scanDomainSteps(hostname, domain) {
 
     return {
         website: hostname,
-        records: { ...dns.records, ...subdomains.records, ...ports.records, ...geolocations.records, ...cves.records },
+        records: { ...dns.records, ...subdomains.records, ...ports.records, ...geolocations.records, ...cves.records, cdnIps: [...cdnIps] },
         checks:  { ...dns.checks,  ...subdomains.checks,  ...ports.checks,  ...geolocations.checks,  ...cves.checks }
     }
 }
