@@ -47,13 +47,17 @@ const getHostName = (ip, domainScan) => {
     return ip;
 }
 
-const getServerStatus = (ip, portRecord, findings) => {
+const getServerStatus = (ip, portRecord, findings, isCdn = false) => {
     let status = "healthy";
-    
-    if (portRecord && portRecord.vulns.length > 0) {
+
+    // mark CDN edge's open ports/vulns as non-critical as they are shared infrastructure
+    if (!isCdn && portRecord && portRecord.vulns.length > 0) {
         return "critical";
     }
-    
+    if (isCdn) {
+        return status;
+    }
+
     for (let finding of findings) {
         if (finding.hosts && finding.hosts.includes(ip)) {
             if (finding.severity === "critical" || finding.severity === "high") {
@@ -99,6 +103,7 @@ const getServers = (domainScan, findings) => {
     }
 
     const records = domainScan.result.records;
+    const cdn = new Set(records.cdnIps ?? []);
 
     for (let geo of records.geo) {
         if (geo.status !== "ok"){
@@ -111,6 +116,8 @@ const getServers = (domainScan, findings) => {
         if (portRecord) {
             ports = portRecord.ports;
         }
+
+        const isCdn = cdn.has(geo.ip);
 
         let service = "None found";
         let summary = "No open services were listed for this server.";
@@ -127,6 +134,10 @@ const getServers = (domainScan, findings) => {
             summary = `${ports.length} open service(s) found on this server.`;
         }
 
+        if (isCdn) {
+            summary = "CDN edge server — shared infrastructure, not scored against you.";
+        }
+
         servers.push({
             id: geo.ip,
             host: getHostName(geo.ip, domainScan),
@@ -137,8 +148,9 @@ const getServers = (domainScan, findings) => {
             lng: geo.lon,
             provider: geo.isp,
             service: service,
-            status: getServerStatus(geo.ip, portRecord, findings),
+            status: getServerStatus(geo.ip, portRecord, findings, isCdn),
             summary: summary,
+            isCdn: isCdn,
         });
     }
 
