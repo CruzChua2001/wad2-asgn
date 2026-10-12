@@ -2,8 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useMemo, useState, useRef } from "react";
-import { DOMAIN_STEPS, REPO_STEPS } from "./scan-steps";
 import api from "@/lib/api";
+import { createClient } from "@/lib/client";
 import { toResult } from "./scan-result";
 
 const ScanContext = createContext(null);
@@ -20,7 +20,6 @@ export function ScanProvider({ children }) {
   const [lines, setLines] = useState([]);
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState(null);
-  const timerRef = useRef(null);
   const abortRef = useRef(null);
 
   const startScan = useCallback(async ({domain, githubRepo, projectId, force}) => {
@@ -28,44 +27,98 @@ export function ScanProvider({ children }) {
       setLines((current) => [...current, { id:current.length, kind, text, time: formatLogTime(new Date()) }]);
     }
 
-    // Resets the terminal
-    // Switch page to the terminal view
+    // Resets the terminal and switch page to the terminal view
     setLines([]);
     setProgress(0);
     setScan({ domain, githubRepo });
     setPhase("scanning");
     addLine("command", `$ cruz scan ${[domain, githubRepo].filter(Boolean).join(" ")}`);
 
-    // Fake progress
-    // Every 2 seconds, prints the hardcoded line
-    const steps = [...(domain ? DOMAIN_STEPS : []), ...(githubRepo ? REPO_STEPS : [])];
-    let step = 0;
-
-    timerRef.current = setInterval(() => {
-      if (step < steps.length) {
-        addLine("info", steps[step]);
-        step++;
-      }
-
-      setProgress((current) => Math.min(current+8, 90));
-    }, 2000);
+    const expected = (domain ? 5 : 0) + (githubRepo ? 3 : 0); // domain modules + repo modules
+    let completed = 0;
 
     // Cancel switch for the request
     abortRef.current = new AbortController();
 
     try {
-      const { data } = await api.post("/api/scan", { domain, githubRepo, projectId, force }, { signal: abortRef.current.signal });
-      clearInterval(timerRef.current);
-      addLine("summary", "Done. Opening your results now...");
-      setProgress(100);
-      setScan({ domain, githubRepo, id: data.id });
-      setPhase("results");
+      const supabase = createClient();
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
 
-      router.push(`/scan/${data.id}`);
-    } catch (e) {
-      clearInterval(timerRef.current);
-      if (e.code === "ERR_CANCELED") return;
-      addLine("bad", e.response?.data?.error ?? "Scan failed. Please try again.");
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/scan`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ domain, githubRepo, projectId, force }),
+        signal: abortRef.current.signal,
+      });
+
+      // Check for pre-stream failures (bad input, auth, permissions)
+      if (!response.ok) {
+        let message = "Scan failed. Please try again.";
+        try {
+          const body = await response.json();
+          message = body.error ?? message;
+        } catch (_) { /* non-JSON body */ }
+        addLine("bad", message);
+        return;
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      const handleEvent = (event) => {
+        if (event.type === "event") {
+          addLine(event.kind, event.text);
+          if (event.kind === "ok" || event.kind === "warn") {
+            completed += 1;
+            setProgress(expected > 0 ? Math.min(90, Math.round((completed / expected) * 100)) : 90);
+          }
+        } else if (event.type === "done") {
+          addLine("summary", "Done. Opening your results now...");
+          setProgress(100);
+          setScan({ domain, githubRepo, id: event.id });
+          setPhase("results");
+          router.push(`/scan/${event.id}`);
+        } else if (event.type === "error") {
+          addLine("bad", event.message ?? "Scan failed. Please try again.");
+        }
+      };
+
+      // Read NDJSON per line
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split("\n");
+        buffer = parts.pop();
+
+        for (const line of parts) {
+          if (!line.trim()) continue;
+          try {
+            handleEvent(JSON.parse(line));
+          } catch (error) {
+
+          }
+        }
+      }
+
+      // Flush any trailing complete line left in the buffer
+      if (buffer.trim()) {
+        try {
+          handleEvent(JSON.parse(buffer));
+        }        
+        catch (error) {
+          
+        }
+      }
+    } catch (error) {
+      if (e.name === "AbortError") return; // user cancelled, terminal was reset
+      addLine("bad", "Scan failed. Please try again.");
     }
   }, [router])
 
@@ -86,7 +139,6 @@ export function ScanProvider({ children }) {
     setPhase("idle");
     setLines([]);
     setScan(null);
-    clearInterval(timerRef.current);
     abortRef.current?.abort();
   }, []);
 

@@ -12,16 +12,39 @@ const { checkRepoFiles } = require("../checks/github/files");
 const { checkDependencies } = require("../checks/github/deps");
 
 const { getDomainFindings, getRepoFindings, getScore } = require("../lib/findings");
+const { isCdnIp } = require("../lib/cdn");
 
 const cacheLimit = _ => new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString()
 
-const scanDomain = async (hostname, domain) => {
-    const [dns, subdomains] = await Promise.all([
-        checkDns(hostname, domain), 
-        checkSubdomains(domain)
-    ])
+const ev = (kind, text, module = null) => ({ type: "event", kind, text, module });
 
-    // Collects every IP from the main site, and each subdomain
+// Count DNS records
+const dnsRecordCount = dns => {
+    const r = dns.records;
+    return (r.a?.length ?? 0) + (r.aaaa?.length ?? 0) + (r.ns?.length ?? 0)
+         + (r.mx?.length ?? 0) + (r.caa?.length ?? 0);
+}
+
+// Count total open ports
+const openPortCount = ports => (ports.records.ports ?? []).reduce((sum, p) => sum + (p.ports?.length ?? 0), 0);
+
+/**
+ * Step-by-step Domain scan
+ */
+async function* scanDomainSteps(hostname, domain) {
+    yield ev("info", "Resolving DNS records...", "dns");
+    yield ev("info", "Searching certificate logs for subdomains...", "subdomains");
+
+    const [dns, subdomains] = await Promise.all([
+        checkDns(hostname, domain),
+        checkSubdomains(domain)
+    ]);
+
+    yield ev(dns.checks.a === "unavailable" ? "warn" : "ok", `DNS: ${dnsRecordCount(dns)} record(s) found.`, "dns");
+    yield ev(subdomains.checks.subdomains === "unavailable" ? "warn" : "ok",
+        `Subdomains: ${subdomains.records.subdomains.length} found.`, "subdomains");
+
+    // Collect every IP from the main site and each subdomain
     const hostIps = (dns.records.a ?? []).concat(dns.records.aaaa ?? []);
     const subdomainIps = [];
 
@@ -29,51 +52,105 @@ const scanDomain = async (hostname, domain) => {
         subdomainIps.push(...(subdomain.ips ?? []));
     }
 
-    // -- Remove duplicated ips
+    // Remove duplicated ips
     const ips = [...new Set([...hostIps, ...subdomainIps])];
 
-    // Find open ports (using Shodan) using each ip and the server location for the globe
+    // Find open ports via Shodan using each ip and the server location for the globe
+    yield ev("info", `Checking open ports on ${ips.length} server(s)...`, "open-ports");
+    yield ev("info", "Locating servers around the world...", "geolocation");
+
     const [ports, geolocations] = await Promise.all([
         checkOpenPorts(ips),
         checkGeolocation(ips)
-    ])
+    ]);
 
-    // Open port may list known vulnerability IDs (vulns). Collect all and look up their details (CVE database)
+    yield ev("ok", `Ports: ${openPortCount(ports)} open across ${ips.length} server(s).`, "open-ports");
+    yield ev("ok", "Server locations mapped.", "geolocation");
+
+    // Flag CDN edge IPs as their ports/CVEs are shared infrastructure so they must not become findings or dock the score (still keep them geolocated though)
+    const ispByIp = new Map((geolocations.records.geo ?? []).map(g => [g.ip, g.isp]));
+    const cdnIps = new Set(
+        (ports.records.ports ?? [])
+            .filter(p => isCdnIp({ isp: ispByIp.get(p.ip), tags: p.tags }))
+            .map(p => p.ip)
+    );
+    
     const cveIds = [];
 
     for (let port of ports.records.ports) {
+        if (cdnIps.has(port.ip)) continue;
         cveIds.push(...(port.vulns ?? []));
     }
-    
+
+    yield ev("info", "Looking up known vulnerabilities (CVEs)...", "cves");
     const cves = await checkCves(cveIds);
+    yield ev(cveIds.length > 0 ? "warn" : "ok", `CVEs: ${cves.records.cves?.length ?? 0} found.`, "cves");
 
     return {
         website: hostname,
-        records: { ...dns.records, ...subdomains.records, ...ports.records, ...geolocations.records, ...cves.records },
+        records: { ...dns.records, ...subdomains.records, ...ports.records, ...geolocations.records, ...cves.records, cdnIps: [...cdnIps] },
         checks:  { ...dns.checks,  ...subdomains.checks,  ...ports.checks,  ...geolocations.checks,  ...cves.checks }
     }
 }
 
-const getRepoScanId = async (repo, force) => {
+/**
+ * Resolve the domain_scans id, returning progress along the way
+ */
+async function* getDomainScanIdSteps(site, force) {
+    if (!force) {
+        const { data } = await supabase.from("domain_scans").select("id").eq("domain", site.hostname).gte("created_at", cacheLimit())
+            .order("created_at", { ascending: false }).limit(1).maybeSingle();
+        if (data) {
+            yield ev("ok", "Found a recent website scan, reusing it.", "cache");
+            return data.id;
+        }
+    }
+
+    const result = yield* scanDomainSteps(site.hostname, site.domain);
+
+    const { data, error } = await supabase.from("domain_scans").insert({ domain: site.hostname, result }).select("id").single();
+    if (error) throw error;
+
+    return data.id;
+}
+
+/**
+ * Resolve the repo_scans id, returning progress along the way
+ */
+async function* getRepoScanIdSteps(repo, force) {
+    yield ev("info", "Looking up the repository on GitHub...", "repo");
     const info = await checkRepoInfo(repo);
-    if (info.checks.repo !== "ok") return null;
+    if (info.checks.repo !== "ok") {
+        yield ev("bad", "Repository not found or not public.", "repo");
+        return null;
+    }
 
     const sha = info.records.commitSha;
-    
+    yield ev("ok", "Repository found, latest commit read.", "repo");
+
     // Check for cache result in database
-    // - within the 12 hour limit
-    // - compare with the commit SHA (if not additional commit, use the cache)
     if (!force) {
         const { data } = await supabase.from("repo_scans").select("id").eq("github_repo", repo).eq("commit_sha", sha).gte("created_at", cacheLimit())
             .order("created_at", { ascending: false }).limit(1).maybeSingle();
-        if (data) return data.id;
+        if (data) {
+            yield ev("ok", "Found a recent repository scan, reusing it.", "cache");
+            return data.id;
+        }
     }
 
     // Fetch new result
+    yield ev("info", "Listing files and checking for committed secrets...", "files");
+    yield ev("info", "Reading dependencies and asking OSV.dev about them...", "deps");
+
     const [files, deps] = await Promise.all([
         checkRepoFiles(repo, sha),
         checkDependencies(repo, sha)
-    ])
+    ]);
+
+    yield ev(files.records.sensitiveFiles?.length > 0 ? "warn" : "ok",
+        `Files: ${files.records.sensitiveFiles?.length ?? 0} sensitive file(s) found.`, "files");
+    yield ev(deps.records.dependencies?.length > 0 ? "warn" : "ok",
+        `Dependencies: ${deps.records.dependencies?.length ?? 0} vulnerable package(s).`, "deps");
 
     const result = {
         repo,
@@ -87,24 +164,21 @@ const getRepoScanId = async (repo, force) => {
     return data.id
 }
 
-const getDomainScanId = async (site, force) => {
-    if (!force) {
-        const { data } = await supabase.from("domain_scans").select("id").eq("domain", site.hostname).gte("created_at", cacheLimit())
-            .order("created_at", { ascending: false }).limit(1).maybeSingle();
-        if (data) return data.id;
+/**
+ * Drain an async generator, forwarding each yielded event to write(), and return the generator's final return value
+ */
+async function drain(gen, write) {
+    let step = await gen.next();
+    while (!step.done) {
+        write(step.value);
+        step = await gen.next();
     }
-
-    const result = await scanDomain(site.hostname, site.domain);
-
-    const { data, error } = await supabase.from("domain_scans").insert({ domain: site.hostname, result }).select("id").single();
-    if (error) throw error;
-
-    return data.id;
+    return step.value;
 }
 
 const createScan = async (req, res) => {
     const { domain, githubRepo, force , projectId} = req.body;
-    
+
     if (!domain && !githubRepo) {
         return res.status(400).json({ error: "Enter a website or a GitHub repository." });
     }
@@ -131,14 +205,28 @@ const createScan = async (req, res) => {
         }
     }
 
+    // Stream progress as NDJSON
+    res.status(200);
+    res.setHeader("Content-Type", "application/x-ndjson");
+    res.setHeader("Cache-Control", "no-cache, no-transform");
+    res.setHeader("X-Accel-Buffering", "no");
+
+    const write = event => {
+        if (res.writableEnded) return;
+        try {
+            res.write(JSON.stringify(event) + "\n");
+        } catch (error) {
+
+        }
+    };
+
     try {
-        const [domainScanId, repoScanId] = await Promise.all([
-            site ? getDomainScanId(site, force) : null,
-            repo ? getRepoScanId(repo.repo, force) : null
-        ])
+        const domainScanId = site ? await drain(getDomainScanIdSteps(site, force), write) : null;
+        const repoScanId = repo ? await drain(getRepoScanIdSteps(repo.repo, force), write) : null;
 
         if (repo && !repoScanId) {
-            return res.status(400).json({ error: "We couldn't find that GitHub repository. Check that it's public and spelled correctly." });
+            write({ type: "error", message: "We couldn't find that GitHub repository. Check that it's public and spelled correctly." });
+            return res.end();
         }
 
         const newScan = {
@@ -151,11 +239,13 @@ const createScan = async (req, res) => {
         const { data:scan, error } = await supabase.from("scans").insert(newScan).select("id").single();
         if (error) throw error;
 
-        res.status(201).json({ id: scan.id });
+        write({ type: "done", id: scan.id });
+        res.end();
 
     } catch (e) {
         console.error("Create scan failed:", e);
-        res.status(500).json({ error: "Scan failed. Please try again." });
+        write({ type: "error", message: "Scan failed. Please try again." });
+        res.end();
     }
 }
 

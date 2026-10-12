@@ -67,9 +67,10 @@ const getDomainFindings = result => {
         });
     }
 
-    // Risky open ports, one finding per port
+    // Risky open ports, one finding per port (CDN edge IPs excluded)
+    const cdn = new Set(records.cdnIps ?? []);
     for (let port in RISKY_PORTS) {
-        const servers = (records.ports ?? []).filter(item => item.ports.includes(Number(port)));
+        const servers = (records.ports ?? []).filter(item => item.ports.includes(Number(port)) && !cdn.has(item.ip));
 
         if (servers.length === 0) {
             continue;
