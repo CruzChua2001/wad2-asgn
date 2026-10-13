@@ -46,6 +46,42 @@ function ScoreRing({ score, reduceMotion }) {
   );
 }
 
+const DOT_COLORS = { healthy: "bg-accent", attention: "bg-warm", critical: "bg-critical" };
+
+// Phone-sized replacement for the globe's server list: servers grouped by country.
+function ServerGroups({ groups, selectedId, onSelect }) {
+  return (
+    <div className="flex flex-col gap-4 p-3.5" role="group" aria-label="Servers by country">
+      {groups.map((group) => (
+        <section key={group.country} aria-label={group.country}>
+          <h3 className="mb-2 text-xs font-semibold text-muted">
+            {group.country} · {group.nodes.length} {group.nodes.length === 1 ? "server" : "servers"}
+          </h3>
+          <ul className="flex flex-col gap-2">
+            {group.nodes.map((node) => (
+              <li key={node.id}>
+                <button
+                  type="button"
+                  aria-pressed={node.id === selectedId}
+                  onClick={() => onSelect(node.id)}
+                  className={`flex w-full min-w-0 cursor-pointer items-start gap-2.5 rounded-md border bg-surface px-2.5 py-2 text-left text-ink ${node.id === selectedId ? "border-accent" : "border-line"}`}
+                >
+                  <i aria-hidden="true" className={`mt-1.5 size-2 flex-none rounded-full ${DOT_COLORS[node.status]}`} />
+                  <span className="sr-only">{STATUS_LABELS[node.status]}:</span>
+                  <span className="min-w-0 flex-1">
+                    <strong className="block truncate font-mono text-xs font-semibold">{node.host}</strong>
+                    <small className="block break-words text-xs text-muted">{node.provider} · {node.service}</small>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+    </div>
+  );
+}
+
 // The scan layout only renders this tab once a finished scan exists.
 export default function OverviewTab() {
   const { result, lines } = useScan();
@@ -56,6 +92,17 @@ export default function OverviewTab() {
   const [selectedNodeId, setSelectedNodeId] = useState(findings[0]?.nodeId || result.nodes[0]?.id);
   const [logOpen, setLogOpen] = useState(false);
   const [showAllServers, setShowAllServers] = useState(false);
+  const [mapOpen, setMapOpen] = useState(false);
+
+  const countryGroups = [];
+  for (const node of result.nodes) {
+    let group = countryGroups.find((item) => item.country === node.country);
+    if (!group) {
+      group = { country: node.country, nodes: [] };
+      countryGroups.push(group);
+    }
+    group.nodes.push(node);
+  }
 
   let shownNodes = result.nodes;
   if (!showAllServers) {
@@ -120,7 +167,22 @@ export default function OverviewTab() {
             </div>
           </div>
 
-          <div className={`${styles.globeStage} flex-none h-75 md:h-[clamp(300px,38vh,380px)]`}>
+          <div className="md:hidden">
+            <ServerGroups groups={countryGroups} selectedId={selectedNode.id} onSelect={selectNode} />
+            <div className="border-t border-line px-3.5 py-3">
+              <button
+                type="button"
+                aria-expanded={mapOpen}
+                aria-controls="map-stage"
+                onClick={() => setMapOpen((open) => !open)}
+                className="w-full cursor-pointer rounded-md border border-line bg-surface px-3 py-2 text-sm font-semibold text-accent"
+              >
+                {mapOpen ? "Hide map" : "Show map"}
+              </button>
+            </div>
+          </div>
+
+          <div id="map-stage" className={`${styles.globeStage} flex-none h-75 md:h-[clamp(300px,38vh,380px)] ${mapOpen ? "" : "max-md:hidden"}`}>
             <ExposureGlobe
               nodes={result.nodes}
               arcs={result.arcs}
@@ -132,7 +194,7 @@ export default function OverviewTab() {
             <p className={styles.globeHint}>Drag to spin · click a dot or a server below</p>
           </div>
 
-          <div className={styles.nodeList} role="group" aria-label="Servers">
+          <div className={`${styles.nodeList} max-md:hidden!`} role="group" aria-label="Servers">
             {shownNodes.map((node) => (
               <button
                 key={node.id}
