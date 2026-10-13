@@ -17,6 +17,11 @@ const SEVERITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };
 const SEVERITY_LABELS = { critical: "Critical", high: "High", medium: "Medium", low: "Low" };
 const STATUS_LABELS = { healthy: "Healthy", attention: "Needs attention", critical: "Critical" };
 
+// ip-api's org is the hosting company; older cached scans only have isp.
+function hostingProvider(node) {
+  return node.org || node.provider || "Unknown";
+}
+
 function scoreTone(value) {
   if (value >= 80) return "good";
   if (value >= 60) return "warn";
@@ -164,7 +169,8 @@ export default function OverviewTab() {
                 <div><dt>Address</dt><dd>{selectedNode.host}</dd></div>
                 <div><dt>IP</dt><dd>{selectedNode.ip}</dd></div>
                 <div><dt>Location</dt><dd>{selectedNode.city}, {selectedNode.country}</dd></div>
-                <div><dt>Host</dt><dd>{selectedNode.provider}</dd></div>
+                <div><dt>Hosting provider</dt><dd>{hostingProvider(selectedNode)}</dd></div>
+                <div><dt>Network operator</dt><dd>{selectedNode.as || "Unknown"}</dd></div>
                 <div><dt>Service</dt><dd>{selectedNode.service}</dd></div>
               </dl>
               <div className={styles.inspectorText}>
