@@ -81,6 +81,8 @@ const getFindings = data => {
 
         findings.push({
             id: finding.id,
+            category: finding.category,
+            kind: finding.kind,
             severity: finding.severity,
             title: finding.title,
             why: finding.explain,
@@ -88,6 +90,7 @@ const getFindings = data => {
             source: SOURCE_LABELS[finding.source],
             hosts: finding.hosts,
             files: finding.files,
+            details: finding.details,
             nodeId: nodeId,
         });
     }
@@ -228,6 +231,11 @@ export const toResult = data => {
         score: data.score,
         grade: data.grade,
         rating: `Grade ${data.grade} · ${getRating(data.score)}`,
+        breakdown: data.breakdown,
+        checks: data.checks,
+        cap: data.cap,
+        incomplete: data.incomplete,
+        uncappedScore: data.uncappedScore,
         summary,
         nodes: servers,
         arcs,
