@@ -7,7 +7,9 @@ const checkRepo = input => {
     const repo = input.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/^(www\.)?github\.com\//, "")
         .replace(/\.git$/, "").replace(/\/+$/, "");
 
-    if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) {
+    const [owner, name] = repo.split("/");
+
+    if (!/^[\w.-]+\/[\w.-]+$/.test(repo) || [owner, name].some(part => part === "." || part === "..")) {
         return { isValid: false, reason: "Use a public GitHub URL or owner/repository." };
     }
 
