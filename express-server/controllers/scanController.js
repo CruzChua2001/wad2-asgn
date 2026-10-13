@@ -262,6 +262,8 @@ const getScanById = async (req, res) => {
         return res.status(404).json({ error: "Scan not found." }); 
     }
 
+    let role = null;
+
     if (scan.project_id) {
         if (!req.user) {
             return res.status(404).json({ error: "Scan not found." });
@@ -272,9 +274,11 @@ const getScanById = async (req, res) => {
         if (!member) {
             return res.status(404).json({ error: "Scan not found." });
         }
+
+        role = member.role;
     }
 
-    res.json({ ...scan, ...buildFindings(scan) });
+    res.json({ ...scan, role, ...buildFindings(scan) });
 }
 
 module.exports = { createScan, getScanById }

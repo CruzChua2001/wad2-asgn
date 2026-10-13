@@ -1,4 +1,20 @@
 const { supabase } = require("../lib/supabase");
+const { checkWebsite } = require("../lib/domain");
+const { checkRepo } = require("../lib/github");
+
+const checkTargets = (domain, githubRepo) => {
+    const site = domain ? checkWebsite(domain) : null;
+    const repo = githubRepo ? checkRepo(githubRepo) : null;
+
+    if (site && !site.isValid) {
+        return { error: site.reason };
+    }
+    if (repo && !repo.isValid) {
+        return { error: repo.reason };
+    }
+
+    return { domain: site?.hostname ?? null, githubRepo: repo?.repo ?? null };
+}
 
 const getProjects = async (req, res) => {
     const { data, error } = await supabase.from("project_members").select("role, projects(*)").eq("user_id", req.user.id);
@@ -12,16 +28,21 @@ const getProjects = async (req, res) => {
 };
 
 const createProject = async (req, res) => {
-    const { name, domain, githubRepo } = req.body;
+    const { name, domain, githubRepo, scanId } = req.body;
 
     if (!name || (!domain && !githubRepo)) {
         return res.status(400).json({ error: "Add a name and at least a domain or GitHub repo." });
     }
 
+    const targets = checkTargets(domain, githubRepo);
+    if (targets.error) {
+        return res.status(400).json({ error: targets.error });
+    }
+
     let newProject = {
-        name, 
-        domain: domain || null,
-        github_repo: githubRepo || null,
+        name,
+        domain: targets.domain,
+        github_repo: targets.githubRepo,
         created_by: req.user.id
     }
 
@@ -45,6 +66,19 @@ const createProject = async (req, res) => {
         return res.status(500).json({ error: "Could not create project. Please try again." });
     }
 
+    // Save to project: copy the scan into the new project
+    if (scanId) {
+        const { data: scan } = await supabase.from("scans").select("domain_scan_id, repo_scan_id").eq("id", scanId).is("project_id", null).maybeSingle();
+
+        if (scan) {
+            const { error: scanError } = await supabase.from("scans").insert({ ...scan, project_id: data.id, user_id: req.user.id });
+
+            if (scanError) {
+                console.error("Save scan to project failed:", scanError);
+            }
+        }
+    }
+
     res.status(201).json({ ...data, role: "owner" });
 };
 
@@ -54,10 +88,15 @@ const updateProjectById = async (req, res) => {
         return res.status(400).json({ error: "Add a name and at least a domain or GitHub repo." });
     }
 
+    const targets = checkTargets(domain, githubRepo);
+    if (targets.error) {
+        return res.status(400).json({ error: targets.error });
+    }
+
     let updatedProject = {
         name,
-        domain: domain || null,
-        github_repo: githubRepo || null
+        domain: targets.domain,
+        github_repo: targets.githubRepo
     }
     const { data, error } = await supabase.from("projects").update(updatedProject).eq("id", req.params.id).select().single();
 

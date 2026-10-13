@@ -62,15 +62,15 @@ const ProjectModal = ({ editing, modalRef, form, updateField, onSubmit, error, l
                             <button
                                 key={t.key}
                                 type="button"
-                                aria-pressed={shown[t.key]}
+                                aria-pressed={isShown(t.key)}
                                 onClick={() => toggleTarget(t.key)}
-                                className={`flex items-center gap-2 h-9 px-3 rounded-full border text-sm ${shown[t.key] ? "border-accent bg-accent-soft/20 text-ink" : "border-line text-muted hover:text-ink cursor-pointer"}`}
+                                className={`flex items-center gap-2 h-9 px-3 rounded-full border text-sm ${isShown(t.key) ? "border-accent bg-accent-soft/20 text-ink" : "border-line text-muted hover:text-ink cursor-pointer"}`}
                             >
-                                {shown[t.key] ? <LuCheck size={14} /> : <LuPlus size={14} />} {t.label}
+                                {isShown(t.key) ? <LuCheck size={14} /> : <LuPlus size={14} />} {t.label}
                             </button>
                         ))}
                     </div>
-                    {TARGETS.filter(t => shown[t.key]).map(t => (
+                    {TARGETS.filter(t => isShown(t.key)).map(t => (
                         <Field key={t.key} icon={t.icon} label={t.label} name={t.key} value={form[t.key]} onChange={updateField} placeholder={t.placeholder} />
                     ))}
                 </fieldset>

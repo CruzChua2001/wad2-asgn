@@ -243,7 +243,8 @@ export const toResult = data => {
         stats,
         scannedAt: scannedAt,
         scannedAgo: lastScanTime(scannedAt),
-        projectId: data.project_id
+        projectId: data.project_id,
+        role: data.role
     }
 }
 

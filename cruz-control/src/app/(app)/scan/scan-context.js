@@ -69,6 +69,7 @@ export function ScanProvider({ children }) {
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
+      let finished = false;
 
       const handleEvent = (event) => {
         if (event.type === "event") {
@@ -78,12 +79,14 @@ export function ScanProvider({ children }) {
             setProgress(expected > 0 ? Math.min(90, Math.round((completed / expected) * 100)) : 90);
           }
         } else if (event.type === "done") {
+          finished = true;
           addLine("summary", "Done. Opening your results now...");
           setProgress(100);
           setScan({ domain, githubRepo, id: event.id });
           setPhase("results");
           router.push(`/scan/${event.id}`);
         } else if (event.type === "error") {
+          finished = true;
           addLine("bad", event.message ?? "Scan failed. Please try again.");
         }
       };
@@ -113,11 +116,15 @@ export function ScanProvider({ children }) {
           handleEvent(JSON.parse(buffer));
         }        
         catch (error) {
-          
+
         }
       }
+
+      if (!finished) {
+        addLine("bad", "Scan failed. Please try again.");
+      }
     } catch (error) {
-      if (e.name === "AbortError") return; // user cancelled, terminal was reset
+      if (error.name === "AbortError") return; // user cancelled, terminal was reset
       addLine("bad", "Scan failed. Please try again.");
     }
   }, [router])

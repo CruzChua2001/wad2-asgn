@@ -74,7 +74,8 @@ export default function ScanResultsLayout({ children }) {
       let data = {
         name: result.title,
         domain: result.domain,
-        githubRepo: result.linkedRepository
+        githubRepo: result.linkedRepository,
+        scanId: id
       }
 
       await api.post("/api/project", data);
@@ -109,7 +110,7 @@ export default function ScanResultsLayout({ children }) {
           )}
           
 
-          {result.scannedAgo !== "just now" && (
+          {result.scannedAgo !== "just now" && (!result.projectId || result.role === "owner") && (
             <button className={styles.newScan} onClick={rescan}>Re-scan</button>
           )}
 
