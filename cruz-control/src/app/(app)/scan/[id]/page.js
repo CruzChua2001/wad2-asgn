@@ -75,7 +75,7 @@ function ServerGroups({ groups, selectedId, onSelect }) {
                   <span className="sr-only">{STATUS_LABELS[node.status]}:</span>
                   <span className="min-w-0 flex-1">
                     <strong className="block truncate font-mono text-xs font-semibold">{node.host}</strong>
-                    <small className="block break-words text-xs text-muted">{node.provider} · {node.service}</small>
+                    <small className="block break-words text-xs text-muted">{hostingProvider(node)} · {node.service}</small>
                   </span>
                 </button>
               </li>
