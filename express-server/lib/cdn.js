@@ -16,13 +16,14 @@ const CDN_ISP_PATTERNS = [
 ];
 
 /**
- * Decide if an IP is a CDN edge from its Shodan tags and ip-api ISP string
+ * Decide if an IP is a CDN edge from its Shodan tags and ip-api ISP/org strings
+ * (CloudFront and Azure Front Door may only show up in org, not isp)
  */
-function isCdnIp({ isp = "", tags = [] } = {}) {
+function isCdnIp({ isp = "", org = "", tags = [] } = {}) {
     if (tags.some(t => String(t).toLowerCase() === "cdn")) {
         return true;
     }
-    return CDN_ISP_PATTERNS.some(re => re.test(isp));
+    return CDN_ISP_PATTERNS.some(re => re.test(isp) || re.test(org));
 }
 
 module.exports = { isCdnIp };

@@ -68,10 +68,10 @@ async function* scanDomainSteps(hostname, domain) {
     yield ev("ok", "Server locations mapped.", "geolocation");
 
     // Flag CDN edge IPs as their ports/CVEs are shared infrastructure so they must not become findings or dock the score (still keep them geolocated though)
-    const ispByIp = new Map((geolocations.records.geo ?? []).map(g => [g.ip, g.isp]));
+    const geoByIp = new Map((geolocations.records.geo ?? []).map(g => [g.ip, g]));
     const cdnIps = new Set(
         (ports.records.ports ?? [])
-            .filter(p => isCdnIp({ isp: ispByIp.get(p.ip), tags: p.tags }))
+            .filter(p => isCdnIp({ isp: geoByIp.get(p.ip)?.isp, org: geoByIp.get(p.ip)?.org, tags: p.tags }))
             .map(p => p.ip)
     );
     
