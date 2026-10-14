@@ -191,7 +191,8 @@ const getDomainFindings = result => {
             source: "domain",
             details: { domain: domain ?? website ?? null, record: records.dmarc ?? null },
         });
-    } else if (/p=none/i.test(records.dmarc ?? "")) {
+    // Match the p= tag only at a tag boundary, so the sp= subdomain policy isn't mistaken for it
+    } else if (/(^|;)\s*p\s*=\s*none/i.test(records.dmarc ?? "")) {
         findings.push({
             id: "dns-dmarc-weak",
             category: "email-dns",
