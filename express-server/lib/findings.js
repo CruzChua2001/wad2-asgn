@@ -26,8 +26,14 @@ const DOMAIN_CATEGORIES = ["software", "ports", "email-dns"];
 const REPO_CATEGORIES = ["secrets", "packages", "repo-basics"];
 
 const getDomainFindings = result => {
-    const { records, checks } = result;
+    const { records, checks, website } = result;
     const findings = [];
+    const cdn = new Set(records.cdnIps ?? []);
+
+    // Servers running each cve, from Shodan's vulns (CDN edge IPs excluded, as above)
+    const cveHosts = id => (records.ports ?? [])
+        .filter(item => (item.vulns ?? []).includes(id) && !cdn.has(item.ip))
+        .map(item => item.ip);
 
     // Known vulnerabilities (CVE) in software on server
     let exploited = [];
@@ -36,15 +42,27 @@ const getDomainFindings = result => {
 
     if (records.cves) {
         for (let cve of records.cves) {
+            const entry = {
+                id: cve.id,
+                cvss: cve.cvss,
+                epss: cve.epss,
+                kev: cve.kev,
+                summary: cve.summary,
+                hosts: cveHosts(cve.id),
+            };
+
             if (cve.kev) {
-                exploited.push(cve.id);
+                exploited.push(entry);
             } else if (cve.cvss >= 7) {
-                serious.push(cve.id);
+                serious.push(entry);
             } else {
-                other.push(cve.id);
+                other.push(entry);
             }
         }
     }
+
+    // Every server affected by at least one cve in the group
+    const groupHosts = group => [...new Set(group.flatMap(cve => cve.hosts))];
 
     if (exploited.length > 0) {
         findings.push({
@@ -57,7 +75,9 @@ const getDomainFindings = result => {
             explain: "Your servers run software with bugs that are being used in real attacks right now.",
             fix: "Update the software on these servers to the latest version as soon as possible.",
             source: "domain",
-            cves: exploited,
+            cves: exploited.map(cve => cve.id),
+            hosts: groupHosts(exploited),
+            details: { cves: exploited },
         });
     }
 
@@ -72,7 +92,9 @@ const getDomainFindings = result => {
             explain: "Your servers run software versions with publicly known, high-risk bugs.",
             fix: "Update the software on these servers to the latest version.",
             source: "domain",
-            cves: serious,
+            cves: serious.map(cve => cve.id),
+            hosts: groupHosts(serious),
+            details: { cves: serious },
         });
     }
 
@@ -87,12 +109,13 @@ const getDomainFindings = result => {
             explain: "Your servers run software versions with publicly known bugs that are less likely to be used in attacks.",
             fix: "Plan to update the software on these servers.",
             source: "domain",
-            cves: other,
+            cves: other.map(cve => cve.id),
+            hosts: groupHosts(other),
+            details: { cves: other },
         });
     }
 
     // Risky open ports, one finding per port (CDN edge IPs excluded)
-    const cdn = new Set(records.cdnIps ?? []);
     for (let port in RISKY_PORTS) {
         const servers = (records.ports ?? []).filter(item => item.ports.includes(Number(port)) && !cdn.has(item.ip));
 
@@ -113,6 +136,7 @@ const getDomainFindings = result => {
             fix: `Close port ${port} in your firewall, or only allow access through a VPN.`,
             source: "domain",
             hosts: servers.map(item => item.ip),
+            details: { port: Number(port), service: name },
         })
     }
 
@@ -128,6 +152,7 @@ const getDomainFindings = result => {
             explain: "SPF tells email providers which servers may send email for your domain. Without it, scammers can fake your address more easily.",
             fix: "Add a TXT record starting with v=spf1 that lists your email provider.",
             source: "domain",
+            details: { domain: website ?? null, record: records.spf ?? null },
         });
     }
 
@@ -142,6 +167,7 @@ const getDomainFindings = result => {
             explain: "DMARC tells email providers what to do with fake emails using your domain. Without it, they may still be delivered.",
             fix: "Add a TXT record at _dmarc.yourdomain starting with v=DMARC1; p=none, then tighten it to p=quarantine.",
             source: "domain",
+            details: { domain: website ?? null, record: records.dmarc ?? null },
         });
     } else if (/p=none/i.test(records.dmarc ?? "")) {
         findings.push({
@@ -154,6 +180,7 @@ const getDomainFindings = result => {
             explain: "Your DMARC policy is p=none, so fake emails are reported but still delivered.",
             fix: "Change your DMARC policy to p=quarantine or p=reject.",
             source: "domain",
+            details: { domain: website ?? null, record: records.dmarc ?? null },
         });
     }
 
@@ -169,6 +196,7 @@ const getDomainFindings = result => {
             explain: "Any certificate authority could issue an HTTPS certificate for your domain.",
             fix: "Add a CAA record that only allows the certificate authority you use (e.g. letsencrypt.org).",
             source: "domain",
+            details: { domain: website ?? null, record: null },
         });
     }
 
@@ -192,6 +220,7 @@ const getRepoFindings = result => {
             fix: "Delete the files, add them to .gitignore, then change (rotate) every password or key inside. They stay in the git history, so deleting alone isn't enough.",
             source: "repo",
             files: records.sensitiveFiles,
+            details: { files: records.sensitiveFiles },
         });
     }
 
@@ -207,6 +236,7 @@ const getRepoFindings = result => {
             explain: `This package has ${pkg.vulns.length} known security bug(s): ${pkg.vulns.join(", ")}.`,
             fix: `Run npm install ${pkg.name}@latest (or npm audit fix), then check your app still works.`,
             source: "repo",
+            details: { package: pkg.name, version: pkg.version, vulns: pkg.vulns },
         });
     }
 
@@ -223,6 +253,7 @@ const getRepoFindings = result => {
             explain: "People who find a bug in your project don't know how to report it to you privately.",
             fix: "Add a SECURITY.md file that explains how to report security issues (e.g. an email address).",
             source: "repo",
+            details: {},
         });
     }
     if (basics && !basics.dependabot) {
@@ -236,6 +267,7 @@ const getRepoFindings = result => {
             explain: "Dependabot automatically opens pull requests when your packages have security fixes.",
             fix: "Add a .github/dependabot.yml file (GitHub > Insights > Dependency graph > Dependabot).",
             source: "repo",
+            details: {},
         });
     }
     if (basics?.packageJson && !basics.lockfile) {
@@ -249,6 +281,7 @@ const getRepoFindings = result => {
             explain: "Without package-lock.json, every install can pick different package versions, including vulnerable ones.",
             fix: "Run npm install and commit the package-lock.json file it creates.",
             source: "repo",
+            details: {},
         });
     }
 
