@@ -13,7 +13,6 @@ import styles from "@/styles/overview/scan-results.module.css";
 
 const RESULT_TABS = [
   { href: "", label: "Overview", showsCount: true },
-  { href: "/repository", label: "Repository", requiresRepository: true },
   { href: "/fix-guide", label: "Fix Guide" },
   { href: "/checklist", label: "Checklist" },
   { href: "/report-card", label: "Report Card" },
