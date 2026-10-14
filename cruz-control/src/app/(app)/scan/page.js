@@ -28,14 +28,14 @@ const SAMPLE_TARGETS = {
 
 const CHECKS = {
   website: [
-    { step: "01", title: "DNS & certificates", detail: "Maps public records, certificate history, and candidate subdomains." },
-    { step: "02", title: "Headers & exposure", detail: "Reviews bounded HTTP headers and pre-indexed public service data." },
-    { step: "03", title: "Guided findings", detail: "Turns evidence into prioritized explanations and practical next steps." },
+    { step: "01", title: "DNS & email", detail: "Reads public DNS records, checks SPF, DMARC and CAA, and finds subdomains in certificate logs." },
+    { step: "02", title: "Servers & software", detail: "Looks up open ports and known bugs in Shodan's public data, and maps where your servers are." },
+    { step: "03", title: "HTTPS & headers", detail: "Checks your certificate, the HTTPS redirect and the security headers on your home page." },
   ],
   repository: [
-    { step: "01", title: "Dependencies", detail: "Checks supported manifests against public vulnerability records." },
-    { step: "02", title: "Configuration", detail: "Reviews public files for risky defaults and redacted secret patterns." },
-    { step: "03", title: "Project hygiene", detail: "Explains ignore rules, documentation gaps, and remediation priorities." },
+    { step: "01", title: "Dependencies", detail: "Checks the npm packages in package.json against the OSV.dev vulnerability database." },
+    { step: "02", title: "Secret files", detail: "Looks for committed .env files and private keys by file name, without reading them." },
+    { step: "03", title: "Project hygiene", detail: "Checks your .gitignore rules, README, SECURITY.md, Dependabot and lockfile." },
   ],
 };
 

@@ -5,6 +5,8 @@ const { checkSubdomains } = require("../checks/domain/subdomains");
 const { checkOpenPorts } = require("../checks/domain/open-ports");
 const { checkCves } = require("../checks/domain/cves");
 const { checkGeolocation } = require("../checks/domain/geolocation");
+const { checkCertificate } = require("../checks/domain/certificate");
+const { checkHeaders } = require("../checks/domain/headers");
 
 const { checkRepo } = require("../lib/github");
 const { checkRepoInfo } = require("../checks/github/repo");
@@ -27,6 +29,21 @@ const dnsRecordCount = dns => {
 
 // Count total open ports
 const openPortCount = ports => (ports.records.ports ?? []).reduce((sum, p) => sum + (p.ports?.length ?? 0), 0);
+
+// Describe the certificate for its progress line
+const certLabel = certificate => {
+    const cert = certificate.records.certificate;
+
+    if (certificate.checks.certificate === "none") return "no HTTPS found";
+    if (!cert) return "couldn't check";
+    return `${cert.trusted ? "trusted" : "not trusted"}, ${cert.daysLeft < 0 ? "expired" : `${cert.daysLeft} day(s) left`}`;
+}
+
+// Count how many of the 4 security headers the home page sends
+const headerCount = headers => {
+    const h = headers.records.headers;
+    return h ? [h.hsts, h.csp, h.frameOptions, h.contentType].filter(Boolean).length : 0;
+}
 
 // Describe a .gitignore or README result for the Files progress line
 const coverLabel = (status, record) => {
@@ -65,14 +82,21 @@ async function* scanDomainSteps(hostname, domain) {
     // Find open ports via Shodan using each ip and the server location for the globe
     yield ev("info", `Checking open ports on ${ips.length} server(s)...`, "open-ports");
     yield ev("info", "Locating servers around the world...", "geolocation");
+    yield ev("info", "Checking the HTTPS certificate...", "certificate");
+    yield ev("info", "Checking website security settings...", "headers");
 
-    const [ports, geolocations] = await Promise.all([
+    const [ports, geolocations, certificate, headers] = await Promise.all([
         checkOpenPorts(ips),
-        checkGeolocation(ips)
+        checkGeolocation(ips),
+        checkCertificate(hostname),
+        checkHeaders(hostname)
     ]);
 
     yield ev("ok", `Ports: ${openPortCount(ports)} open across ${ips.length} server(s).`, "open-ports");
     yield ev("ok", "Server locations mapped.", "geolocation");
+    yield ev(certificate.records.certificate?.trusted ? "ok" : "warn", `Certificate: ${certLabel(certificate)}.`, "certificate");
+    yield ev(headerCount(headers) === 4 ? "ok" : "warn",
+        headers.checks.headers === "ok" ? `Website settings: ${headerCount(headers)} of 4 security headers found.` : "Website settings: couldn't check.", "headers");
 
     // Flag CDN edge IPs as their ports/CVEs are shared infrastructure so they must not become findings or dock the score (still keep them geolocated though)
     const geoByIp = new Map((geolocations.records.geo ?? []).map(g => [g.ip, g]));
@@ -95,8 +119,8 @@ async function* scanDomainSteps(hostname, domain) {
 
     return {
         website: hostname,
-        records: { ...dns.records, ...subdomains.records, ...ports.records, ...geolocations.records, ...cves.records, cdnIps: [...cdnIps] },
-        checks:  { ...dns.checks,  ...subdomains.checks,  ...ports.checks,  ...geolocations.checks,  ...cves.checks }
+        records: { ...dns.records, ...subdomains.records, ...ports.records, ...geolocations.records, ...cves.records, ...certificate.records, ...headers.records, cdnIps: [...cdnIps] },
+        checks:  { ...dns.checks,  ...subdomains.checks,  ...ports.checks,  ...geolocations.checks,  ...cves.checks, ...certificate.checks, ...headers.checks }
     }
 }
 

@@ -19,6 +19,28 @@ const STATUS_LABELS = { healthy: "Healthy", attention: "Needs attention", critic
 
 const MAX_SHOWN_CVES = 10;
 
+const SCORE_RULE = "Every check scores 0 to 10, riskier checks count more, and any critical problem caps the score at 50 until it's fixed.";
+
+const REPO_CATEGORIES = ["secrets", "packages", "repo-basics", "ignore-rules", "readme"];
+
+// One scored check in the Repository card: its score out of 10, or why it didn't run
+function checkValue(check) {
+  if (check.status === "unavailable") return "Couldn't check";
+  if (check.status === "not_checked") return "Not checked";
+  return `${check.score}/10`;
+}
+
+function checkMark(check) {
+  if (check.status !== "ok") return "-";
+  return check.score === 10 ? "✓" : "✕";
+}
+
+function checkTone(check) {
+  if (check.status !== "ok") return "text-muted";
+  if (check.score === 10) return "text-ink";
+  return check.score === 0 ? "text-critical" : "text-warm";
+}
+
 // Package vulnerabilities use OSV and GitHub IDs (GHSA-...), not only CVEs.
 function vulnUrl(id) {
   if (id.startsWith("CVE-")) {
@@ -89,6 +111,21 @@ function FindingDetails({ details }) {
           </div>
         </>
       )}
+
+      {details.issuer && (
+        <>
+          <div><dt className="inline font-semibold">Issuer</dt><dd className="ml-2 inline">{details.issuer}</dd></div>
+          <div><dt className="inline font-semibold">Expires</dt><dd className="ml-2 inline">{new Date(details.validTo).toLocaleDateString()} ({details.daysLeft < 0 ? "expired" : `${details.daysLeft} days`})</dd></div>
+          <div><dt className="inline font-semibold">Key</dt><dd className="ml-2 inline font-mono">{details.keyBits ? `${details.keyBits}-bit · ` : ""}{details.tlsVersion}</dd></div>
+        </>
+      )}
+
+      {details.header && (
+        <>
+          <div><dt className="inline font-semibold">Page</dt><dd className="ml-2 inline font-mono break-all">{details.url}</dd></div>
+          <div><dt className="inline font-semibold">{details.header}</dt><dd className="ml-2 inline font-mono break-all">{details.value || "Not set"}</dd></div>
+        </>
+      )}
     </dl>
   );
 }
@@ -124,6 +161,58 @@ function ScoreRing({ score, reduceMotion }) {
         <span className={styles.ringScale} aria-hidden="true">/100</span>
       </div>
     </div>
+  );
+}
+
+// Points each category lost, worst first. The bar shows how much of that category's points are gone.
+function ScoreBreakdown({ breakdown, checks, reduceMotion }) {
+  const ran = checks.filter((check) => check.status === "ok");
+  const totalWeight = ran.reduce((sum, check) => sum + check.weight, 0);
+
+  return (
+    <ul className="m-0 flex w-full list-none flex-col gap-2.5 p-0" aria-label="Score breakdown">
+      {breakdown.map((item) => {
+        const weight = ran.filter((check) => check.category === item.category).reduce((sum, check) => sum + check.weight, 0);
+        const most = totalWeight > 0 ? (100 * weight) / totalWeight : 0;
+        const share = most > 0 ? Math.min(100, (100 * item.lost) / most) : 0;
+        const barColor = share >= 50 ? "bg-critical" : "bg-warm";
+        const imperfect = ran.some((check) => check.category === item.category && check.score < 10);
+
+        let value = <><span aria-hidden="true">✓</span><span className="sr-only">Passed</span></>;
+        let tone = "text-accent";
+        if (item.status === "unavailable") {
+          value = "Couldn't check";
+          tone = "text-muted";
+        } else if (item.status === "not_checked") {
+          value = "Not checked";
+          tone = "text-muted";
+        } else if (item.lost > 0) {
+          value = <>-{item.lost}<span className="sr-only"> points</span></>;
+          tone = share >= 50 ? "text-critical" : "text-warm";
+        } else if (imperfect) {
+          // Lost less than a point, which rounds to 0
+          value = "Minor";
+          tone = "text-warm";
+        }
+
+        return (
+          <li key={item.category}>
+            <div className="mb-1 flex justify-between gap-2.5 font-mono text-[10px] text-muted">
+              <span>{item.label}</span>
+              <span className={`flex-none font-semibold ${tone}`}>{value}</span>
+            </div>
+            <div className="h-1.5 overflow-hidden rounded-full bg-line" aria-hidden="true">
+              <motion.span
+                className={`block h-full rounded-full ${barColor}`}
+                initial={reduceMotion ? false : { width: 0 }}
+                animate={{ width: `${share}%` }}
+                transition={{ duration: 0.8, delay: 0.35, ease: [0.22, 1, 0.36, 1] }}
+              />
+            </div>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
@@ -219,17 +308,8 @@ export default function OverviewTab() {
     repoInfo = result.repo.records.repo;
   }
 
-  let repoChecks = []
-  if (result.repo && result.repo.records.basics) {
-    const records = result.repo.records;
-    repoChecks = [
-      { label: "No secret files committed", passed: records.sensitiveFiles.length === 0 },
-      { label: "No packages with known bugs", passed: records.dependencies.length === 0 },
-      { label: "Has a security policy (SECURITY.md)", passed: records.basics.securityPolicy },
-      { label: "Dependabot is set up", passed: records.basics.dependabot },
-      { label: "Has a lockfile", passed: records.basics.lockfile },
-    ];
-  }
+  // The repo's scored checks, so the card always matches the score
+  const repoChecks = (result.checks ?? []).filter((check) => REPO_CATEGORIES.includes(check.category));
 
   function selectNode(nodeId) {
     setSelectedNodeId(nodeId);
@@ -402,8 +482,9 @@ export default function OverviewTab() {
 
             <ul className="mt-4 mb-4 flex flex-col gap-2 text-sm">
               {repoChecks.map((check) => (
-                <li key={check.label} className={check.passed ? "text-ink" : "text-critical"}>
-                  {check.passed ? "✓" : "✕"} {check.label}
+                <li key={check.id} className={`flex justify-between gap-3 ${checkTone(check)}`}>
+                  <span><span aria-hidden="true">{checkMark(check)}</span> {check.label}</span>
+                  <span className="flex-none font-mono text-xs">{checkValue(check)}</span>
                 </li>
               ))}
             </ul>
@@ -416,12 +497,33 @@ export default function OverviewTab() {
           <motion.section className={`${styles.card} ${styles.scoreCard}`} aria-labelledby="score-title" {...reveal(0.2)}>
             <div className={styles.cardHead}>
               <h2 id="score-title">Exposure score</h2>
-              <span className={styles.ratingBadge} data-tone={scoreTone(result.score)}>{result.rating}</span>
+              <span className={styles.ratingBadge} data-tone={result.incomplete ? "warn" : scoreTone(result.score)}>
+                {result.incomplete ? "Incomplete, re-scan" : result.rating}
+              </span>
             </div>
             <div className={styles.scoreBody}>
               <ScoreRing score={result.score} reduceMotion={reduceMotion} />
+              {result.checks?.length > 0 && (
+                <ScoreBreakdown breakdown={result.breakdown} checks={result.checks} reduceMotion={reduceMotion} />
+              )}
             </div>
+            {result.cap?.applied && result.uncappedScore > result.score && (
+              <p className="m-0 mt-3 text-xs text-critical">
+                Capped at 50 until the critical problem is fixed. Without it, you&apos;d score {result.uncappedScore}.
+              </p>
+            )}
+            {result.incomplete && (
+              <p className="m-0 mt-3 text-xs text-warm">
+                A critical check couldn&apos;t run, so there&apos;s no grade yet. Re-scan to try again.
+              </p>
+            )}
+            {result.breakdown?.some((item) => item.status === "not_checked") && (
+              <p className="m-0 mt-3 text-xs text-muted">
+                &quot;Not checked&quot; means the check doesn&apos;t apply here, or this scan is older than the check. Re-scan to run every check.
+              </p>
+            )}
             <p className={styles.scoreSummary}>{result.summary} Higher is safer.</p>
+            <p className="m-0 mt-2 text-[11px] leading-relaxed text-muted">{SCORE_RULE}</p>
           </motion.section>
 
           <motion.section className={`${styles.card} ${styles.findingsCard}`} aria-labelledby="findings-title" {...reveal(0.27)}>

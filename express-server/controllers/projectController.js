@@ -1,6 +1,7 @@
 const { supabase } = require("../lib/supabase");
 const { checkWebsite } = require("../lib/domain");
 const { checkRepo } = require("../lib/github");
+const { buildFindings } = require("../lib/findings");
 
 const checkTargets = (domain, githubRepo) => {
     const site = domain ? checkWebsite(domain) : null;
@@ -123,14 +124,19 @@ const deleteProjectById = async (req, res) => {
 }
 
 const getScansByProjectId = async (req, res) => {
-    const { data, error } = await supabase.from("scans").select("id, created_at").eq("project_id", req.params.id).order("created_at", { ascending: false });
+    const { data, error } = await supabase.from("scans").select("id, created_at, domain_scans(result), repo_scans(result)")
+        .eq("project_id", req.params.id).order("created_at", { ascending: false });
 
     if (error) {
         console.error("Load project scans failed:", error);
         return res.status(500).json({ error: "Could not load scan history. Please try again." });
     }
 
-    res.json(data);
+    // Scores use today's rules, so past scores move when the formula changes
+    res.json(data.map(scan => {
+        const { score, grade } = buildFindings(scan);
+        return { id: scan.id, created_at: scan.created_at, score, grade };
+    }));
 }
 
 module.exports = { getProjects, createProject, updateProjectById, deleteProjectById, getScansByProjectId };
