@@ -204,10 +204,20 @@ export const toResult = data => {
         summary = `${serious} serious issue(s) are pulling your score down. Fix those first.`;
     }
 
-    // Arcs can only be drawn between servers we located
-    const locatedServers = servers.filter(server => server.located);
-    for (let i = 1; i < locatedServers.length; i++) {
-        arcs.push({ id: locatedServers[i].id, from: locatedServers[0], to: locatedServers[i], status: locatedServers[i].status });
+    // Arcs run from the main site's server to the others: they show structure, not traffic
+    if (data.domain_scans) {
+        const records = data.domain_scans.result.records;
+        const locatedServers = servers.filter(server => server.located);
+        const mainIps = new Set([...(records.a ?? []), ...(records.aaaa ?? [])]);
+        const mainSite = locatedServers.find(server => mainIps.has(server.ip));
+
+        if (mainSite) {
+            for (const server of locatedServers) {
+                if (server.id !== mainSite.id) {
+                    arcs.push({ id: server.id, from: mainSite, to: server, status: server.status });
+                }
+            }
+        }
     }
 
     if (data.domain_scans) {
