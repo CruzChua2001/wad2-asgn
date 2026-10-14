@@ -307,6 +307,12 @@ export default function OverviewTab() {
             </p>
           )}
 
+          {result.arcs.length > 0 && (
+            <p className={`m-0 px-4 py-2 text-center text-xs text-muted ${mapOpen ? "" : "max-md:hidden"}`}>
+              Lines connect your main site to your other servers. They don&apos;t show real traffic.
+            </p>
+          )}
+
           {result.nodes.length > 0 && (
           <div className={`${styles.nodeList} max-md:hidden!`} role="group" aria-label="Servers">
             {shownNodes.map((node) => (
