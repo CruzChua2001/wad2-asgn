@@ -20,10 +20,12 @@ const CATEGORY_LABELS = {
     secrets: "Secret files",
     packages: "Packages",
     "repo-basics": "Repo basics",
+    "ignore-rules": "Ignore rules",
+    readme: "README",
 };
 
 const DOMAIN_CATEGORIES = ["software", "ports", "email-dns"];
-const REPO_CATEGORIES = ["secrets", "packages", "repo-basics"];
+const REPO_CATEGORIES = ["secrets", "packages", "repo-basics", "ignore-rules", "readme"];
 
 const getDomainFindings = result => {
     const { records, checks, website } = result;
@@ -204,7 +206,7 @@ const getDomainFindings = result => {
 }
 
 const getRepoFindings = result => {
-    const { records } = result;
+    const { records, checks } = result;
     let findings = []
 
     // Secret files committed
@@ -263,9 +265,9 @@ const getRepoFindings = result => {
             checkId: "basics-dependabot",
             kind: "recommendation",
             severity: "low",
-            title: "Dependabot is not set up",
+            title: "We couldn't find a Dependabot or Renovate config",
             explain: "Dependabot automatically opens pull requests when your packages have security fixes.",
-            fix: "Add a .github/dependabot.yml file (GitHub > Insights > Dependency graph > Dependabot).",
+            fix: `Add this as .github/dependabot.yml:\n# .github/dependabot.yml\nversion: 2\nupdates:\n  - package-ecosystem: "npm"\n    directory: "/"   # one entry per folder that has a package.json\n    schedule:\n      interval: "weekly"\nAlso turn on Dependabot alerts and security updates in Settings → Code security.`,
             source: "repo",
             details: {},
         });
@@ -283,6 +285,55 @@ const getRepoFindings = result => {
             source: "repo",
             details: {},
         });
+    }
+
+    // Ignore rules, skipped when the .gitignore couldn't be read (or an older scan never checked)
+    if (checks?.gitignore === "ok" || checks?.gitignore === "none") {
+        const gitignore = records.gitignore;
+        const missing = [];
+
+        if (!gitignore?.env) missing.push(".env");
+        if (!gitignore?.nodeModules) missing.push("node_modules");
+        if (!gitignore?.keys) missing.push("key files");
+
+        if (missing.length > 0) {
+            findings.push({
+                id: "repo-gitignore",
+                category: "ignore-rules",
+                checkId: "ignore-rules",
+                kind: "issue",
+                severity: "medium",
+                title: gitignore ? "Your .gitignore misses some risky files" : "No .gitignore file",
+                explain: `Without a rule for ${missing.join(", ")}, these can be committed by accident and become public.`,
+                fix: `Add a line for ${missing.join(", ")} to your .gitignore (e.g. .env, node_modules/, *.pem).`,
+                source: "repo",
+                details: { missing },
+            });
+        }
+    }
+
+    // README, skipped when it couldn't be read (or an older scan never checked)
+    if (checks?.readme === "ok" || checks?.readme === "none") {
+        const readme = records.readme;
+        const missing = [];
+
+        if (!readme?.setup) missing.push("setup");
+        if (!readme?.security) missing.push("security");
+
+        if (missing.length > 0) {
+            findings.push({
+                id: "repo-readme",
+                category: "readme",
+                checkId: "readme",
+                kind: "recommendation",
+                severity: "low",
+                title: readme ? "Your README is missing some sections" : "No README file",
+                explain: `Your README doesn't cover ${missing.join(" or ")}, so people can't tell how to run your project safely.`,
+                fix: `Add a short ${missing.join(" and ")} section to your README.`,
+                source: "repo",
+                details: { missing },
+            });
+        }
     }
 
     return findings;
