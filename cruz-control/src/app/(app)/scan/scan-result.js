@@ -110,9 +110,8 @@ const getServers = (domainScan, findings) => {
     const cdn = new Set(records.cdnIps ?? []);
 
     for (let geo of records.geo) {
-        if (geo.status !== "ok"){
-            continue;
-        }
+        // Servers we couldn't locate stay in the list, so their ports and status still count
+        const located = geo.status === "ok";
 
         let portRecord = records.ports.find(item => item.ip === geo.ip);
         let ports = [];
@@ -146,10 +145,11 @@ const getServers = (domainScan, findings) => {
             id: geo.ip,
             host: getHostName(geo.ip, domainScan),
             ip: geo.ip,
-            city: geo.city,
-            country: geo.country,
-            lat: geo.lat,
-            lng: geo.lon,
+            city: located ? geo.city : "",
+            country: located ? geo.country : "",
+            lat: located ? geo.lat : null,
+            lng: located ? geo.lon : null,
+            located: located,
             provider: geo.isp,
             org: geo.org,
             as: geo.as,
@@ -171,6 +171,7 @@ export const toResult = data => {
     let findings = getFindings(data);
     let servers = getServers(data.domain_scans, findings);
     let domain = null;
+    let geoStatus = null;
     let openServices = 0;
     let linkedRepository = null;
     let repo = null;
@@ -182,6 +183,7 @@ export const toResult = data => {
 
     if (data.domain_scans) {
         domain = data.domain_scans.domain;
+        geoStatus = data.domain_scans.result.checks.geo ?? null;
         for (let item of data.domain_scans.result.records.ports) {
             openServices += item.ports.length;
         }
@@ -202,8 +204,10 @@ export const toResult = data => {
         summary = `${serious} serious issue(s) are pulling your score down. Fix those first.`;
     }
 
-    for (let i = 1; i < servers.length; i++) {
-        arcs.push({ id: servers[i].id, from: servers[0], to: servers[i], status: servers[i].status });    
+    // Arcs can only be drawn between servers we located
+    const locatedServers = servers.filter(server => server.located);
+    for (let i = 1; i < locatedServers.length; i++) {
+        arcs.push({ id: locatedServers[i].id, from: locatedServers[0], to: locatedServers[i], status: locatedServers[i].status });
     }
 
     if (data.domain_scans) {
@@ -230,6 +234,7 @@ export const toResult = data => {
     return {
         title: domain || linkedRepository,
         domain: domain,
+        geoStatus: geoStatus,
         linkedRepository: linkedRepository,
         repo: repo,
         score: data.score,

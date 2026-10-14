@@ -23,6 +23,9 @@ const PALETTES = {
 };
 
 const STATUS_LABELS = { healthy: "Healthy", attention: "Needs attention", critical: "Critical" };
+
+// The tooltip is raw HTML inside the canvas overlay, so the CDN tag uses the theme tokens directly
+const CDN_TAG_STYLE = "margin-left:4px;padding:0 3px;border:1px solid var(--line);border-radius:3px;color:var(--muted);font-size:9px;font-weight:500";
 const MIN_DISTANCE = 180;
 const MAX_DISTANCE = 420;
 const MIN_ALTITUDE = MIN_DISTANCE / 100 - 1;
@@ -44,7 +47,11 @@ export default function ExposureGlobe({ nodes, arcs, selectedId, onSelect, theme
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [countries, setCountries] = useState([]);
   const palette = PALETTES[theme] || PALETTES.light;
-  const selected = nodes.find((node) => node.id === selectedId);
+
+  // Only servers we located have coordinates to draw
+  const located = useMemo(() => nodes.filter((node) => node.located), [nodes]);
+  const locatedArcs = useMemo(() => arcs.filter((arc) => arc.from.located && arc.to.located), [arcs]);
+  const selected = located.find((node) => node.id === selectedId);
 
   const material = useMemo(
     () => new MeshPhongMaterial({ color: palette.globe, emissive: palette.emissive, emissiveIntensity: 0.35, shininess: 4 }),
@@ -125,7 +132,7 @@ export default function ExposureGlobe({ nodes, arcs, selectedId, onSelect, theme
           hexPolygonMargin={0.55}
           hexPolygonUseDots
           hexPolygonColor={() => palette.land}
-          pointsData={nodes}
+          pointsData={located}
           pointLat="lat"
           pointLng="lng"
           pointColor={statusColor}
@@ -134,11 +141,11 @@ export default function ExposureGlobe({ nodes, arcs, selectedId, onSelect, theme
           pointsMerge={false}
           pointLabel={(node) => `
             <div class="globe-tooltip">
-              <strong>${escapeHtml(node.host)}</strong>
+              <strong>${escapeHtml(node.host)}${node.isCdn ? ` <span style="${CDN_TAG_STYLE}">CDN</span>` : ""}</strong>
               <span>${escapeHtml(node.city)}, ${escapeHtml(node.country)} · ${escapeHtml(STATUS_LABELS[node.status])}</span>
             </div>`}
           onPointClick={(node) => onSelect?.(node.id)}
-          arcsData={arcs}
+          arcsData={locatedArcs}
           arcStartLat={(arc) => arc.from.lat}
           arcStartLng={(arc) => arc.from.lng}
           arcEndLat={(arc) => arc.to.lat}
