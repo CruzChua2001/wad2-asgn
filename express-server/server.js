@@ -3,6 +3,9 @@ require("dotenv").config();
 const express = require('express');
 const app = express();
 
+// Vercel puts one proxy in front of us, so req.ip is the real client ip and not the proxy's
+app.set("trust proxy", 1);
+
 const cors = require("cors");
 app.use(cors({ origin: process.env.FRONTEND_URL }));
 
