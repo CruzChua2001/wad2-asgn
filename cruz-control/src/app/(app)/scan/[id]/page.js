@@ -129,14 +129,28 @@ function ScoreRing({ score, reduceMotion }) {
 
 const DOT_COLORS = { healthy: "bg-accent", attention: "bg-warm", critical: "bg-critical" };
 
+// Servers whose location lookup failed stay in the lists, without a place
+function locationLabel(node) {
+  if (!node.located) {
+    return "Location unknown";
+  }
+  return `${node.city}, ${node.country}`;
+}
+
+function CdnBadge() {
+  return (
+    <span className="ml-1.5 rounded-sm border border-line px-1 text-[9px] font-medium text-muted align-middle">CDN</span>
+  );
+}
+
 // Phone-sized replacement for the globe's server list: servers grouped by country.
 function ServerGroups({ groups, selectedId, onSelect }) {
   return (
     <div className="flex flex-col gap-4 p-3.5" role="group" aria-label="Servers by country">
       {groups.map((group) => (
-        <section key={group.country} aria-label={group.country}>
+        <section key={group.label} aria-label={group.label}>
           <h3 className="mb-2 text-xs font-semibold text-muted">
-            {group.country} · {group.nodes.length} {group.nodes.length === 1 ? "server" : "servers"}
+            {group.label} · {group.nodes.length} {group.nodes.length === 1 ? "server" : "servers"}
           </h3>
           <ul className="flex flex-col gap-2">
             {group.nodes.map((node) => (
@@ -150,7 +164,9 @@ function ServerGroups({ groups, selectedId, onSelect }) {
                   <i aria-hidden="true" className={`mt-1.5 size-2 flex-none rounded-full ${DOT_COLORS[node.status]}`} />
                   <span className="sr-only">{STATUS_LABELS[node.status]}:</span>
                   <span className="min-w-0 flex-1">
-                    <strong className="block truncate font-mono text-xs font-semibold">{node.host}</strong>
+                    <strong className="block truncate font-mono text-xs font-semibold">
+                      {node.host}{node.isCdn && <CdnBadge />}
+                    </strong>
                     <small className="block break-words text-xs text-muted">{hostingProvider(node)} · {node.service}</small>
                   </span>
                 </button>
@@ -178,13 +194,16 @@ export default function OverviewTab() {
 
   const countryGroups = [];
   for (const node of result.nodes) {
-    let group = countryGroups.find((item) => item.country === node.country);
+    const label = locationLabel(node);
+    let group = countryGroups.find((item) => item.label === label);
     if (!group) {
-      group = { country: node.country, nodes: [] };
+      group = { label, nodes: [] };
       countryGroups.push(group);
     }
     group.nodes.push(node);
   }
+
+  const locatedNodes = result.nodes.filter((node) => node.located);
 
   let shownNodes = result.nodes;
   if (!showAllServers) {
@@ -238,7 +257,7 @@ export default function OverviewTab() {
       </motion.dl>
 
       <div className={styles.grid}>
-        {result.nodes.length > 0 && (
+        {result.domain && (
         <motion.section className={styles.mapCard} aria-labelledby="map-title" {...reveal(0.15)}>
           <div className={styles.cardHead}>
             <h2 id="map-title">Where your servers are</h2>
@@ -249,33 +268,46 @@ export default function OverviewTab() {
             </div>
           </div>
 
-          <div className="md:hidden">
-            <ServerGroups groups={countryGroups} selectedId={selectedNode.id} onSelect={selectNode} />
-            <div className="border-t border-line px-3.5 py-3">
-              <button
-                type="button"
-                aria-expanded={mapOpen}
-                aria-controls="map-stage"
-                onClick={() => setMapOpen((open) => !open)}
-                className="w-full cursor-pointer rounded-md border border-line bg-surface px-3 py-2 text-sm font-semibold text-accent"
-              >
-                {mapOpen ? "Hide map" : "Show map"}
-              </button>
+          {result.nodes.length > 0 && (
+            <div className="md:hidden">
+              <ServerGroups groups={countryGroups} selectedId={selectedNode.id} onSelect={selectNode} />
+              {locatedNodes.length > 0 && (
+                <div className="border-t border-line px-3.5 py-3">
+                  <button
+                    type="button"
+                    aria-expanded={mapOpen}
+                    aria-controls="map-stage"
+                    onClick={() => setMapOpen((open) => !open)}
+                    className="w-full cursor-pointer rounded-md border border-line bg-surface px-3 py-2 text-sm font-semibold text-accent"
+                  >
+                    {mapOpen ? "Hide map" : "Show map"}
+                  </button>
+                </div>
+              )}
             </div>
-          </div>
+          )}
 
-          <div id="map-stage" className={`${styles.globeStage} flex-none h-75 md:h-[clamp(300px,38vh,380px)] ${mapOpen ? "" : "max-md:hidden"}`}>
-            <ExposureGlobe
-              nodes={result.nodes}
-              arcs={result.arcs}
-              selectedId={selectedNode.id}
-              onSelect={selectNode}
-              theme={theme}
-              reduceMotion={reduceMotion}
-            />
-            <p className={styles.globeHint}>Drag to spin · click a dot or a server below</p>
-          </div>
+          {locatedNodes.length > 0 ? (
+            <div id="map-stage" className={`${styles.globeStage} flex-none h-75 md:h-[clamp(300px,38vh,380px)] ${mapOpen ? "" : "max-md:hidden"}`}>
+              <ExposureGlobe
+                nodes={result.nodes}
+                arcs={result.arcs}
+                selectedId={selectedNode.id}
+                onSelect={selectNode}
+                theme={theme}
+                reduceMotion={reduceMotion}
+              />
+              <p className={styles.globeHint}>Drag to spin · click a dot or a server below</p>
+            </div>
+          ) : (
+            <p className="m-0 border-b border-line px-4 py-8 text-center text-sm text-muted">
+              {result.geoStatus === "unavailable"
+                ? "We couldn't look up where these servers are right now. Try re-scanning later."
+                : "We couldn't place these servers on a map."}
+            </p>
+          )}
 
+          {result.nodes.length > 0 && (
           <div className={`${styles.nodeList} max-md:hidden!`} role="group" aria-label="Servers">
             {shownNodes.map((node) => (
               <button
@@ -287,7 +319,10 @@ export default function OverviewTab() {
                 onClick={() => selectNode(node.id)}
               >
                 <i aria-hidden="true" />
-                <span><strong>{node.host}</strong><small>{node.city}, {node.country} · {node.service}</small></span>
+                <span>
+                  <strong>{node.host}{node.isCdn && <CdnBadge />}</strong>
+                  <small>{locationLabel(node)} · {node.service}</small>
+                </span>
               </button>
             ))}
 
@@ -297,7 +332,9 @@ export default function OverviewTab() {
               </button>
             )}
           </div>
+          )}
 
+          {selectedNode && (
           <section className={styles.inspector} aria-labelledby="details-title" aria-live="polite">
             <div className={styles.inspectorHead}>
               <h2 id="details-title">Server details</h2>
@@ -307,7 +344,7 @@ export default function OverviewTab() {
               <dl className={styles.kv}>
                 <div><dt>Address</dt><dd>{selectedNode.host}</dd></div>
                 <div><dt>IP</dt><dd>{selectedNode.ip}</dd></div>
-                <div><dt>Location</dt><dd>{selectedNode.city}, {selectedNode.country}</dd></div>
+                <div><dt>Location</dt><dd>{locationLabel(selectedNode)}</dd></div>
                 <div><dt>Hosting provider</dt><dd>{hostingProvider(selectedNode)}</dd></div>
                 <div><dt>Network operator</dt><dd>{selectedNode.as || "Unknown"}</dd></div>
                 <div><dt>Service</dt><dd>{selectedNode.service}</dd></div>
@@ -325,6 +362,7 @@ export default function OverviewTab() {
               </div>
             </div>
           </section>
+          )}
 
           <div className={styles.logDrawer}>
             <button type="button" className={styles.logBar} aria-expanded={logOpen} aria-controls="scan-log" onClick={() => setLogOpen((open) => !open)}>
