@@ -1,4 +1,5 @@
 const { checkWebsite } = require("./domain");
+const { getDomainChecks, getRepoChecks, getScore } = require("./score");
 
 const RISKY_PORTS = {
     21: { name: "FTP (file transfer)", severity: "high" },
@@ -13,21 +14,11 @@ const RISKY_PORTS = {
     9200: { name: "Elasticsearch database", severity: "critical" },
 };
 
-const PENALTY = { critical: 25, high: 15, medium: 8, low: 3 };
-
 // Shodan matches cves from the version number a server reports, without confirming them
 const VERSION_GUESS = "This is based on the version number your server reports, so check whether your version already includes the fix.";
 
-const CATEGORY_LABELS = {
-    software: "Server software",
-    ports: "Open ports",
-    "email-dns": "Email & DNS",
-    secrets: "Secret files",
-    packages: "Packages",
-    "repo-basics": "Repo basics",
-    "ignore-rules": "Ignore rules",
-    readme: "README",
-};
+// HSTS should last at least about six months
+const HSTS_MIN_AGE = 180 * 24 * 60 * 60;
 
 // Name the user's own servers or files, keeping the fix short: at most 3, then a count
 const nameList = (items = []) => {
@@ -39,9 +30,6 @@ const nameList = (items = []) => {
 
     return named;
 }
-
-const DOMAIN_CATEGORIES = ["software", "ports", "email-dns"];
-const REPO_CATEGORIES = ["secrets", "packages", "repo-basics", "ignore-rules", "readme"];
 
 const getDomainFindings = result => {
     const { records, checks, website } = result;
@@ -223,6 +211,170 @@ const getDomainFindings = result => {
         });
     }
 
+    const host = website ?? "your site";
+
+    // HTTPS certificate
+    const cert = records.certificate;
+
+    if (checks.certificate === "ok" && cert) {
+        const certDetails = {
+            issuer: cert.issuer,
+            validTo: cert.validTo,
+            daysLeft: cert.daysLeft,
+            selfSigned: cert.selfSigned,
+            keyBits: cert.keyBits,
+            tlsVersion: cert.tlsVersion,
+        };
+
+        let certTitle = "Your HTTPS certificate can't be verified";
+        if (cert.daysLeft < 0) {
+            certTitle = "Your HTTPS certificate has expired";
+        } else if (cert.selfSigned) {
+            certTitle = "Your HTTPS certificate is self-signed";
+        } else if (cert.error === "ERR_TLS_CERT_ALTNAME_INVALID") {
+            certTitle = `Your HTTPS certificate doesn't cover ${host}`;
+        }
+
+        if (!cert.trusted) {
+            findings.push({
+                id: "cert-invalid",
+                category: "certificate",
+                checkId: "cert-validity",
+                kind: "issue",
+                severity: "high",
+                title: certTitle,
+                explain: "Browsers warn visitors that the connection isn't private, so many will leave, and it's easier for someone to pretend to be your site.",
+                fix: `Install a valid certificate for ${host} from a trusted authority such as Let's Encrypt (most hosts do this for free), and turn on automatic renewal.`,
+                source: "domain",
+                details: certDetails,
+            });
+        } else if (cert.daysLeft < 30) {
+            findings.push({
+                id: "cert-expiring",
+                category: "certificate",
+                checkId: "cert-validity",
+                kind: "issue",
+                severity: "medium",
+                title: `Your HTTPS certificate expires in ${cert.daysLeft} day(s)`,
+                explain: "Once it expires, browsers show visitors a security warning instead of your site.",
+                fix: `Renew the certificate for ${host} now, and turn on automatic renewal so it can't lapse.`,
+                source: "domain",
+                details: certDetails,
+            });
+        }
+
+        const weakKey = cert.keyBits && cert.keyBits < (cert.keyType === "EC" ? 256 : 2048);
+        const oldTls = ["TLSv1", "TLSv1.1"].includes(cert.tlsVersion);
+
+        if (weakKey || oldTls) {
+            findings.push({
+                id: "cert-weak",
+                category: "certificate",
+                checkId: "cert-validity",
+                kind: "issue",
+                severity: "medium",
+                title: "Your HTTPS setup uses outdated security",
+                explain: weakKey
+                    ? `The certificate uses a ${cert.keyBits}-bit key, which is too short to be safe today.`
+                    : `Your server uses ${cert.tlsVersion}, an old version that browsers have stopped trusting.`,
+                fix: weakKey
+                    ? `Get a new certificate for ${host} with a 2048-bit RSA or 256-bit EC key.`
+                    : `Turn on TLS 1.2 and 1.3 for ${host} and turn off the older versions.`,
+                source: "domain",
+                details: certDetails,
+            });
+        }
+    }
+
+    // Website security settings, read from the home page
+    const headers = records.headers;
+
+    if (checks.headers === "ok" && headers) {
+        const webDetails = (header, value) => ({ url: headers.url, header, value: value ?? null });
+
+        // A certificate means the site has HTTPS, even if the page couldn't be read over it
+        const hasHttps = headers.https || checks.certificate === "ok";
+
+        if (headers.httpRedirect === false) {
+            findings.push({
+                id: "web-https-redirect",
+                category: "web-settings",
+                checkId: "web-https-hsts",
+                kind: "issue",
+                severity: hasHttps ? "medium" : "high",
+                title: hasHttps ? "HTTP doesn't redirect to HTTPS" : "Your site doesn't use HTTPS",
+                explain: "Pages sent over plain http:// aren't encrypted, so anyone on the same network (like public Wi-Fi) can read or change them.",
+                fix: hasHttps
+                    ? `Make http://${host} redirect to https://${host} with a 301 redirect in your web server or hosting settings.`
+                    : `Set up HTTPS for ${host} (most hosts offer free Let's Encrypt certificates), then redirect http:// to https://.`,
+                source: "domain",
+                details: { url: `http://${host}/`, header: "Location", value: null },
+            });
+        }
+
+        const hstsAge = Number(/max-age="?(\d+)/i.exec(headers.hsts ?? "")?.[1] ?? 0);
+
+        if (hstsAge < HSTS_MIN_AGE) {
+            findings.push({
+                id: "web-hsts",
+                category: "web-settings",
+                checkId: "web-https-hsts",
+                kind: "issue",
+                severity: "medium",
+                title: headers.hsts ? "HSTS is too short" : "HSTS is missing",
+                explain: "HSTS tells browsers to always use HTTPS for your site, so nobody can quietly switch visitors back to plain HTTP.",
+                fix: `Once HTTPS works on every page of ${host}, add the header Strict-Transport-Security: max-age=31536000.`,
+                source: "domain",
+                details: webDetails("Strict-Transport-Security", headers.hsts),
+            });
+        }
+
+        if (!headers.csp) {
+            findings.push({
+                id: "web-csp",
+                category: "web-settings",
+                checkId: "web-headers",
+                kind: "issue",
+                severity: "low",
+                title: "No Content-Security-Policy",
+                explain: "A Content-Security-Policy limits which scripts can run on your pages, which makes cross-site scripting (XSS) attacks much harder.",
+                fix: `Add a Content-Security-Policy header to ${host}, starting with default-src 'self'. Try it as Content-Security-Policy-Report-Only first so nothing breaks.`,
+                source: "domain",
+                details: webDetails("Content-Security-Policy", headers.csp),
+            });
+        }
+
+        if (!headers.frameOptions && !/frame-ancestors/i.test(headers.csp ?? "")) {
+            findings.push({
+                id: "web-frame-options",
+                category: "web-settings",
+                checkId: "web-headers",
+                kind: "issue",
+                severity: "medium",
+                title: "No clickjacking protection",
+                explain: "Other sites can show your pages inside a hidden frame and trick visitors into clicking buttons they can't see.",
+                fix: `Add the header X-Frame-Options: DENY to ${host} (or frame-ancestors 'none' in your Content-Security-Policy).`,
+                source: "domain",
+                details: webDetails("X-Frame-Options", headers.frameOptions),
+            });
+        }
+
+        if (!/nosniff/i.test(headers.contentType ?? "")) {
+            findings.push({
+                id: "web-content-type",
+                category: "web-settings",
+                checkId: "web-headers",
+                kind: "issue",
+                severity: "low",
+                title: "No X-Content-Type-Options",
+                explain: "Without it, browsers may guess a file's type and run an uploaded file as a script.",
+                fix: `Add the header X-Content-Type-Options: nosniff to every response from ${host}.`,
+                source: "domain",
+                details: webDetails("X-Content-Type-Options", headers.contentType),
+            });
+        }
+    }
+
     return findings;
 }
 
@@ -381,45 +533,23 @@ const getRepoFindings = result => {
     return findings;
 }
 
-const getScore = (findings, categories) => {
-    let lost = 0;
-    let lostByCategory = {};
-
-    for (let finding of findings) {
-        lost += PENALTY[finding.severity];
-        lostByCategory[finding.category] = (lostByCategory[finding.category] ?? 0) + PENALTY[finding.severity];
-    }
-
-    const score = Math.max(0, 100 - lost);
-
-    const breakdown = categories
-        .map(category => ({ category, label: CATEGORY_LABELS[category], lost: lostByCategory[category] ?? 0 }))
-        .sort((a, b) => b.lost - a.lost);
-
-    let grade = "F";
-    if (score >= 90) grade = "A";
-    else if (score >= 80) grade = "B";
-    else if (score >= 70) grade = "C";
-    else if (score >= 60) grade = "D";
-
-    return { score, grade, breakdown };
-}
-
 const buildFindings = scan => {
     let findings = [];
-    let categories = [];
+    let checks = [];
 
     if (scan.domain_scans) {
-        findings.push(...getDomainFindings(scan.domain_scans.result));
-        categories.push(...DOMAIN_CATEGORIES);
+        const domainFindings = getDomainFindings(scan.domain_scans.result);
+        findings.push(...domainFindings);
+        checks.push(...getDomainChecks(scan.domain_scans.result, domainFindings));
     }
 
     if (scan.repo_scans) {
-        findings.push(...getRepoFindings(scan.repo_scans.result));
-        categories.push(...REPO_CATEGORIES);
+        const repoFindings = getRepoFindings(scan.repo_scans.result);
+        findings.push(...repoFindings);
+        checks.push(...getRepoChecks(scan.repo_scans.result, repoFindings));
     }
 
-    return { findings, ...getScore(findings, categories) };
+    return { findings, ...getScore(checks) };
 }
 
-module.exports = { getDomainFindings, getRepoFindings, getScore, buildFindings };
+module.exports = { getDomainFindings, getRepoFindings, buildFindings };

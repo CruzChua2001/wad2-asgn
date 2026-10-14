@@ -34,7 +34,7 @@ export function ScanProvider({ children }) {
     setPhase("scanning");
     addLine("command", `$ cruz scan ${[domain, githubRepo].filter(Boolean).join(" ")}`);
 
-    const expected = (domain ? 5 : 0) + (githubRepo ? 3 : 0); // domain modules + repo modules
+    const expected = (domain ? 7 : 0) + (githubRepo ? 3 : 0); // domain modules + repo modules
     let completed = 0;
 
     // Cancel switch for the request
