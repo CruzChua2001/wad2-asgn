@@ -28,6 +28,13 @@ const dnsRecordCount = dns => {
 // Count total open ports
 const openPortCount = ports => (ports.records.ports ?? []).reduce((sum, p) => sum + (p.ports?.length ?? 0), 0);
 
+// Describe a .gitignore or README result for the Files progress line
+const coverLabel = (status, record) => {
+    if (status === "none") return "missing";
+    if (status !== "ok" || !record) return "not checked";
+    return Object.values(record).every(Boolean) ? "complete" : "incomplete";
+}
+
 /**
  * Step-by-step Domain scan
  */
@@ -148,7 +155,9 @@ async function* getRepoScanIdSteps(repo, force) {
     ]);
 
     yield ev(files.records.sensitiveFiles?.length > 0 ? "warn" : "ok",
-        `Files: ${files.records.sensitiveFiles?.length ?? 0} sensitive file(s) found.`, "files");
+        `Files: ${files.records.sensitiveFiles?.length ?? 0} sensitive file(s) found, `
+        + `.gitignore ${coverLabel(files.checks.gitignore, files.records.gitignore)}, `
+        + `README ${coverLabel(files.checks.readme, files.records.readme)}.`, "files");
     yield ev(deps.records.dependencies?.length > 0 ? "warn" : "ok",
         `Dependencies: ${deps.records.dependencies?.length ?? 0} vulnerable package(s).`, "deps");
 
