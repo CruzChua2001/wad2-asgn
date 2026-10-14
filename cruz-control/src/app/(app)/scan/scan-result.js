@@ -90,6 +90,7 @@ const getFindings = data => {
             source: SOURCE_LABELS[finding.source],
             hosts: finding.hosts,
             files: finding.files,
+            cves: finding.cves,
             details: finding.details,
             nodeId: nodeId,
         });
