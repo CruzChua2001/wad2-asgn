@@ -1,3 +1,5 @@
+const { checkWebsite } = require("./domain");
+
 const RISKY_PORTS = {
     21: { name: "FTP (file transfer)", severity: "high" },
     22: { name: "SSH (remote login)", severity: "medium" },
@@ -24,6 +26,17 @@ const CATEGORY_LABELS = {
     readme: "README",
 };
 
+// Name the user's own servers or files, keeping the fix short: at most 3, then a count
+const nameList = (items = []) => {
+    const named = items.slice(0, 3).join(", ");
+
+    if (items.length > 3) {
+        return `${named} and ${items.length - 3} more`;
+    }
+
+    return named;
+}
+
 const DOMAIN_CATEGORIES = ["software", "ports", "email-dns"];
 const REPO_CATEGORIES = ["secrets", "packages", "repo-basics", "ignore-rules", "readme"];
 
@@ -31,6 +44,10 @@ const getDomainFindings = result => {
     const { records, checks, website } = result;
     const findings = [];
     const cdn = new Set(records.cdnIps ?? []);
+
+    // DNS records live on the registrable domain: www.example.com uses _dmarc.example.com
+    const site = checkWebsite(website ?? "");
+    const domain = site.isValid ? site.domain : null;
 
     // Servers running each cve, from Shodan's vulns (CDN edge IPs excluded, as above)
     const cveHosts = id => (records.ports ?? [])
@@ -75,7 +92,7 @@ const getDomainFindings = result => {
             severity: "critical",
             title: `${exploited.length} known bug(s) attackers are already using`,
             explain: "Your servers run software with bugs that are being used in real attacks right now.",
-            fix: "Update the software on these servers to the latest version as soon as possible.",
+            fix: `Update the software on ${nameList(groupHosts(exploited)) || "these servers"} to the latest version as soon as possible.`,
             source: "domain",
             cves: exploited.map(cve => cve.id),
             hosts: groupHosts(exploited),
@@ -92,7 +109,7 @@ const getDomainFindings = result => {
             severity: "high",
             title: `${serious.length} serious known bug(s) in server software`,
             explain: "Your servers run software versions with publicly known, high-risk bugs.",
-            fix: "Update the software on these servers to the latest version.",
+            fix: `Update the software on ${nameList(groupHosts(serious)) || "these servers"} to the latest version.`,
             source: "domain",
             cves: serious.map(cve => cve.id),
             hosts: groupHosts(serious),
@@ -109,7 +126,7 @@ const getDomainFindings = result => {
             severity: "medium",
             title: `${other.length} smaller known bug(s) in server software`,
             explain: "Your servers run software versions with publicly known bugs that are less likely to be used in attacks.",
-            fix: "Plan to update the software on these servers.",
+            fix: `Plan to update the software on ${nameList(groupHosts(other)) || "these servers"}.`,
             source: "domain",
             cves: other.map(cve => cve.id),
             hosts: groupHosts(other),
@@ -135,7 +152,7 @@ const getDomainFindings = result => {
             severity,
             title: `${name} is open to the internet`,
             explain: `Port ${port} is reachable on ${servers.length} server(s), so anyone online can try to break in.`,
-            fix: `Close port ${port} in your firewall, or only allow access through a VPN.`,
+            fix: `Close port ${port} on ${nameList(servers.map(item => item.ip))} in your firewall, or only allow access through a VPN.`,
             source: "domain",
             hosts: servers.map(item => item.ip),
             details: { port: Number(port), service: name },
@@ -152,9 +169,9 @@ const getDomainFindings = result => {
             severity: "medium",
             title: "No SPF record",
             explain: "SPF tells email providers which servers may send email for your domain. Without it, scammers can fake your address more easily.",
-            fix: "Add a TXT record starting with v=spf1 that lists your email provider.",
+            fix: `Add a TXT record on ${domain ?? "your domain"} starting with v=spf1 that lists your email provider.`,
             source: "domain",
-            details: { domain: website ?? null, record: records.spf ?? null },
+            details: { domain: domain ?? website ?? null, record: records.spf ?? null },
         });
     }
 
@@ -167,9 +184,9 @@ const getDomainFindings = result => {
             severity: "medium",
             title: "No DMARC record",
             explain: "DMARC tells email providers what to do with fake emails using your domain. Without it, they may still be delivered.",
-            fix: "Add a TXT record at _dmarc.yourdomain starting with v=DMARC1; p=none, then tighten it to p=quarantine.",
+            fix: `Add a TXT record at _dmarc.${domain ?? "yourdomain"} starting with v=DMARC1; p=none, then tighten it to p=quarantine.`,
             source: "domain",
-            details: { domain: website ?? null, record: records.dmarc ?? null },
+            details: { domain: domain ?? website ?? null, record: records.dmarc ?? null },
         });
     } else if (/p=none/i.test(records.dmarc ?? "")) {
         findings.push({
@@ -180,9 +197,9 @@ const getDomainFindings = result => {
             severity: "low",
             title: "DMARC only monitors",
             explain: "Your DMARC policy is p=none, so fake emails are reported but still delivered.",
-            fix: "Change your DMARC policy to p=quarantine or p=reject.",
+            fix: `Change the DMARC policy at _dmarc.${domain ?? "yourdomain"} to p=quarantine or p=reject.`,
             source: "domain",
-            details: { domain: website ?? null, record: records.dmarc ?? null },
+            details: { domain: domain ?? website ?? null, record: records.dmarc ?? null },
         });
     }
 
@@ -196,9 +213,9 @@ const getDomainFindings = result => {
             severity: "low",
             title: "No CAA record",
             explain: "Any certificate authority could issue an HTTPS certificate for your domain.",
-            fix: "Add a CAA record that only allows the certificate authority you use (e.g. letsencrypt.org).",
+            fix: `Add a CAA record on ${domain ?? "your domain"} that only allows the certificate authority you use (e.g. letsencrypt.org).`,
             source: "domain",
-            details: { domain: website ?? null, record: null },
+            details: { domain: domain ?? website ?? null, record: null },
         });
     }
 
@@ -208,6 +225,11 @@ const getDomainFindings = result => {
 const getRepoFindings = result => {
     const { records, checks } = result;
     let findings = []
+
+    // The user's own repo as owner/repo, for the fix steps
+    const repo = result.repo ?? records.repo?.name ?? null;
+    const inRepo = repo ? ` in ${repo}` : "";
+    const repoName = repo ?? "your repo";
 
     // Secret files committed
     if (records.sensitiveFiles?.length > 0) {
@@ -219,7 +241,7 @@ const getRepoFindings = result => {
             severity: "critical",
             title: "Secret files are committed to the repo",
             explain: `${records.sensitiveFiles.length} file(s) like .env or private keys are public. Anyone can download them and use the passwords or keys inside.`,
-            fix: "Delete the files, add them to .gitignore, then change (rotate) every password or key inside. They stay in the git history, so deleting alone isn't enough.",
+            fix: `Delete ${nameList(records.sensitiveFiles)} from ${repoName}, add them to .gitignore, then change (rotate) every password or key inside. They stay in the git history, so deleting alone isn't enough.`,
             source: "repo",
             files: records.sensitiveFiles,
             details: { files: records.sensitiveFiles },
@@ -236,7 +258,7 @@ const getRepoFindings = result => {
             severity: "high",
             title: `${pkg.name} ${pkg.version} has known vulnerabilities`,
             explain: `This package has ${pkg.vulns.length} known security bug(s): ${pkg.vulns.join(", ")}.`,
-            fix: `Run npm install ${pkg.name}@latest (or npm audit fix), then check your app still works.`,
+            fix: `You have ${pkg.name} ${pkg.version}. Run npm install ${pkg.name}@latest (or npm audit fix), then check your app still works.`,
             source: "repo",
             details: { package: pkg.name, version: pkg.version, vulns: pkg.vulns },
         });
@@ -253,7 +275,7 @@ const getRepoFindings = result => {
             severity: "low",
             title: "No security policy (SECURITY.md)",
             explain: "People who find a bug in your project don't know how to report it to you privately.",
-            fix: "Add a SECURITY.md file that explains how to report security issues (e.g. an email address).",
+            fix: `Add a SECURITY.md file to ${repoName} that explains how to report security issues (e.g. an email address).`,
             source: "repo",
             details: {},
         });
@@ -281,7 +303,7 @@ const getRepoFindings = result => {
             severity: "low",
             title: "No lockfile",
             explain: "Without package-lock.json, every install can pick different package versions, including vulnerable ones.",
-            fix: "Run npm install and commit the package-lock.json file it creates.",
+            fix: `Run npm install${inRepo} and commit the package-lock.json file it creates.`,
             source: "repo",
             details: {},
         });
@@ -305,7 +327,7 @@ const getRepoFindings = result => {
                 severity: "medium",
                 title: gitignore ? "Your .gitignore misses some risky files" : "No .gitignore file",
                 explain: `Without a rule for ${missing.join(", ")}, these can be committed by accident and become public.`,
-                fix: `Add a line for ${missing.join(", ")} to your .gitignore (e.g. .env, node_modules/, *.pem).`,
+                fix: `Add a line for ${missing.join(", ")} to the .gitignore in ${repoName} (e.g. .env, node_modules/, *.pem).`,
                 source: "repo",
                 details: { missing },
             });
@@ -329,7 +351,7 @@ const getRepoFindings = result => {
                 severity: "low",
                 title: readme ? "Your README is missing some sections" : "No README file",
                 explain: `Your README doesn't cover ${missing.join(" or ")}, so people can't tell how to run your project safely.`,
-                fix: `Add a short ${missing.join(" and ")} section to your README.`,
+                fix: `Add a short ${missing.join(" and ")} section to the README in ${repoName}.`,
                 source: "repo",
                 details: { missing },
             });
