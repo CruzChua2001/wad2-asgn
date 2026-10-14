@@ -15,6 +15,9 @@ const RISKY_PORTS = {
 
 const PENALTY = { critical: 25, high: 15, medium: 8, low: 3 };
 
+// Shodan matches cves from the version number a server reports, without confirming them
+const VERSION_GUESS = "This is based on the version number your server reports, so check whether your version already includes the fix.";
+
 const CATEGORY_LABELS = {
     software: "Server software",
     ports: "Open ports",
@@ -90,8 +93,8 @@ const getDomainFindings = result => {
             checkId: "software-kev",
             kind: "issue",
             severity: "critical",
-            title: `${exploited.length} known bug(s) attackers are already using`,
-            explain: "Your servers run software with bugs that are being used in real attacks right now.",
+            title: `Server software may have ${exploited.length} bug(s) attackers are already using`,
+            explain: `Your servers report software versions that are listed as affected by bugs being used in real attacks right now. ${VERSION_GUESS}`,
             fix: `Update the software on ${nameList(groupHosts(exploited)) || "these servers"} to the latest version as soon as possible.`,
             source: "domain",
             cves: exploited.map(cve => cve.id),
@@ -107,8 +110,8 @@ const getDomainFindings = result => {
             checkId: "software-serious",
             kind: "issue",
             severity: "high",
-            title: `${serious.length} serious known bug(s) in server software`,
-            explain: "Your servers run software versions with publicly known, high-risk bugs.",
+            title: `Server software may have ${serious.length} serious known bug(s)`,
+            explain: `Your servers report software versions that are listed as affected by publicly known, high-risk bugs. ${VERSION_GUESS}`,
             fix: `Update the software on ${nameList(groupHosts(serious)) || "these servers"} to the latest version.`,
             source: "domain",
             cves: serious.map(cve => cve.id),
@@ -124,8 +127,8 @@ const getDomainFindings = result => {
             checkId: "software-other",
             kind: "issue",
             severity: "medium",
-            title: `${other.length} smaller known bug(s) in server software`,
-            explain: "Your servers run software versions with publicly known bugs that are less likely to be used in attacks.",
+            title: `Server software may have ${other.length} smaller known bug(s)`,
+            explain: `Your servers report software versions that are listed as affected by publicly known bugs that are less likely to be used in attacks. ${VERSION_GUESS}`,
             fix: `Plan to update the software on ${nameList(groupHosts(other)) || "these servers"}.`,
             source: "domain",
             cves: other.map(cve => cve.id),
@@ -304,6 +307,22 @@ const getRepoFindings = result => {
             title: "No lockfile",
             explain: "Without package-lock.json, every install can pick different package versions, including vulnerable ones.",
             fix: `Run npm install${inRepo} and commit the package-lock.json file it creates.`,
+            source: "repo",
+            details: {},
+        });
+    }
+
+    // Archived repo, so nothing lands in it any more
+    if (records.repo?.archived) {
+        findings.push({
+            id: "repo-archived",
+            category: "repo-basics",
+            checkId: null,
+            kind: "recommendation",
+            severity: "low",
+            title: "This repository is archived",
+            explain: "Archived repositories are read-only, so they get no more updates or security fixes, including for bugs found later.",
+            fix: `If you still rely on ${repoName}, switch to a maintained fork or alternative. If it's still in use, unarchive it in Settings so it can be updated.`,
             source: "repo",
             details: {},
         });
