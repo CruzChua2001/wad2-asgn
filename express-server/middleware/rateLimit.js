@@ -41,6 +41,16 @@ const scanRateLimit = (req, res, next) => {
 
     entry.count += cost;
 
+    // Give the cost back when the scan never ran (bad input, not signed in, wrong role)
+    res.on("finish", () => {
+        if (res.statusCode < 400 || res.statusCode >= 500 || res.statusCode === 429) {
+            return;
+        }
+        if (scanCounts.get(key) === entry) {
+            entry.count = Math.max(0, entry.count - cost);
+        }
+    });
+
     next();
 }
 

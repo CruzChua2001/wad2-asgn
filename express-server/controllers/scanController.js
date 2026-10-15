@@ -152,8 +152,15 @@ async function* getRepoScanIdSteps(repo, force) {
     yield ev("info", "Looking up the repository on GitHub...", "repo");
     const info = await checkRepoInfo(repo);
     if (info.checks.repo !== "ok") {
-        yield ev("bad", "Repository not found or not public.", "repo");
-        return null;
+        // GitHub not answering is a different problem from a repo that isn't there
+        const down = info.checks.repo === "unavailable";
+        yield ev("bad", down ? "GitHub didn't respond. Please try again in a moment." : "Repository not found or not public.", "repo");
+        return {
+            id: null,
+            message: down
+                ? "GitHub didn't respond. Please try again in a moment."
+                : "We couldn't find that GitHub repository. Check that it's public and spelled correctly."
+        };
     }
 
     const sha = info.records.commitSha;
@@ -165,7 +172,7 @@ async function* getRepoScanIdSteps(repo, force) {
             .order("created_at", { ascending: false }).limit(1).maybeSingle();
         if (data) {
             yield ev("ok", "Found a recent repository scan, reusing it.", "cache");
-            return data.id;
+            return { id: data.id };
         }
     }
 
@@ -194,7 +201,7 @@ async function* getRepoScanIdSteps(repo, force) {
     const { data, error } = await supabase.from("repo_scans").insert({ github_repo: repo, commit_sha: sha, result }).select("id").single();
     if (error) throw error;
 
-    return data.id
+    return { id: data.id }
 }
 
 /**
@@ -255,17 +262,17 @@ const createScan = async (req, res) => {
 
     try {
         const domainScanId = site ? await drain(getDomainScanIdSteps(site, force), write) : null;
-        const repoScanId = repo ? await drain(getRepoScanIdSteps(repo.repo, force), write) : null;
+        const repoScan = repo ? await drain(getRepoScanIdSteps(repo.repo, force), write) : null;
 
-        if (repo && !repoScanId) {
-            write({ type: "error", message: "We couldn't find that GitHub repository. Check that it's public and spelled correctly." });
+        if (repo && !repoScan.id) {
+            write({ type: "error", message: repoScan.message });
             return res.end();
         }
 
         const newScan = {
             project_id: projectId || null,
             domain_scan_id: domainScanId,
-            repo_scan_id: repoScanId,
+            repo_scan_id: repoScan?.id ?? null,
             user_id: req.user?.id ?? null
         };
 

@@ -52,6 +52,11 @@ const getDomainFindings = result => {
 
     if (records.cves) {
         for (let cve of records.cves) {
+            // A lookup that failed tells us nothing, so don't group it or score it
+            if (cve.status === "unavailable") {
+                continue;
+            }
+
             const entry = {
                 id: cve.id,
                 cvss: cve.cvss,
