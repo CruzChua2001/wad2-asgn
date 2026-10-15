@@ -1,6 +1,6 @@
 const SOURCE_LABELS = { domain: "Website", repo: "Repository" };
 
-const getRating = score => {
+export const getRating = score => {
     if (score >= 80) {
         return "Good";
     }
@@ -82,6 +82,7 @@ const getFindings = data => {
         findings.push({
             id: finding.id,
             category: finding.category,
+            checkId: finding.checkId,
             kind: finding.kind,
             severity: finding.severity,
             title: finding.title,

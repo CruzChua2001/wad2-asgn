@@ -19,6 +19,7 @@ const ProjectPage = _ => {
     const memberRef = useRef(null);
     const [projects, setProjects] = useState([]);
     const [error, setError] = useState("");
+    const [formError, setFormError] = useState("");
     const [form, setForm] = useState({ name: "", domain: "", githubRepo: "" });
     const [loading, setLoading] = useState(false);
     const [editingId, setEditingId] = useState(null);
@@ -56,7 +57,7 @@ const ProjectPage = _ => {
     const openModal = project => {
         setEditingId(project?.id ?? null);
         setForm({ name: project?.name ?? "", domain: project?.domain ?? "", githubRepo: project?.github_repo ?? "" });
-        setError("");
+        setFormError("");
         popupModalRef.current.showModal();
     }
 
@@ -90,7 +91,7 @@ const ProjectPage = _ => {
     const createProject = async event => {
         event.preventDefault();
         setLoading(true);
-        setError("");
+        setFormError("");
         try {
             if (editingId) {
                 const response = await api.put(`/api/project/${editingId}`, form);
@@ -106,7 +107,7 @@ const ProjectPage = _ => {
 
             scanProject(response.data);
         } catch (e) {
-            setError(e.response?.data?.error ?? "Could not create or update project.");
+            setFormError(e.response?.data?.error ?? "Could not create or update project.");
         } finally {
             setLoading(false)
         }
@@ -184,7 +185,7 @@ const ProjectPage = _ => {
 
             <h1 className="text-2xl font-semibold">My Projects</h1>
 
-            <ProjectModal editing={Boolean(editingId)} modalRef={popupModalRef} form={form} updateField={updateField} onSubmit={createProject} error={error} loading={loading} />
+            <ProjectModal editing={Boolean(editingId)} modalRef={popupModalRef} form={form} updateField={updateField} onSubmit={createProject} error={formError} loading={loading} />
             <MemberModal project={memberProject} modalRef={memberRef} />
 
             {error && <p role="alert" className="text-critical">{error}</p>}

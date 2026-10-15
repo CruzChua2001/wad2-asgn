@@ -72,6 +72,10 @@ const getInviteByCurrUser = async (req, res) => {
 }
 
 const acceptInvite = async (req, res) => {
+    if (!req.user.email_confirmed_at) {
+        return res.status(403).json({ error: "Please confirm your email address before accepting this invite." });
+    }
+
     const { data:invite } = await supabase.from("project_invites").select("*").eq("id", req.params.id).eq("email", req.user.email.toLowerCase()).gt("expires_at", new Date().toISOString()).maybeSingle();
 
     if (!invite) {
