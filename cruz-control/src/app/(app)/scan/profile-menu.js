@@ -73,7 +73,6 @@ export default function ProfileMenu() {
               <strong>{profile.name}</strong>
               <span>{profile.email}</span>
             </div>
-            <span className={styles.previewBadge}>Preview</span>
           </div>
 
           <div className={styles.section}>
