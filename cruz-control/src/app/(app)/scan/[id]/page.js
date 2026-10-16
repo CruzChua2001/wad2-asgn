@@ -49,6 +49,11 @@ function checkTone(check) {
   return check.score === 0 ? "text-critical" : "text-warm";
 }
 
+// T18: what fixing this finding would win back. The API works out gain, we only read it.
+function showGain(finding, incomplete) {
+  return !incomplete && Boolean(finding.checkId) && Boolean(finding.gain);
+}
+
 // Package vulnerabilities use OSV and GitHub IDs (GHSA-...), not only CVEs.
 function vulnUrl(id) {
   if (id.startsWith("CVE-")) {
@@ -289,7 +294,8 @@ export default function OverviewTab() {
   const [showAllServers, setShowAllServers] = useState(false);
   const [mapOpen, setMapOpen] = useState(false);
   const [mapView, setMapView] = useState("globe");
-  const [detailsOpenId, setDetailsOpenId] = useState(null);
+  const [openFindingIds, setOpenFindingIds] = useState(() => new Set(findings[0] ? [findings[0].id] : []));
+  const [detailsOpenIds, setDetailsOpenIds] = useState(() => new Set());
   const [filterNodeId, setFilterNodeId] = useState(null);
 
   const countryGroups = [];
@@ -320,6 +326,7 @@ export default function OverviewTab() {
   const nodeFindingCount = selectedNode ? findings.filter((finding) => affectsNode(finding, selectedNode.id)).length : 0;
   const filterNode = result.nodes.find((node) => node.id === filterNodeId);
   const shownFindings = filterNode ? findings.filter((finding) => affectsNode(finding, filterNode.id)) : findings;
+  const allFindingsOpen = shownFindings.length > 0 && shownFindings.every((finding) => openFindingIds.has(finding.id));
 
   const statusCounts = result.nodes.reduce((counts, node) => ({ ...counts, [node.status]: (counts[node.status] || 0) + 1 }), {});
 
@@ -331,20 +338,72 @@ export default function OverviewTab() {
   // The repo's scored checks, so the card always matches the score
   const repoChecks = (result.checks ?? []).filter((check) => REPO_CATEGORIES.includes(check.category));
 
+  function openFinding(id) {
+    setOpenFindingIds((open) => new Set(open).add(id));
+  }
+
   function selectNode(nodeId) {
+    const finding = findings.find((item) => affectsNode(item, nodeId));
     setSelectedNodeId(nodeId);
-    setSelectedFindingId(findings.find((finding) => affectsNode(finding, nodeId))?.id);
+    setSelectedFindingId(finding?.id ?? null);
+
+    if (finding) {
+      openFinding(finding.id);
+    }
   }
 
   // On phones the findings card is further down, so bring it into view
   function showNodeFindings(nodeId) {
+    const finding = findings.find((item) => affectsNode(item, nodeId));
     setFilterNodeId(nodeId);
+
+    if (finding) {
+      setSelectedFindingId(finding.id);
+      openFinding(finding.id);
+    }
+
     document.getElementById("findings-title")?.closest("section").scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "nearest" });
   }
 
-  function selectFinding(finding) {
-    setSelectedFindingId(finding.id);
-    setSelectedNodeId(finding.nodeId);
+  // Findings open and close on their own, and the last one opened drives the map highlight
+  function toggleFinding(finding) {
+    const open = new Set(openFindingIds);
+
+    if (open.has(finding.id)) {
+      open.delete(finding.id);
+      if (finding.id === selectedFindingId) {
+        setSelectedFindingId(null);
+      }
+    } else {
+      open.add(finding.id);
+      setSelectedFindingId(finding.id);
+      setSelectedNodeId(finding.nodeId);
+    }
+
+    setOpenFindingIds(open);
+  }
+
+  function toggleDetails(id) {
+    const open = new Set(detailsOpenIds);
+
+    if (open.has(id)) {
+      open.delete(id);
+    } else {
+      open.add(id);
+    }
+
+    setDetailsOpenIds(open);
+  }
+
+  function toggleAllFindings() {
+    if (allFindingsOpen) {
+      setOpenFindingIds(new Set());
+      setDetailsOpenIds(new Set());
+      setSelectedFindingId(null);
+      return;
+    }
+
+    setOpenFindingIds(new Set(shownFindings.map((finding) => finding.id)));
   }
 
   const reveal = (delay = 0) => (reduceMotion
@@ -592,7 +651,14 @@ export default function OverviewTab() {
           <motion.section className={`${styles.card} ${styles.findingsCard}`} aria-labelledby="findings-title" {...reveal(0.27)}>
             <div className={styles.cardHead}>
               <h2 id="findings-title">Findings · worst first</h2>
-              <span className={styles.count}><NumberTicker value={shownFindings.length} delay={0.3} /></span>
+              <span className="flex items-center gap-3">
+                {shownFindings.length > 0 && (
+                  <button type="button" onClick={toggleAllFindings} className="cursor-pointer text-xs! font-semibold text-accent">
+                    {allFindingsOpen ? "Collapse all" : "Expand all"}
+                  </button>
+                )}
+                <span className={styles.count}><NumberTicker value={shownFindings.length} delay={0.3} /></span>
+              </span>
             </div>
             {filterNode && (
               <p className="m-0 mb-3 text-xs text-muted">
@@ -610,38 +676,60 @@ export default function OverviewTab() {
                     data-severity={finding.severity}
                     className={finding.id === selectedFinding?.id ? styles.findingActive : ""}
                     aria-pressed={finding.id === selectedFinding?.id}
-                    onClick={() => selectFinding(finding)}
+                    aria-expanded={openFindingIds.has(finding.id)}
+                    onClick={() => toggleFinding(finding)}
                   >
-                    <span className={styles.severity}>{SEVERITY_LABELS[finding.severity]}</span>
+                    <span className="flex items-center justify-between gap-2">
+                      <span className={styles.severity}>{SEVERITY_LABELS[finding.severity]}</span>
+                      {showGain(finding, result.incomplete) && (
+                        <span
+                          className={`${styles.severity} text-accent!`}
+                          title={`Fixing this adds ${finding.sharedCheck ? "up to " : ""}${finding.gain} points to your score`}
+                          aria-label={`Fixing this adds ${finding.sharedCheck ? "up to " : ""}${finding.gain} points to your score`}
+                        >
+                          <span aria-hidden="true">↑ </span>
+                          {finding.sharedCheck ? "up to " : ""}+{finding.gain} pts
+                        </span>
+                      )}
+                    </span>
                     <strong>{finding.title}</strong>
                     <small>{result.nodes.find((node) => node.id === finding.nodeId)?.host} · {finding.source}</small>
                   </button>
 
-                  {finding.id === selectedFinding?.id && (
+                  {openFindingIds.has(finding.id) && (
                     <div className={`${styles.findingWhy} px-3`}>
-                      {withTerms(finding.why)}
-                      <br /><strong>What to do:</strong> {withTerms(finding.fix)}
+                      <span className="block">{withTerms(finding.why)}</span>
+                      {showGain(finding, result.incomplete) && (
+                        <span className="mt-1.5 block text-xs text-ink">
+                          {finding.sharedCheck ? (
+                            <>Fixing this and the related findings raises your score by up to <span className="font-semibold">{finding.gain}</span> points.</>
+                          ) : (
+                            <>Fixing this raises your score from <span className="font-semibold">{result.score}</span> to <span className="font-semibold">{result.score + finding.gain}</span>.</>
+                          )}
+                        </span>
+                      )}
+                      <span className="mt-1.5 block"><strong>What to do:</strong> {withTerms(finding.fix)}</span>
                     </div>
                   )}
 
-                  {finding.id === selectedFinding?.id && finding.hosts?.length > 1 && (
+                  {openFindingIds.has(finding.id) && finding.hosts?.length > 1 && (
                     <p className="m-0 mt-1.5 px-3 text-xs font-semibold text-accent">
                       Affects {finding.hosts.length} of your {result.nodes.length} servers
                     </p>
                   )}
 
-                  {finding.id === selectedFinding?.id && hasDetails(finding.details) && (
+                  {openFindingIds.has(finding.id) && hasDetails(finding.details) && (
                     <div className="mt-1.5 px-3">
                       <button
                         type="button"
-                        aria-expanded={detailsOpenId === finding.id}
+                        aria-expanded={detailsOpenIds.has(finding.id)}
                         aria-controls={`finding-details-${finding.id}`}
-                        onClick={() => setDetailsOpenId(detailsOpenId === finding.id ? null : finding.id)}
+                        onClick={() => toggleDetails(finding.id)}
                         className="w-auto! cursor-pointer border-0! bg-transparent! p-0! text-xs! font-semibold text-accent"
                       >
-                        Technical details {detailsOpenId === finding.id ? "▲" : "▼"}
+                        Technical details {detailsOpenIds.has(finding.id) ? "▲" : "▼"}
                       </button>
-                      {detailsOpenId === finding.id && (
+                      {detailsOpenIds.has(finding.id) && (
                         <div id={`finding-details-${finding.id}`} className="mt-2 rounded-md border border-line bg-surface p-2.5">
                           <FindingDetails details={finding.details} />
                         </div>
