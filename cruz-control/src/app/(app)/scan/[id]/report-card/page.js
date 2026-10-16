@@ -19,7 +19,7 @@ const TONE_BAR = { good: "bg-accent", warn: "bg-warm", bad: "bg-critical" };
 // Category, score, risk and why side by side from md up; stacked on phones
 const ROW_GRID = "grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 md:grid-cols-[13rem_7.5rem_7rem_minmax(0,1fr)]";
 
-const SCORE_RULE = "Every check scores 0 to 10, riskier checks count more, and any critical problem caps the score at 50 until it's fixed.";
+const SCORE_RULE = "Your score is out of 100, and higher is safer. Each check scores 0 to 10, and riskier checks count for more. A critical problem keeps your score at 50 or below until it's fixed.";
 
 function scoreTone(value) {
   if (value >= 80) return "good";

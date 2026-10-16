@@ -27,7 +27,7 @@ const STATUS_LABELS = { healthy: "Healthy", attention: "Needs attention", critic
 
 const MAX_SHOWN_CVES = 10;
 
-const SCORE_RULE = "Every check scores 0 to 10, riskier checks count more, and any critical problem caps the score at 50 until it's fixed.";
+const SCORE_RULE = "Your score is out of 100, and higher is safer. Each check scores 0 to 10, and riskier checks count for more. A critical problem keeps your score at 50 or below until it's fixed.";
 
 const REPO_CATEGORIES = ["secrets", "packages", "repo-basics", "ignore-rules", "readme", "workflows"];
 
@@ -178,55 +178,72 @@ function ScoreRing({ score, reduceMotion }) {
   );
 }
 
+function trackStyle(missing, passed) {
+  if (missing) return "border border-dashed border-line";
+  return passed ? "bg-accent-soft" : "bg-line";
+}
+
 // Points each category lost, worst first. The bar shows how much of that category's points are gone.
 function ScoreBreakdown({ breakdown, checks, reduceMotion }) {
   const ran = checks.filter((check) => check.status === "ok");
   const totalWeight = ran.reduce((sum, check) => sum + check.weight, 0);
 
   return (
-    <ul className="m-0 flex w-full list-none flex-col gap-2.5 p-0" aria-label="Score breakdown">
-      {breakdown.map((item) => {
-        const weight = ran.filter((check) => check.category === item.category).reduce((sum, check) => sum + check.weight, 0);
-        const most = totalWeight > 0 ? (100 * weight) / totalWeight : 0;
-        const share = most > 0 ? Math.min(100, (100 * item.lost) / most) : 0;
-        const barColor = share >= 50 ? "bg-critical" : "bg-warm";
-        const imperfect = ran.some((check) => check.category === item.category && check.score < 10);
+    <div className="w-full">
+      <p className="m-0 mb-2 font-mono text-[10px] tracking-[.08em] text-muted uppercase">Points lost by category</p>
+      <ul className="m-0 flex w-full list-none flex-col gap-2.5 p-0" aria-label="Score breakdown">
+        {breakdown.map((item) => {
+          const weight = ran.filter((check) => check.category === item.category).reduce((sum, check) => sum + check.weight, 0);
+          const most = totalWeight > 0 ? (100 * weight) / totalWeight : 0;
+          const share = most > 0 ? Math.min(100, (100 * item.lost) / most) : 0;
+          const barColor = share >= 50 ? "bg-critical" : "bg-warm";
+          const imperfect = ran.some((check) => check.category === item.category && check.score < 10);
+          // A category that didn't run has no points to show, so it gets an empty dashed track
+          const missing = item.status === "unavailable" || item.status === "not_checked";
+          // Nothing lost and every check perfect, so the empty track can read as good
+          const passed = item.status === "ok" && item.lost === 0 && !imperfect;
 
-        let value = <><span aria-hidden="true">✓</span><span className="sr-only">Passed</span></>;
-        let tone = "text-accent";
-        if (item.status === "unavailable") {
-          value = "Couldn't check";
-          tone = "text-muted";
-        } else if (item.status === "not_checked") {
-          value = "Not checked";
-          tone = "text-muted";
-        } else if (item.lost > 0) {
-          value = <>-{item.lost}<span className="sr-only"> points</span></>;
-          tone = share >= 50 ? "text-critical" : "text-warm";
-        } else if (imperfect) {
-          // Lost less than a point, which rounds to 0
-          value = "Minor";
-          tone = "text-warm";
-        }
+          let value = <><span aria-hidden="true">✓</span> No issues</>;
+          let tone = "text-accent";
+          if (item.status === "unavailable") {
+            value = "Couldn't check";
+            tone = "text-muted";
+          } else if (item.status === "not_checked") {
+            value = "Not checked";
+            tone = "text-muted";
+          } else if (item.lost > 0) {
+            value = <>-{item.lost}<span className="sr-only"> points</span></>;
+            tone = share >= 50 ? "text-critical" : "text-warm";
+          } else if (imperfect) {
+            // Lost less than a point, which rounds to 0
+            value = "Minor";
+            tone = "text-warm";
+          }
 
-        return (
-          <li key={item.category}>
-            <div className="mb-1 flex justify-between gap-2.5 font-mono text-[10px] text-muted">
-              <span>{item.label}</span>
-              <span className={`flex-none font-semibold ${tone}`}>{value}</span>
-            </div>
-            <div className="h-1.5 overflow-hidden rounded-full bg-line" aria-hidden="true">
-              <motion.span
-                className={`block h-full rounded-full ${barColor}`}
-                initial={reduceMotion ? false : { width: 0 }}
-                animate={{ width: `${share}%` }}
-                transition={{ duration: 0.8, delay: 0.35, ease: [0.22, 1, 0.36, 1] }}
-              />
-            </div>
-          </li>
-        );
-      })}
-    </ul>
+          return (
+            <li key={item.category}>
+              <div className="mb-1 flex justify-between gap-2.5 font-mono text-[10px] text-muted">
+                <span>{item.label}</span>
+                <span className={`flex-none font-semibold ${tone}`}>{value}</span>
+              </div>
+              <div
+                className={`h-1.5 overflow-hidden rounded-full ${trackStyle(missing, passed)}`}
+                aria-hidden="true"
+              >
+                {!missing && (
+                  <motion.span
+                    className={`block h-full rounded-full ${barColor}`}
+                    initial={reduceMotion ? false : { width: 0 }}
+                    animate={{ width: `${share}%` }}
+                    transition={{ duration: 0.8, delay: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                  />
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }
 
@@ -337,6 +354,10 @@ export default function OverviewTab() {
 
   // The repo's scored checks, so the card always matches the score
   const repoChecks = (result.checks ?? []).filter((check) => REPO_CATEGORIES.includes(check.category));
+
+  // How much of the scan the score is really based on (T20)
+  const ranChecks = (result.checks ?? []).filter((check) => check.status === "ok").length;
+  const missedChecks = (result.checks ?? []).filter((check) => check.status === "unavailable").length;
 
   function openFinding(id) {
     setOpenFindingIds((open) => new Set(open).add(id));
@@ -629,6 +650,12 @@ export default function OverviewTab() {
                 <ScoreBreakdown breakdown={result.breakdown} checks={result.checks} reduceMotion={reduceMotion} />
               )}
             </div>
+            {result.checks?.length > 0 && (
+              <p className="m-0 mt-3 text-xs text-muted">
+                Based on {ranChecks} checks.
+                {missedChecks > 0 && ` ${missedChecks} couldn't run and ${missedChecks === 1 ? "isn't" : "aren't"} counted.`}
+              </p>
+            )}
             {result.cap?.applied && result.uncappedScore > result.score && (
               <p className="m-0 mt-3 text-xs text-critical">
                 Capped at 50 until the critical problem is fixed. Without it, you&apos;d score {result.uncappedScore}.
@@ -639,13 +666,18 @@ export default function OverviewTab() {
                 A critical check couldn&apos;t run, so there&apos;s no grade yet. Re-scan to try again.
               </p>
             )}
+            {result.breakdown?.some((item) => item.status === "unavailable") && (
+              <p className="m-0 mt-3 text-xs text-muted">
+                &quot;Couldn&apos;t check&quot; means a free lookup service didn&apos;t answer. It isn&apos;t counted in your score. Re-scan to try again.
+              </p>
+            )}
             {result.breakdown?.some((item) => item.status === "not_checked") && (
               <p className="m-0 mt-3 text-xs text-muted">
                 &quot;Not checked&quot; means the check doesn&apos;t apply here, or this scan is older than the check. Re-scan to run every check.
               </p>
             )}
-            <p className={styles.scoreSummary}>{result.summary} Higher is safer.</p>
-            <p className="m-0 mt-2 text-[11px] leading-relaxed text-muted">{SCORE_RULE}</p>
+            <p className={styles.scoreSummary}>{result.summary}</p>
+            <p className="m-0 mt-2 text-xs leading-relaxed text-muted">{SCORE_RULE}</p>
           </motion.section>
 
           <motion.section className={`${styles.card} ${styles.findingsCard}`} aria-labelledby="findings-title" {...reveal(0.27)}>
