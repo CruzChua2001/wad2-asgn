@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { motion, useReducedMotion } from "motion/react";
 import { useState } from "react";
 import NumberTicker from "./number-ticker";
+import { Term, withTerms } from "./glossary";
 import { useTheme } from "@/lib/theme-store";
 import { useScan } from "../scan-context";
 import styles from "@/styles/overview/scan-results.module.css";
@@ -72,11 +73,12 @@ function FindingDetails({ details }) {
     <dl className="m-0 flex flex-col gap-2 text-xs text-muted">
       {details.cves && (
         <div className="flex flex-col gap-2">
-          {details.cves.slice(0, MAX_SHOWN_CVES).map((cve) => (
+          {details.cves.slice(0, MAX_SHOWN_CVES).map((cve, index) => (
             <div key={cve.id}>
               <VulnLink id={cve.id} />
               <span className="ml-2">
-                CVSS {cve.cvss ?? "?"} · EPSS {cve.epss == null ? "?" : `${Math.round(cve.epss * 100)}%`}
+                {index === 0 ? <Term term="CVSS" /> : "CVSS"} {cve.cvss ?? "?"} ·{" "}
+                {index === 0 ? <Term term="EPSS" /> : "EPSS"} {cve.epss == null ? "?" : `${Math.round(cve.epss * 100)}%`}
                 {cve.kev && <strong className="ml-2 text-critical">Actively exploited</strong>}
               </span>
               {cve.summary && <p className="mt-0.5 mb-0 line-clamp-2">{cve.summary}</p>}
@@ -90,7 +92,7 @@ function FindingDetails({ details }) {
       )}
 
       {details.port != null && (
-        <div><dt className="inline font-semibold">Port</dt><dd className="ml-2 inline">{details.port} · {details.service}</dd></div>
+        <div><dt className="inline font-semibold">{withTerms("Port")}</dt><dd className="ml-2 inline">{details.port} · {details.service}</dd></div>
       )}
 
       {details.domain !== undefined && (
@@ -130,7 +132,7 @@ function FindingDetails({ details }) {
       {details.header && (
         <>
           <div><dt className="inline font-semibold">Page</dt><dd className="ml-2 inline font-mono break-all">{details.url}</dd></div>
-          <div><dt className="inline font-semibold">{details.header}</dt><dd className="ml-2 inline font-mono break-all">{details.value || "Not set"}</dd></div>
+          <div><dt className="inline font-semibold">{withTerms(details.header)}</dt><dd className="ml-2 inline font-mono break-all">{details.value || "Not set"}</dd></div>
         </>
       )}
     </dl>
@@ -613,13 +615,14 @@ export default function OverviewTab() {
                     <span className={styles.severity}>{SEVERITY_LABELS[finding.severity]}</span>
                     <strong>{finding.title}</strong>
                     <small>{result.nodes.find((node) => node.id === finding.nodeId)?.host} · {finding.source}</small>
-                    {finding.id === selectedFinding?.id && (
-                      <span className={styles.findingWhy}>
-                        {finding.why}
-                        <br /><strong>What to do:</strong> {finding.fix}
-                      </span>
-                    )}
                   </button>
+
+                  {finding.id === selectedFinding?.id && (
+                    <div className={`${styles.findingWhy} px-3`}>
+                      {withTerms(finding.why)}
+                      <br /><strong>What to do:</strong> {withTerms(finding.fix)}
+                    </div>
+                  )}
 
                   {finding.id === selectedFinding?.id && finding.hosts?.length > 1 && (
                     <p className="m-0 mt-1.5 px-3 text-xs font-semibold text-accent">
@@ -634,7 +637,7 @@ export default function OverviewTab() {
                         aria-expanded={detailsOpenId === finding.id}
                         aria-controls={`finding-details-${finding.id}`}
                         onClick={() => setDetailsOpenId(detailsOpenId === finding.id ? null : finding.id)}
-                        className="w-auto! cursor-pointer border-0! bg-transparent! p-0! text-xs font-semibold text-accent"
+                        className="w-auto! cursor-pointer border-0! bg-transparent! p-0! text-xs! font-semibold text-accent"
                       >
                         Technical details {detailsOpenId === finding.id ? "▲" : "▼"}
                       </button>
