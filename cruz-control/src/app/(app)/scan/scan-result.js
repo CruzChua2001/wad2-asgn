@@ -148,7 +148,9 @@ const getServers = (domainScan, findings) => {
             }   
 
             
-            summary = `${ports.length} open service(s) found on this server.`;
+            summary = ports.length === 1
+                ? "1 open service found on this server."
+                : `${ports.length} open services found on this server.`;
         }
 
         if (isCdn) {
@@ -190,7 +192,7 @@ export const toResult = data => {
     let linkedRepository = null;
     let repo = null;
     let serious = 0;
-    let summary = "No serious issues found.";
+    let summary = "No serious problems found.";
     const arcs = [];
     let stats = []
      let scannedAt = null;
@@ -214,8 +216,10 @@ export const toResult = data => {
         }
     }
 
-    if(serious > 0) {
-        summary = `${serious} serious issue(s) are pulling your score down. Fix those first.`;
+    if (serious === 1) {
+        summary = "1 serious problem is lowering your score. Start with that one.";
+    } else if (serious > 1) {
+        summary = `${serious} serious problems are lowering your score. Start with those.`;
     }
 
     // Arcs run from the main site's server to the others: they show structure, not traffic
