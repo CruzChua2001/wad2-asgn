@@ -450,7 +450,7 @@ const getRepoFindings = result => {
             severity: "low",
             title: "We couldn't find a Dependabot or Renovate config",
             explain: "Dependabot automatically opens pull requests when your packages have security fixes.",
-            fix: `Add this as .github/dependabot.yml:\n# .github/dependabot.yml\nversion: 2\nupdates:\n  - package-ecosystem: "npm"\n    directory: "/"   # one entry per folder that has a package.json\n    schedule:\n      interval: "weekly"\nAlso turn on Dependabot alerts and security updates in Settings → Code security.`,
+            fix: `Let Dependabot watch ${repoName} for you.\n1. Create the file: \`.github/dependabot.yml\`.\n2. Paste this in:\n\`\`\`\nversion: 2\nupdates:\n  - package-ecosystem: "npm"\n    directory: "/"   # one entry per folder that has a package.json\n    schedule:\n      interval: "weekly"\n\`\`\`\nTip: also turn on Dependabot alerts and security updates in Settings → Code security.`,
             source: "repo",
             details: {},
         });
@@ -550,7 +550,7 @@ const getRepoFindings = result => {
                 severity: "high",
                 title: "A workflow runs text that anyone can write",
                 explain: "Your GitHub Actions workflow puts text from an issue, pull request or commit message straight into a command. Anyone can write that text, so they can put commands in it and your workflow will run them with access to your secrets.",
-                fix: `In ${nameList(places)}, put the value in an env: variable first, then use "$VAR" in your run: step instead of \${{ ... }}.`,
+                fix: `Keep the text out of your commands in ${nameList(places)}.\n1. Move it into a variable: add an \`env:\` block to the step, like \`MY_TEXT: \${{ github.event.issue.title }}\`.\n2. Use the variable: in your \`run:\` step, write \`"$MY_TEXT"\` instead of \`\${{ ... }}\`.\nTip: keep the double quotes, so spaces in the text can't start a second command.`,
                 source: "repo",
                 files: dangerous.map(item => item.file),
                 details: { lines: dangerous },
@@ -566,7 +566,7 @@ const getRepoFindings = result => {
                 severity: "high",
                 title: "Your workflows can change your code without asking",
                 explain: `${noPermissions.length === 1 ? "One workflow doesn't" : `${noPermissions.length} workflows don't`} say what the workflow is allowed to do, so GitHub may give it write access to your whole repository. A mistake or a bad action could then change your code or releases.`,
-                fix: `Add these two lines at the top of ${nameList(noPermissions)}:\npermissions:\n  contents: read`,
+                fix: `Say what each workflow may do in ${nameList(noPermissions)}.\n1. Open the file: the top of it, above \`jobs:\`.\n2. Paste these two lines there:\n\`\`\`\npermissions:\n  contents: read\n\`\`\`\nTip: if one job really needs to write, give that job its own permissions: block.`,
                 source: "repo",
                 files: noPermissions,
                 details: { files: noPermissions },
@@ -574,6 +574,10 @@ const getRepoFindings = result => {
         }
 
         if (unpinned.length > 0) {
+            // One action can appear in several workflows, and the first one shows the example fix
+            const actions = [...new Set(unpinned.map(item => item.uses))];
+            const [name, tag] = actions[0].split("@");
+
             findings.push({
                 id: "repo-workflow-pinned",
                 category: "workflows",
@@ -581,9 +585,10 @@ const getRepoFindings = result => {
                 kind: "recommendation",
                 severity: "medium",
                 title: "Some workflow actions can change without you knowing",
-                explain: "Your workflows use other people's actions by version tag (like @v1), and a tag can be moved to new code at any time. In March 2025 the popular tj-actions/changed-files action was changed this way, and thousands of repositories leaked their secrets into their build logs. The repos that pinned it to a commit SHA were safe.",
-                fix: `Pin ${nameList(unpinned.map(item => item.uses))} to a commit instead of a tag: take the action's full commit SHA from its Releases page and write uses: owner/name@<40-character SHA> # v1.`,
+                explain: "Your workflows use other people's actions by a version label like @v2. The owner, or someone who hacks their account, can move that label to new code, and your workflow would run it with access to your secrets. This happened to tj-actions/changed-files in March 2025. Locking each action to an exact commit stops this.",
+                fix: `Lock these actions to an exact version: ${nameList(actions)}.\n1. Find the commit ID: open the action on GitHub, go to Releases, pick the version you use, and copy its full 40-character commit ID.\n2. Replace the tag: change \`uses: ${actions[0]}\` to \`uses: ${name}@<commit ID> # ${tag}\`.\nTip: Dependabot can keep these up to date for you.`,
                 source: "repo",
+                learnMore: { label: "Read about the tj-actions incident", url: "https://github.com/advisories/GHSA-mrrh-fwg8-r2c3" },
                 files: [...new Set(unpinned.map(item => item.file))],
                 details: { actions: unpinned },
             });

@@ -99,6 +99,7 @@ const getFindings = data => {
             title: finding.title,
             why: finding.explain,
             fix: finding.fix,
+            learnMore: finding.learnMore,
             source: SOURCE_LABELS[finding.source],
             hosts: finding.hosts,
             files: finding.files,
