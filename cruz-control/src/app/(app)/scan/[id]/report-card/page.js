@@ -8,7 +8,7 @@ import { getRating } from "../../scan-result";
 import ScoreTrend from "./score-trend";
 import styles from "@/styles/overview/scan-results.module.css";
 
-const REPO_CATEGORIES = ["secrets", "packages", "repo-basics", "ignore-rules", "readme"];
+const REPO_CATEGORIES = ["secrets", "packages", "repo-basics", "ignore-rules", "readme", "workflows"];
 const SEVERITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };
 const RISK_LABELS = { critical: "Critical", high: "High", medium: "Medium", low: "Low" };
 const RISK_WEIGHTS = { critical: 10, high: 7.5, medium: 5, low: 2.5 };
