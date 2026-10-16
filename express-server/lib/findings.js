@@ -535,6 +535,61 @@ const getRepoFindings = result => {
         }
     }
 
+    // CI workflows, skipped for repos with no workflows, failed reads and older scans (C11)
+    if (checks?.workflows === "ok" && records.workflows) {
+        const { noPermissions, unpinned, dangerous } = records.workflows;
+
+        if (dangerous.length > 0) {
+            const places = dangerous.map(item => `${item.file} line ${item.line}`);
+
+            findings.push({
+                id: "repo-workflow-dangerous",
+                category: "workflows",
+                checkId: "workflow-dangerous",
+                kind: "issue",
+                severity: "high",
+                title: "A workflow runs text that anyone can write",
+                explain: "Your GitHub Actions workflow puts text from an issue, pull request or commit message straight into a command. Anyone can write that text, so they can put commands in it and your workflow will run them with access to your secrets.",
+                fix: `In ${nameList(places)}, put the value in an env: variable first, then use "$VAR" in your run: step instead of \${{ ... }}.`,
+                source: "repo",
+                files: dangerous.map(item => item.file),
+                details: { lines: dangerous },
+            });
+        }
+
+        if (noPermissions.length > 0) {
+            findings.push({
+                id: "repo-workflow-permissions",
+                category: "workflows",
+                checkId: "workflow-permissions",
+                kind: "issue",
+                severity: "high",
+                title: "Your workflows can change your code without asking",
+                explain: `${noPermissions.length === 1 ? "One workflow doesn't" : `${noPermissions.length} workflows don't`} say what the workflow is allowed to do, so GitHub may give it write access to your whole repository. A mistake or a bad action could then change your code or releases.`,
+                fix: `Add these two lines at the top of ${nameList(noPermissions)}:\npermissions:\n  contents: read`,
+                source: "repo",
+                files: noPermissions,
+                details: { files: noPermissions },
+            });
+        }
+
+        if (unpinned.length > 0) {
+            findings.push({
+                id: "repo-workflow-pinned",
+                category: "workflows",
+                checkId: "workflow-pinned",
+                kind: "recommendation",
+                severity: "medium",
+                title: "Some workflow actions can change without you knowing",
+                explain: "Your workflows use other people's actions by version tag (like @v1), and a tag can be moved to new code at any time. In March 2025 the popular tj-actions/changed-files action was changed this way, and thousands of repositories leaked their secrets into their build logs. The repos that pinned it to a commit SHA were safe.",
+                fix: `Pin ${nameList(unpinned.map(item => item.uses))} to a commit instead of a tag: take the action's full commit SHA from its Releases page and write uses: owner/name@<40-character SHA> # v1.`,
+                source: "repo",
+                files: [...new Set(unpinned.map(item => item.file))],
+                details: { actions: unpinned },
+            });
+        }
+    }
+
     return findings;
 }
 
