@@ -46,6 +46,12 @@ const headerCount = headers => {
 }
 
 // Describe a .gitignore or README result for the Files progress line
+const workflowLabel = (status, workflows) => {
+    if (status === "not_applicable") return "no workflows";
+    if (status !== "ok" || !workflows) return "workflows not checked";
+    return workflows.files.length === 1 ? "1 workflow checked" : `${workflows.files.length} workflows checked`;
+}
+
 const coverLabel = (status, record) => {
     if (status === "none") return "missing";
     if (status !== "ok" || !record) return "not checked";
@@ -188,7 +194,8 @@ async function* getRepoScanIdSteps(repo, force) {
     yield ev(files.records.sensitiveFiles?.length > 0 ? "warn" : "ok",
         `Files: ${files.records.sensitiveFiles?.length ?? 0} sensitive file(s) found, `
         + `.gitignore ${coverLabel(files.checks.gitignore, files.records.gitignore)}, `
-        + `README ${coverLabel(files.checks.readme, files.records.readme)}.`, "files");
+        + `README ${coverLabel(files.checks.readme, files.records.readme)}, `
+        + `${workflowLabel(files.checks.workflows, files.records.workflows)}.`, "files");
     yield ev(deps.records.dependencies?.length > 0 ? "warn" : "ok",
         `Dependencies: ${deps.records.dependencies?.length ?? 0} vulnerable package(s).`, "deps");
 
