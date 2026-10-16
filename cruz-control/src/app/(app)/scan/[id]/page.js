@@ -338,7 +338,7 @@ export default function OverviewTab() {
 
       <div className={styles.grid}>
         {result.domain && (
-        <motion.section className={styles.mapCard} aria-labelledby="map-title" {...reveal(0.15)}>
+        <motion.section className={`${styles.mapCard} self-start`} aria-labelledby="map-title" {...reveal(0.15)}>
           <div className={styles.cardHead}>
             <h2 id="map-title">Where your servers are</h2>
             <div className={styles.legend} aria-label="Status legend">
