@@ -272,3 +272,75 @@ test("Dependabot is skipped without a package.json", () => {
     assert.strictEqual(result.checks.find(check => check.id === "basics-dependabot").status, "not_checked");
     assert.strictEqual(result.score, 100);
 });
+
+// Fixing gain (T18)
+
+const gainOf = (result, id) => result.checks.find(check => check.id === id).gain;
+
+test("gain: fixing an open MongoDB port also lifts the cap", () => {
+    const result = buildFindings(domainScan({ records: { ports: [port(27017)] } }));
+    assert.strictEqual(gainOf(result, "ports-database-telnet"), 50);
+});
+
+test("gain: other checks are worth 0 while the cap holds", () => {
+    const result = buildFindings(domainScan({ records: { ports: [{ ...port(22), ports: [22, 27017] }] } }));
+    assert.strictEqual(result.score, 50);
+    assert.strictEqual(gainOf(result, "ports-database-telnet"), 42);
+    assert.strictEqual(gainOf(result, "ports-remote-access"), 0);
+});
+
+test("gain: typical student repo", () => {
+    const result = buildFindings(repoScan({ basics: { dependabot: false, securityPolicy: false } }));
+    assert.strictEqual(gainOf(result, "basics-dependabot"), 11);
+    assert.strictEqual(gainOf(result, "basics-security-policy"), 14);
+});
+
+test("gain is 0 for checks that passed or didn't run", () => {
+    const result = buildFindings(repoScan({ basics: { securityPolicy: false } }));
+    assert.strictEqual(gainOf(result, "secrets-files"), 0);
+    assert.strictEqual(gainOf(result, "readme"), 0);
+});
+
+// CI workflows (C11)
+
+const workflows = (overrides = {}) => ({ files: ["ci.yml", "deploy.yml"], noPermissions: [], unpinned: [], thirdPartyCount: 0, dangerous: [], ...overrides });
+const workflowChecks = result => result.checks.filter(check => check.category === "workflows");
+
+test("workflows: older scans and repos without workflows skip the three checks", () => {
+    const scans = [repoScan(), repoScan({ records: { workflows: null }, checks: { workflows: "not_applicable" } })];
+    for (const scan of scans) {
+        const result = buildFindings(scan);
+        assert.deepStrictEqual(workflowChecks(result).map(check => check.status), ["not_checked", "not_checked", "not_checked"]);
+        assert.strictEqual(result.score, 100);
+    }
+});
+
+test("workflows: safe workflows score 10 on all three checks", () => {
+    const result = buildFindings(repoScan({ records: { workflows: workflows() }, checks: { workflows: "ok" } }));
+    assert.deepStrictEqual(workflowChecks(result).map(check => check.score), [10, 10, 10]);
+    assert.strictEqual(result.score, 100);
+});
+
+test("workflows: scores are shares of the files and actions, with no cap", () => {
+    const result = buildFindings(repoScan({
+        records: {
+            workflows: workflows({
+                noPermissions: ["deploy.yml"],
+                unpinned: [{ file: "ci.yml", uses: "owner/action@v1" }],
+                thirdPartyCount: 3,
+                dangerous: [{ file: "ci.yml", line: 12, text: "run: echo ${{ github.event.issue.title }}" }],
+            }),
+        },
+        checks: { workflows: "ok" },
+    }));
+    assert.deepStrictEqual(workflowChecks(result).map(check => check.score), [0, 5, 7]);
+    assert.strictEqual(result.score, 77);
+    assert.strictEqual(result.cap.applied, false);
+});
+
+test("workflows: a failed lookup isn't counted and doesn't make the scan incomplete", () => {
+    const result = buildFindings(repoScan({ records: { workflows: null }, checks: { workflows: "unavailable" } }));
+    assert.deepStrictEqual(workflowChecks(result).map(check => check.status), ["unavailable", "unavailable", "unavailable"]);
+    assert.strictEqual(result.incomplete, false);
+    assert.strictEqual(result.score, 100);
+});

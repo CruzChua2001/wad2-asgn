@@ -41,7 +41,7 @@ function withAlpha(hex, alpha) {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-export default function ExposureGlobe({ nodes, arcs, selectedId, onSelect, theme = "light", reduceMotion = false }) {
+export default function ExposureGlobe({ nodes, arcs, selectedId, highlightIds = [], onSelect, theme = "light", reduceMotion = false }) {
   const containerRef = useRef(null);
   const globeRef = useRef(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
@@ -52,6 +52,8 @@ export default function ExposureGlobe({ nodes, arcs, selectedId, onSelect, theme
   const located = useMemo(() => nodes.filter((node) => node.located), [nodes]);
   const locatedArcs = useMemo(() => arcs.filter((arc) => arc.from.located && arc.to.located), [arcs]);
   const selected = located.find((node) => node.id === selectedId);
+  // The selected server, plus every server the selected finding affects
+  const marked = located.filter((node) => node.id === selectedId || highlightIds.includes(node.id));
 
   const material = useMemo(
     () => new MeshPhongMaterial({ color: palette.globe, emissive: palette.emissive, emissiveIntensity: 0.35, shininess: 4 }),
@@ -136,8 +138,8 @@ export default function ExposureGlobe({ nodes, arcs, selectedId, onSelect, theme
           pointLat="lat"
           pointLng="lng"
           pointColor={statusColor}
-          pointAltitude={(node) => (node.id === selectedId ? 0.12 : 0.06)}
-          pointRadius={(node) => (node.id === selectedId ? 0.75 : 0.55)}
+          pointAltitude={(node) => (marked.includes(node) ? 0.12 : 0.06)}
+          pointRadius={(node) => (marked.includes(node) ? 0.75 : 0.55)}
           pointsMerge={false}
           pointLabel={(node) => `
             <div class="globe-tooltip">
@@ -156,7 +158,7 @@ export default function ExposureGlobe({ nodes, arcs, selectedId, onSelect, theme
           arcDashLength={0.45}
           arcDashGap={0.18}
           arcDashAnimateTime={reduceMotion ? 0 : 2600}
-          ringsData={selected ? [selected] : []}
+          ringsData={marked}
           ringLat="lat"
           ringLng="lng"
           ringColor={(node) => (t) => withAlpha(statusColor(node), Math.max(0, 1 - t))}

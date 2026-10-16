@@ -11,6 +11,7 @@ const CATEGORY_LABELS = {
     "repo-basics": "Repo basics",
     "ignore-rules": "Ignore rules",
     readme: "README",
+    workflows: "CI workflows",
 };
 
 // Every scored check, from the check tables in the manifest
@@ -32,11 +33,14 @@ const CHECKS = {
     "basics-lockfile": { category: "repo-basics", label: "Lockfile", risk: "medium" },
     "ignore-rules": { category: "ignore-rules", label: ".gitignore rules", risk: "medium" },
     readme: { category: "readme", label: "README", risk: "low" },
+    "workflow-dangerous": { category: "workflows", label: "Workflows running text anyone can write", risk: "high" },
+    "workflow-permissions": { category: "workflows", label: "Workflow token permissions", risk: "high" },
+    "workflow-pinned": { category: "workflows", label: "Actions pinned to a commit", risk: "medium" },
 };
 
-// A missing status means an older scan that never ran the check
+// A missing status means an older scan that never ran the check, and not_applicable means there was nothing to check
 const statusOf = status => {
-    if (status === undefined) return "not_checked";
+    if (status === undefined || status === "not_applicable") return "not_checked";
     if (status === "unavailable") return "unavailable";
     return "ok";
 }
@@ -123,6 +127,22 @@ const getRepoChecks = (result, findings) => {
     const missingIgnores = missing("repo-gitignore");
     const missingReadme = missing("repo-readme");
 
+    // CI workflows are scored from the raw results, since the scores are shares of all files and actions
+    const workflows = records.workflows;
+    let dangerous = 10;
+    let permissions = 10;
+    let pinned = 10;
+
+    if (workflows) {
+        dangerous = workflows.dangerous.length > 0 ? 0 : 10;
+        if (workflows.files.length > 0) {
+            permissions = Math.round(10 * (workflows.files.length - workflows.noPermissions.length) / workflows.files.length);
+        }
+        if (workflows.thirdPartyCount > 0) {
+            pinned = Math.round(10 * (workflows.thirdPartyCount - workflows.unpinned.length) / workflows.thirdPartyCount);
+        }
+    }
+
     return [
         { id: "secrets-files", status: files, score: has("repo-secrets") ? 0 : 10 },
         { id: "packages-vulns", status: packages, score: Math.max(0, 10 - vulns) },
@@ -131,6 +151,9 @@ const getRepoChecks = (result, findings) => {
         { id: "basics-lockfile", status: npmFiles, score: has("repo-lockfile") ? 0 : 10 },
         { id: "ignore-rules", status: statusOf(checks.gitignore), score: missingIgnores === 0 ? 10 : missingIgnores === 3 ? 0 : 5 },
         { id: "readme", status: statusOf(checks.readme), score: [10, 5, 0][missingReadme] },
+        { id: "workflow-dangerous", status: statusOf(checks.workflows), score: dangerous },
+        { id: "workflow-permissions", status: statusOf(checks.workflows), score: permissions },
+        { id: "workflow-pinned", status: statusOf(checks.workflows), score: pinned },
     ];
 }
 
@@ -145,6 +168,19 @@ const getGrade = score => {
 /**
  * Weighted average of the checks that ran (OpenSSF Scorecard's method), capped at 50 while a critical check scores 0
  */
+const scoreOf = checks => {
+    const ran = checks.filter(check => check.status === "ok");
+    const totalWeight = ran.reduce((sum, check) => sum + check.weight, 0);
+    const earned = ran.reduce((sum, check) => sum + check.weight * check.score, 0);
+
+    const uncappedScore = totalWeight > 0 ? Math.round(10 * earned / totalWeight) : 0;
+
+    const capIds = ran.filter(check => check.risk === "critical" && check.score === 0).map(check => check.id);
+    const score = capIds.length > 0 ? Math.min(50, uncappedScore) : uncappedScore;
+
+    return { score, uncappedScore, capIds };
+}
+
 const getScore = checkResults => {
     const checks = checkResults.map(item => {
         const check = CHECKS[item.id];
@@ -160,14 +196,18 @@ const getScore = checkResults => {
         };
     });
 
-    const ran = checks.filter(check => check.status === "ok");
-    const totalWeight = ran.reduce((sum, check) => sum + check.weight, 0);
-    const earned = ran.reduce((sum, check) => sum + check.weight * check.score, 0);
+    const { score, uncappedScore, capIds } = scoreOf(checks);
 
-    const uncappedScore = totalWeight > 0 ? Math.round(10 * earned / totalWeight) : 0;
+    // Points the score would rise if this check scored 10, cap included
+    for (const check of checks) {
+        check.gain = 0;
+        if (check.status === "ok" && check.score < 10) {
+            const fixed = checks.map(other => (other.id === check.id ? { ...other, score: 10 } : other));
+            check.gain = scoreOf(fixed).score - score;
+        }
+    }
 
-    const capIds = ran.filter(check => check.risk === "critical" && check.score === 0).map(check => check.id);
-    const score = capIds.length > 0 ? Math.min(50, uncappedScore) : uncappedScore;
+    const totalWeight = checks.filter(check => check.status === "ok").reduce((sum, check) => sum + check.weight, 0);
 
     // A critical check that couldn't run means we can't give a fair grade
     const incomplete = checks.some(check => check.risk === "critical" && check.status === "unavailable");

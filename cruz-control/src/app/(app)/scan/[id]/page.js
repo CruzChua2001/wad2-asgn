@@ -21,7 +21,7 @@ const MAX_SHOWN_CVES = 10;
 
 const SCORE_RULE = "Every check scores 0 to 10, riskier checks count more, and any critical problem caps the score at 50 until it's fixed.";
 
-const REPO_CATEGORIES = ["secrets", "packages", "repo-basics", "ignore-rules", "readme"];
+const REPO_CATEGORIES = ["secrets", "packages", "repo-basics", "ignore-rules", "readme", "workflows"];
 
 // One scored check in the Repository card: its score out of 10, or why it didn't run
 function checkValue(check) {
@@ -233,7 +233,7 @@ function CdnBadge() {
 }
 
 // Phone-sized replacement for the globe's server list: servers grouped by country.
-function ServerGroups({ groups, selectedId, onSelect }) {
+function ServerGroups({ groups, selectedId, highlightIds, onSelect }) {
   return (
     <div className="flex flex-col gap-4 p-3.5" role="group" aria-label="Servers by country">
       {groups.map((group) => (
@@ -248,7 +248,7 @@ function ServerGroups({ groups, selectedId, onSelect }) {
                   type="button"
                   aria-pressed={node.id === selectedId}
                   onClick={() => onSelect(node.id)}
-                  className={`flex w-full min-w-0 cursor-pointer items-start gap-2.5 rounded-md border bg-surface px-2.5 py-2 text-left text-ink ${node.id === selectedId ? "border-accent" : "border-line"}`}
+                  className={`flex w-full min-w-0 cursor-pointer items-start gap-2.5 rounded-md border bg-surface px-2.5 py-2 text-left text-ink ${node.id === selectedId ? "border-accent" : "border-line"} ${highlightIds.includes(node.id) ? "ring-1 ring-accent" : ""}`}
                 >
                   <i aria-hidden="true" className={`mt-1.5 size-2 flex-none rounded-full ${DOT_COLORS[node.status]}`} />
                   <span className="sr-only">{STATUS_LABELS[node.status]}:</span>
@@ -280,6 +280,7 @@ export default function OverviewTab() {
   const [showAllServers, setShowAllServers] = useState(false);
   const [mapOpen, setMapOpen] = useState(false);
   const [detailsOpenId, setDetailsOpenId] = useState(null);
+  const [filterNodeId, setFilterNodeId] = useState(null);
 
   const countryGroups = [];
   for (const node of result.nodes) {
@@ -294,13 +295,22 @@ export default function OverviewTab() {
 
   const locatedNodes = result.nodes.filter((node) => node.located);
 
-  let shownNodes = result.nodes;
-  if (!showAllServers) {
-    shownNodes = result.nodes.slice(0, 6);
-  }
-
   const selectedNode = result.nodes.find((node) => node.id === selectedNodeId) || result.nodes[0];
   let selectedFinding = findings.find((finding) => finding.id === selectedFindingId);
+  // Light up every server the selected finding affects. DNS and repo findings have no hosts
+  const highlightIds = selectedFinding?.hosts ?? [];
+
+  // The short list still shows every server the selected finding affects
+  let shownNodes = result.nodes;
+  if (!showAllServers) {
+    shownNodes = result.nodes.filter((node, index) => index < 6 || highlightIds.includes(node.id));
+  }
+
+  const affectsNode = (finding, nodeId) => Boolean(finding.hosts?.includes(nodeId));
+  const nodeFindingCount = selectedNode ? findings.filter((finding) => affectsNode(finding, selectedNode.id)).length : 0;
+  const filterNode = result.nodes.find((node) => node.id === filterNodeId);
+  const shownFindings = filterNode ? findings.filter((finding) => affectsNode(finding, filterNode.id)) : findings;
+
   const statusCounts = result.nodes.reduce((counts, node) => ({ ...counts, [node.status]: (counts[node.status] || 0) + 1 }), {});
 
   let repoInfo = null;
@@ -313,7 +323,13 @@ export default function OverviewTab() {
 
   function selectNode(nodeId) {
     setSelectedNodeId(nodeId);
-    setSelectedFindingId(findings.find((finding) => finding.nodeId === nodeId)?.id);
+    setSelectedFindingId(findings.find((finding) => affectsNode(finding, nodeId))?.id);
+  }
+
+  // On phones the findings card is further down, so bring it into view
+  function showNodeFindings(nodeId) {
+    setFilterNodeId(nodeId);
+    document.getElementById("findings-title")?.closest("section").scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "nearest" });
   }
 
   function selectFinding(finding) {
@@ -350,7 +366,7 @@ export default function OverviewTab() {
 
           {result.nodes.length > 0 && (
             <div className="md:hidden">
-              <ServerGroups groups={countryGroups} selectedId={selectedNode.id} onSelect={selectNode} />
+              <ServerGroups groups={countryGroups} selectedId={selectedNode.id} highlightIds={highlightIds} onSelect={selectNode} />
               {locatedNodes.length > 0 && (
                 <div className="border-t border-line px-3.5 py-3">
                   <button
@@ -373,6 +389,7 @@ export default function OverviewTab() {
                 nodes={result.nodes}
                 arcs={result.arcs}
                 selectedId={selectedNode.id}
+                highlightIds={highlightIds}
                 onSelect={selectNode}
                 theme={theme}
                 reduceMotion={reduceMotion}
@@ -400,7 +417,7 @@ export default function OverviewTab() {
                 key={node.id}
                 type="button"
                 data-status={node.status}
-                className={node.id === selectedNode.id ? styles.nodeActive : ""}
+                className={`${node.id === selectedNode.id ? styles.nodeActive : ""} ${highlightIds.includes(node.id) ? "ring-1 ring-accent" : ""}`}
                 aria-pressed={node.id === selectedNode.id}
                 onClick={() => selectNode(node.id)}
               >
@@ -437,6 +454,16 @@ export default function OverviewTab() {
               </dl>
               <div className={styles.inspectorText}>
                 <p className={styles.nodeSummary}>{selectedNode.summary}</p>
+                {nodeFindingCount > 0 && (
+                  <p className="m-0 flex flex-wrap gap-x-2 text-xs text-muted">
+                    {nodeFindingCount} {nodeFindingCount === 1 ? "finding" : "findings"} on this server
+                    {filterNodeId !== selectedNode.id && (
+                      <button type="button" onClick={() => showNodeFindings(selectedNode.id)} className="cursor-pointer font-semibold text-accent">
+                        Show only these
+                      </button>
+                    )}
+                  </p>
+                )}
                 {selectedFinding ? (
                   <div className={styles.fix}>
                     <h3>What to do</h3>
@@ -529,10 +556,18 @@ export default function OverviewTab() {
           <motion.section className={`${styles.card} ${styles.findingsCard}`} aria-labelledby="findings-title" {...reveal(0.27)}>
             <div className={styles.cardHead}>
               <h2 id="findings-title">Findings · worst first</h2>
-              <span className={styles.count}><NumberTicker value={findings.length} delay={0.3} /></span>
+              <span className={styles.count}><NumberTicker value={shownFindings.length} delay={0.3} /></span>
             </div>
+            {filterNode && (
+              <p className="m-0 mb-3 text-xs text-muted">
+                Showing findings for <span className="font-mono text-ink">{filterNode.host}</span> ·{" "}
+                <button type="button" onClick={() => setFilterNodeId(null)} className="cursor-pointer font-semibold text-accent">
+                  Show all
+                </button>
+              </p>
+            )}
             <ul className={styles.findings}>
-              {findings.map((finding) => (
+              {shownFindings.map((finding) => (
                 <li key={finding.id}>
                   <button
                     type="button"
@@ -551,6 +586,12 @@ export default function OverviewTab() {
                       </span>
                     )}
                   </button>
+
+                  {finding.id === selectedFinding?.id && finding.hosts?.length > 1 && (
+                    <p className="m-0 mt-1.5 px-3 text-xs font-semibold text-accent">
+                      Affects {finding.hosts.length} of your {result.nodes.length} servers
+                    </p>
+                  )}
 
                   {finding.id === selectedFinding?.id && hasDetails(finding.details) && (
                     <div className="mt-1.5 px-3">
