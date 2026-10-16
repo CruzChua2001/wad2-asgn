@@ -73,6 +73,17 @@ const getServerStatus = (ip, portRecord, findings, isCdn = false) => {
 const getFindings = data => {
     let findings = [];
 
+    // Several findings can share one check, so fixing one doesn't win back the whole gain
+    let checkUses = {};
+    for (let finding of data.findings) {
+        if (finding.checkId) {
+            checkUses[finding.checkId] = (checkUses[finding.checkId] ?? 0) + 1;
+        }
+    }
+
+    // The API works out how many points a check is worth (gain), we only read it
+    const gainOf = checkId => (data.checks ?? []).find(check => check.id === checkId)?.gain ?? 0;
+
     for (let finding of data.findings) {
         let nodeId = null;
         if (finding.hosts) {
@@ -93,6 +104,8 @@ const getFindings = data => {
             files: finding.files,
             cves: finding.cves,
             details: finding.details,
+            gain: gainOf(finding.checkId),
+            sharedCheck: checkUses[finding.checkId] > 1,
             nodeId: nodeId,
         });
     }
