@@ -54,6 +54,8 @@ export default function ExposureGlobe({ nodes, arcs, selectedId, highlightIds = 
   const selected = located.find((node) => node.id === selectedId);
   // The selected server, plus every server the selected finding affects
   const marked = located.filter((node) => node.id === selectedId || highlightIds.includes(node.id));
+  // Critical servers always pulse so they stand out
+  const pulsing = located.filter((node) => node.status === "critical" || marked.includes(node));
 
   const material = useMemo(
     () => new MeshPhongMaterial({ color: palette.globe, emissive: palette.emissive, emissiveIntensity: 0.35, shininess: 4 }),
@@ -158,7 +160,7 @@ export default function ExposureGlobe({ nodes, arcs, selectedId, highlightIds = 
           arcDashLength={0.45}
           arcDashGap={0.18}
           arcDashAnimateTime={reduceMotion ? 0 : 2600}
-          ringsData={marked}
+          ringsData={pulsing}
           ringLat="lat"
           ringLng="lng"
           ringColor={(node) => (t) => withAlpha(statusColor(node), Math.max(0, 1 - t))}

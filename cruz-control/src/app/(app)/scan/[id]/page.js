@@ -13,6 +13,13 @@ const ExposureGlobe = dynamic(() => import("./exposure-globe"), {
   loading: () => <div className={styles.globeLoading}>Loading infrastructure map…</div>,
 });
 
+const ServerMap = dynamic(() => import("./server-map"), {
+  ssr: false,
+  loading: () => <div className={styles.globeLoading}>Loading map…</div>,
+});
+
+const MAP_VIEWS = { globe: "Globe", map: "Map" };
+
 const SEVERITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };
 const SEVERITY_LABELS = { critical: "Critical", high: "High", medium: "Medium", low: "Low" };
 const STATUS_LABELS = { healthy: "Healthy", attention: "Needs attention", critical: "Critical" };
@@ -279,6 +286,7 @@ export default function OverviewTab() {
   const [logOpen, setLogOpen] = useState(false);
   const [showAllServers, setShowAllServers] = useState(false);
   const [mapOpen, setMapOpen] = useState(false);
+  const [mapView, setMapView] = useState("globe");
   const [detailsOpenId, setDetailsOpenId] = useState(null);
   const [filterNodeId, setFilterNodeId] = useState(null);
 
@@ -385,16 +393,42 @@ export default function OverviewTab() {
 
           {locatedNodes.length > 0 ? (
             <div id="map-stage" className={`${styles.globeStage} flex-none h-75 md:h-[clamp(300px,38vh,380px)] ${mapOpen ? "" : "max-md:hidden"}`}>
-              <ExposureGlobe
-                nodes={result.nodes}
-                arcs={result.arcs}
-                selectedId={selectedNode.id}
-                highlightIds={highlightIds}
-                onSelect={selectNode}
-                theme={theme}
-                reduceMotion={reduceMotion}
-              />
-              <p className={styles.globeHint}>Drag to spin · click a dot or a server below</p>
+              <div role="group" aria-label="Map view" className="absolute top-3 left-3 z-[2] flex overflow-hidden rounded-md border border-line bg-surface-strong text-xs font-semibold">
+                {Object.entries(MAP_VIEWS).map(([view, label]) => (
+                  <button
+                    key={view}
+                    type="button"
+                    aria-pressed={mapView === view}
+                    onClick={() => setMapView(view)}
+                    className={`cursor-pointer px-3 py-1.5 ${mapView === view ? "bg-accent-soft text-ink" : "text-muted"}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {mapView === "globe" ? (
+                <ExposureGlobe
+                  nodes={result.nodes}
+                  arcs={result.arcs}
+                  selectedId={selectedNode.id}
+                  highlightIds={highlightIds}
+                  onSelect={selectNode}
+                  theme={theme}
+                  reduceMotion={reduceMotion}
+                />
+              ) : (
+                <ServerMap
+                  nodes={result.nodes}
+                  arcs={result.arcs}
+                  selectedId={selectedNode.id}
+                  highlightIds={highlightIds}
+                  onSelect={selectNode}
+                  reduceMotion={reduceMotion}
+                />
+              )}
+              <p className={styles.globeHint}>
+                {mapView === "globe" ? "Drag to spin · click a dot or a server below" : "Scroll to zoom, drag to move · click a dot or a server below"}
+              </p>
             </div>
           ) : (
             <p className="m-0 border-b border-line px-4 py-8 text-center text-sm text-muted">
@@ -430,7 +464,7 @@ export default function OverviewTab() {
             ))}
 
             {result.nodes.length > 6 && (
-              <button className="text-sm text-accent font-semibold mt-2 cursor-pointer" onClick={() => setShowAllServers(!showAllServers)}>
+              <button type="button" className="col-span-full justify-self-start border-0! bg-transparent! p-0! text-sm! text-accent! font-semibold mt-1 cursor-pointer" onClick={() => setShowAllServers(!showAllServers)}>
                 {showAllServers ? "Show fewer servers" : `Show all ${result.nodes.length} servers`}
               </button>
             )}
