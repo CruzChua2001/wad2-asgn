@@ -301,15 +301,22 @@ function trackStyle(missing, passed) {
 }
 
 // Points each category lost, worst first. The bar shows how much of that category's points are gone.
+// Categories with no issues fold into one line, since the Report Card lists every category.
 function ScoreBreakdown({ breakdown, checks, reduceMotion }) {
+  const [showPassed, setShowPassed] = useState(false);
   const ran = checks.filter((check) => check.status === "ok");
   const totalWeight = ran.reduce((sum, check) => sum + check.weight, 0);
+
+  // Nothing lost and every check perfect, so the empty track can read as good
+  const passedItems = breakdown.filter((item) => item.status === "ok" && item.lost === 0
+    && !ran.some((check) => check.category === item.category && check.score < 10));
+  const shown = showPassed ? breakdown : breakdown.filter((item) => !passedItems.includes(item));
 
   return (
     <div className="w-full">
       <p className="m-0 mb-2 font-mono text-[10px] tracking-[.08em] text-muted uppercase">Points lost by category</p>
       <ul className="m-0 flex w-full list-none flex-col gap-2.5 p-0" aria-label="Score breakdown">
-        {breakdown.map((item) => {
+        {shown.map((item) => {
           const weight = ran.filter((check) => check.category === item.category).reduce((sum, check) => sum + check.weight, 0);
           const most = totalWeight > 0 ? (100 * weight) / totalWeight : 0;
           const share = most > 0 ? Math.min(100, (100 * item.lost) / most) : 0;
@@ -317,8 +324,7 @@ function ScoreBreakdown({ breakdown, checks, reduceMotion }) {
           const imperfect = ran.some((check) => check.category === item.category && check.score < 10);
           // A category that didn't run has no points to show, so it gets an empty dashed track
           const missing = item.status === "unavailable" || item.status === "not_checked";
-          // Nothing lost and every check perfect, so the empty track can read as good
-          const passed = item.status === "ok" && item.lost === 0 && !imperfect;
+          const passed = passedItems.includes(item);
 
           let value = <><span aria-hidden="true">✓</span> No issues</>;
           let tone = "text-accent";
@@ -360,6 +366,19 @@ function ScoreBreakdown({ breakdown, checks, reduceMotion }) {
           );
         })}
       </ul>
+      {passedItems.length > 0 && (
+        <p className="m-0 mt-2.5 flex gap-2.5 font-mono text-[10px] font-semibold">
+          {!showPassed && (
+            <span className="text-accent">
+              <span aria-hidden="true">✓</span>{" "}
+              {shown.length === 0 ? `All ${passedItems.length} categories have no issues` : `${passedItems.length} more with no issues`}
+            </span>
+          )}
+          <button type="button" className="ml-auto cursor-pointer text-accent hover:underline" aria-expanded={showPassed} onClick={() => setShowPassed(!showPassed)}>
+            {showPassed ? "Show fewer" : "Show all"}
+          </button>
+        </p>
+      )}
     </div>
   );
 }

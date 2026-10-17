@@ -11,12 +11,11 @@ import styles from "@/styles/overview/scan-results.module.css";
 const REPO_CATEGORIES = ["secrets", "packages", "repo-basics", "ignore-rules", "readme", "workflows"];
 const SEVERITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };
 const RISK_LABELS = { critical: "Critical", high: "High", medium: "Medium", low: "Low" };
-const RISK_WEIGHTS = { critical: 10, high: 7.5, medium: 5, low: 2.5 };
 const RISK_TONES = { critical: "text-critical", high: "text-warm", medium: "text-accent", low: "text-muted" };
 const TONE_TEXT = { good: "text-accent", warn: "text-warm", bad: "text-critical" };
 const TONE_BAR = { good: "bg-accent", warn: "bg-warm", bad: "bg-critical" };
 
-// Category, score, risk and why side by side from md up; stacked on phones
+// Category, score, points lost and why side by side from md up; stacked on phones
 const ROW_GRID = "grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 md:grid-cols-[13rem_7.5rem_7rem_minmax(0,1fr)]";
 
 const SCORE_RULE = "Your score is out of 100, and higher is safer. Each check scores 0 to 10, and riskier checks count for more. A critical problem keeps your score at 50 or below until it's fixed.";
@@ -41,15 +40,13 @@ function sideScore(checks) {
   return score === null ? null : Math.round(10 * score);
 }
 
-// One row per category: its score out of 10, its riskiest check, and the findings behind it
+// One row per category: its score out of 10, the points it lost, and the findings behind it
 function categoryRows(breakdown, checks, findings) {
   const rows = breakdown.map((item) => {
-    const inCategory = checks.filter((check) => check.category === item.category);
-    const score = averageScore(inCategory);
-    const risk = inCategory.map((check) => check.risk).sort((a, b) => SEVERITY_ORDER[a] - SEVERITY_ORDER[b])[0];
+    const score = averageScore(checks.filter((check) => check.category === item.category));
     const related = findings.filter((finding) => finding.checkId && finding.category === item.category);
 
-    return { ...item, score: score === null ? null : Math.floor(score), risk, related };
+    return { ...item, score: score === null ? null : Math.floor(score), related };
   });
 
   // Worst first, and categories that didn't run last
@@ -81,12 +78,18 @@ function RowScore({ row }) {
   );
 }
 
-function RiskBadge({ risk }) {
-  return (
-    <span className={`w-fit rounded-full border border-current px-2 py-0.5 font-mono text-[10px] font-semibold tracking-wider uppercase ${RISK_TONES[risk]}`}>
-      {RISK_LABELS[risk]} · {RISK_WEIGHTS[risk]}<span className="sr-only"> weight</span>
-    </span>
-  );
+// Same wording as the Overview's breakdown, so the rows add up to 100 minus the score
+function RowLost({ row }) {
+  // Keeps the grid cell, so the why text stays in its column
+  if (row.status !== "ok") return <span />;
+
+  if (row.lost > 0) {
+    const tone = scoreTone(row.score * 10) === "bad" ? "text-critical" : "text-warm";
+    return <span className={`font-mono text-sm font-semibold ${tone}`}>-{row.lost} pts</span>;
+  }
+  // Lost less than a point, which rounds to 0
+  if (row.score < 10) return <span className="font-mono text-sm font-semibold text-warm">Minor</span>;
+  return <span className="font-mono text-sm text-muted">0 pts</span>;
 }
 
 // The scan layout only renders this tab once a finished scan exists.
@@ -105,6 +108,9 @@ export default function ReportCardTab() {
 
   // Only worth showing when the scan has both a website and a repository
   const showSideScores = sides.length > 1;
+
+  const lostTotal = rows.reduce((sum, row) => sum + row.lost, 0);
+  const anyRan = rows.some((row) => row.status === "ok");
 
   const tone = result.incomplete ? "warn" : scoreTone(result.score);
   let summary = result.incomplete ? "Incomplete, re-scan" : getRating(result.score);
@@ -163,21 +169,21 @@ export default function ReportCardTab() {
         <div className={`${ROW_GRID} mt-8 border-b border-line pb-2 font-mono text-[10px] font-semibold tracking-wider text-muted uppercase max-md:hidden!`} aria-hidden="true">
           <span>Check</span>
           <span>Score</span>
-          <span>Risk</span>
+          <span>Points lost</span>
           <span>Why</span>
         </div>
 
         {sides.map((side) => (
           <div key={side.label} className="mt-4">
             <h3 className="m-0 font-mono text-[10px] font-semibold tracking-wider text-muted uppercase">
-              {side.label}{showSideScores && side.score !== null && ` · ${side.score}/100`}
+              {side.label}
             </h3>
             <ul className="m-0 list-none p-0">
               {side.rows.map((row) => (
                 <li key={row.category} className={`${ROW_GRID} items-center gap-y-1.5 border-b border-line py-3 last:border-b-0`}>
                   <span className="text-sm font-medium text-ink">{row.label}</span>
                   <RowScore row={row} />
-                  <RiskBadge risk={row.risk} />
+                  <RowLost row={row} />
                   <span className="col-span-2 text-sm text-muted md:col-span-1">{rowReason(row)}</span>
                 </li>
               ))}
@@ -185,9 +191,16 @@ export default function ReportCardTab() {
           </div>
         ))}
 
-        <p className="m-0 mt-4 text-[11px] leading-relaxed text-muted">
-          {SCORE_RULE} Risk shows the riskiest check in each row and how much it counts.
-        </p>
+        {anyRan && (
+          <p className="m-0 mt-1 border-t border-line pt-3 font-mono text-sm text-ink">
+            100 - {lostTotal} points lost = {result.uncappedScore}
+            {result.cap?.applied && result.uncappedScore > result.score && (
+              <span className="text-critical">, capped at {result.score}</span>
+            )}
+          </p>
+        )}
+
+        <p className="m-0 mt-4 text-[11px] leading-relaxed text-muted">{SCORE_RULE}</p>
       </motion.section>
 
       <motion.section className={styles.card} aria-labelledby="fix-first-title" {...reveal(0.14)}>
