@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useMemo, useState, useRef } from "react";
 import api from "@/lib/api";
+import { useAuth } from "@/components/auth/auth-provider";
 import { createClient } from "@/lib/client";
 import { toResult } from "./scan-result";
 
@@ -20,7 +21,11 @@ export function ScanProvider({ children }) {
   const [lines, setLines] = useState([]);
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState(null);
+  const [savedScanId, setSavedScanId] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const abortRef = useRef(null);
+  const { status, openAuth } = useAuth();
 
   const startScan = useCallback(async ({domain, githubRepo, projectId, force}) => {
     const addLine = (kind, text) => {
@@ -131,6 +136,7 @@ export function ScanProvider({ children }) {
 
   const loadResult = useCallback(async (id) => {
     setResult(null);
+    setSaveError("");
 
     try {
       const { data } = await api.get(`/api/scan/${id}`);
@@ -141,6 +147,24 @@ export function ScanProvider({ children }) {
     }
   }, []);
 
+  // "Save to project" in the results header and on the Report Card: makes a project from the scan and copies the scan in
+  const saveToProject = useCallback(async (scanId) => {
+    if (status !== "authenticated") return openAuth("login");
+    if (saving) return;
+
+    setSaving(true);
+    setSaveError("");
+
+    try {
+      await api.post("/api/project", { name: result.title, domain: result.domain, githubRepo: result.linkedRepository, scanId });
+      setSavedScanId(scanId);
+    } catch (e) {
+      setSaveError(e.response?.data?.error ?? "Could not save to project.");
+    } finally {
+      setSaving(false);
+    }
+  }, [status, openAuth, saving, result]);
+
   // Used by "Cancel scan" and "+ New scan": back to the empty pre-scan form.
   const resetScan = useCallback(() => {
     setPhase("idle");
@@ -150,8 +174,8 @@ export function ScanProvider({ children }) {
   }, []);
 
   const value = useMemo(
-    () => ({ phase, scan, lines, progress, startScan, resetScan, result, loadResult }),
-    [phase, scan, lines, progress, startScan, resetScan, result, loadResult],
+    () => ({ phase, scan, lines, progress, startScan, resetScan, result, loadResult, saveToProject, savedScanId, saving, saveError }),
+    [phase, scan, lines, progress, startScan, resetScan, result, loadResult, saveToProject, savedScanId, saving, saveError],
   );
 
   return <ScanContext value={value}>{children}</ScanContext>;

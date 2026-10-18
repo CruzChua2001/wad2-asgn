@@ -3,12 +3,11 @@
 import Link from "next/link";
 import { usePathname, useRouter, useParams } from "next/navigation";
 import { motion, useReducedMotion } from "motion/react";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { LuBookmarkCheck, LuBookmarkPlus, LuPlus, LuRefreshCw } from "react-icons/lu";
 
 import RippleButton from "@/components/ripple-button";
 import { useScan } from "../scan-context";
-import { useAuth } from "@/components/auth/auth-provider";
-import api from "@/lib/api";
 import styles from "@/styles/overview/scan-results.module.css";
 
 const RESULT_TABS = [
@@ -19,18 +18,34 @@ const RESULT_TABS = [
   { href: "/compare", label: "Compare" },
 ];
 
+// Header buttons: New scan is the main action, the rest are outlined
+const ACTION = "inline-flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-md border px-4 text-xs! font-semibold! no-underline transition max-sm:flex-1";
+const PRIMARY = `${ACTION} border-accent bg-accent text-page! hover:-translate-y-px hover:bg-accent-bright [&_.ripple-content]:inline-flex [&_.ripple-content]:items-center [&_.ripple-content]:gap-2`;
+const SECONDARY = `${ACTION} border-line bg-surface-strong text-ink! hover:border-accent hover:text-accent! disabled:cursor-default disabled:opacity-60`;
+
 function ResultTabs({ hasRepository, findingsCount }) {
   const pathname = usePathname();
   const { id } = useParams();
+  const reduceMotion = useReducedMotion();
   const tabs = RESULT_TABS.filter((tab) => !tab.requiresRepository || hasRepository);
   return (
     <nav className={styles.tabs} aria-label="Scan result sections">
       {tabs.map((tab) => {
         const href = `/scan/${id}${tab.href}`;
+        const active = href === pathname;
         return (
-          <Link key={href} href={href} className={href === pathname ? styles.tabActive : ""} aria-current={href === pathname ? "page" : undefined}>
-            {tab.label}
-            {tab.showsCount && <span className={styles.tabCount}>{findingsCount}</span>}
+          <Link key={href} href={href} className={active ? styles.tabActive : ""} aria-current={active ? "page" : undefined}>
+            {/* One pill that slides to the active tab */}
+            {active && (
+              <motion.span
+                layoutId="result-tab-pill"
+                className="absolute -inset-px rounded-md border border-accent/25 bg-surface-strong shadow-sm"
+                transition={reduceMotion ? { duration: 0 } : { type: "spring", bounce: 0.2, duration: 0.45 }}
+                aria-hidden="true"
+              />
+            )}
+            <span className="relative">{tab.label}</span>
+            {tab.showsCount && <span className={`${styles.tabCount} relative`}>{findingsCount}</span>}
           </Link>
         )
       })}
@@ -42,10 +57,7 @@ export default function ScanResultsLayout({ children }) {
   const router = useRouter();
   const reduceMotion = useReducedMotion();
   const { id } = useParams();
-  const { result, loadResult, resetScan, startScan } = useScan();
-  const { status, openAuth } = useAuth();
-  const [saved, setSaved] = useState(false);
-  const [saveError, setSaveError] = useState("");
+  const { result, loadResult, resetScan, startScan, saveToProject, savedScanId, saving, saveError } = useScan();
 
   useEffect(() => {
     loadResult(id);
@@ -65,25 +77,6 @@ export default function ScanResultsLayout({ children }) {
     router.push("/scan");
   }
 
-  const saveToProject = async _ => {
-    if (status !== "authenticated") return openAuth("login");
-    setSaveError("");
-
-    try {
-      let data = {
-        name: result.title,
-        domain: result.domain,
-        githubRepo: result.linkedRepository,
-        scanId: id
-      }
-
-      await api.post("/api/project", data);
-      setSaved(true);
-    } catch (e) {
-      setSaveError(e.response?.data?.error ?? "Could not save to project.");
-    }
-  } 
-
   const reveal = (delay = 0) => (reduceMotion
     ? {}
     : { initial: { opacity: 0, y: 14 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.45, delay, ease: [0.22, 1, 0.36, 1] } });
@@ -101,19 +94,20 @@ export default function ScanResultsLayout({ children }) {
           {saveError && <p role="alert" className="text-critical text-sm">{saveError}</p>}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {!result.projectId && (
-            saved 
-            ? <Link href="/project" className={styles.newScan}>Saved · View project</Link>
-            : <button className={styles.newScan} onClick={saveToProject}>Save to project</button>
+            savedScanId === id
+            ? <Link href="/project" className={SECONDARY}><LuBookmarkCheck aria-hidden="true" /> Saved · View project</Link>
+            : <button type="button" className={SECONDARY} onClick={() => saveToProject(id)} disabled={saving}>
+                <LuBookmarkPlus aria-hidden="true" /> {saving ? "Saving..." : "Save to project"}
+              </button>
           )}
-          
 
           {result.scannedAgo !== "just now" && (!result.projectId || result.role === "owner") && (
-            <button className={styles.newScan} onClick={rescan}>Re-scan</button>
+            <button type="button" className={SECONDARY} onClick={rescan}><LuRefreshCw aria-hidden="true" /> Re-scan</button>
           )}
 
-          <RippleButton className={styles.newScan} type="button" onClick={newScan}>+ New scan</RippleButton>
+          <RippleButton className={PRIMARY} type="button" onClick={newScan}><LuPlus aria-hidden="true" /> New scan</RippleButton>
         </div>
       </motion.header>
 

@@ -9,7 +9,7 @@ const LoginRequired = ({ title, message }) => {
         <div className="grid gap-3 p-6 border border-line rounded-xl bg-surface">
             <h2 className="text-xl font-semibold">{title}</h2>
             <p className="text-muted">{message}</p>
-            <button type="button" className="auth-primaryButton w-fit" onClick={() => openAuth("login")}>Log in</button>
+            <button type="button" className="auth-primaryButton w-fit!" onClick={() => openAuth("login")}>Log in</button>
         </div>
     )
 }

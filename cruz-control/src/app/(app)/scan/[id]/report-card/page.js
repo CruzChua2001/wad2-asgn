@@ -5,20 +5,35 @@ import { useParams } from "next/navigation";
 import { motion, useReducedMotion } from "motion/react";
 import { useScan } from "../../scan-context";
 import { getRating } from "../../scan-result";
+import FixText from "../fix-text";
+import GradeBadge, { gradeFor } from "@/components/grade-badge";
+import NumberTicker from "../number-ticker";
 import ScoreTrend from "./score-trend";
 import styles from "@/styles/overview/scan-results.module.css";
 
 const REPO_CATEGORIES = ["secrets", "packages", "repo-basics", "ignore-rules", "readme", "workflows"];
 const SEVERITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };
 const RISK_LABELS = { critical: "Critical", high: "High", medium: "Medium", low: "Low" };
-const RISK_TONES = { critical: "text-critical", high: "text-warm", medium: "text-accent", low: "text-muted" };
+// Same colours as the Overview's findings
+const RISK_TONES = { critical: "text-critical", high: "text-critical", medium: "text-warm", low: "text-accent" };
 const TONE_TEXT = { good: "text-accent", warn: "text-warm", bad: "text-critical" };
 const TONE_BAR = { good: "bg-accent", warn: "bg-warm", bad: "bg-critical" };
 
 // Category, score, points lost and why side by side from md up; stacked on phones
-const ROW_GRID = "grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 md:grid-cols-[13rem_7.5rem_7rem_minmax(0,1fr)]";
+const ROW_GRID = "grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 md:grid-cols-[15rem_7.5rem_6rem_minmax(0,1fr)]";
 
 const SCORE_RULE = "Your score is out of 100, and higher is safer. Each check scores 0 to 10, and riskier checks count for more. A critical problem keeps your score at 50 or below until it's fixed.";
+
+// The rows are written in one after another, and each grade pops in just after its row
+const ROW_LIST = { hidden: {}, show: { transition: { staggerChildren: 0.06 } } };
+const ROW_ITEM = {
+  hidden: { opacity: 0, x: -8 },
+  show: { opacity: 1, x: 0, transition: { duration: 0.3, ease: "easeOut", delayChildren: 0.08 } },
+};
+const GRADE_POP = {
+  hidden: { opacity: 0, scale: 0.6 },
+  show: { opacity: 1, scale: 1, transition: { duration: 0.3, ease: "backOut" } },
+};
 
 function scoreTone(value) {
   if (value >= 80) return "good";
@@ -62,15 +77,29 @@ function rowReason(row) {
   return row.related.length > 2 ? `${titles} +${row.related.length - 2} more` : titles;
 }
 
+// A letter grade per category, or an empty box when it didn't run so the labels stay lined up
+function RowGrade({ row }) {
+  if (row.status !== "ok") {
+    return <span className="size-7 flex-none rounded-md border border-dashed border-line" aria-hidden="true" />;
+  }
+  return (
+    <motion.span className="flex flex-none" variants={GRADE_POP}>
+      <GradeBadge grade={gradeFor(row.score * 10)} size="sm" />
+    </motion.span>
+  );
+}
+
 function RowScore({ row }) {
   if (row.status !== "ok") {
     return <span className="font-mono text-xs text-muted">{row.status === "unavailable" ? "Couldn't check" : "Not checked"}</span>;
   }
 
   const tone = scoreTone(row.score * 10);
+  // A red track for 0/10, so it reads as failed instead of empty
+  const track = row.score === 0 ? "bg-critical/20" : "bg-line";
   return (
     <span className="flex items-center gap-2">
-      <span className="h-1.5 w-12 overflow-hidden rounded-full bg-line" aria-hidden="true">
+      <span className={`h-1.5 w-12 overflow-hidden rounded-full ${track}`} aria-hidden="true">
         <span className={`block h-full rounded-full ${TONE_BAR[tone]}`} style={{ width: `${row.score * 10}%` }} />
       </span>
       <span className={`font-mono text-sm font-semibold ${TONE_TEXT[tone]}`}>{row.score}/10</span>
@@ -79,17 +108,31 @@ function RowScore({ row }) {
 }
 
 // Same wording as the Overview's breakdown, so the rows add up to 100 minus the score
-function RowLost({ row }) {
+function RowLost({ row, delay }) {
   // Keeps the grid cell, so the why text stays in its column
   if (row.status !== "ok") return <span />;
 
   if (row.lost > 0) {
     const tone = scoreTone(row.score * 10) === "bad" ? "text-critical" : "text-warm";
-    return <span className={`font-mono text-sm font-semibold ${tone}`}>-{row.lost} pts</span>;
+    return (
+      <span className={`font-mono text-sm font-semibold ${tone}`}>
+        <span aria-hidden="true">-<NumberTicker value={row.lost} delay={delay} /> pts</span>
+        <span className="sr-only">{row.lost} points lost</span>
+      </span>
+    );
   }
   // Lost less than a point, which rounds to 0
   if (row.score < 10) return <span className="font-mono text-sm font-semibold text-warm">Minor</span>;
   return <span className="font-mono text-sm text-muted">0 pts</span>;
+}
+
+// Same rule as the Overview's "+N pts" chip
+function showGain(finding, incomplete) {
+  return !incomplete && Boolean(finding.checkId) && Boolean(finding.gain);
+}
+
+function gainLabel(finding) {
+  return `Fixing this adds ${finding.sharedCheck ? "up to " : ""}${finding.gain} points to your score`;
 }
 
 // The scan layout only renders this tab once a finished scan exists.
@@ -112,7 +155,6 @@ export default function ReportCardTab() {
   const lostTotal = rows.reduce((sum, row) => sum + row.lost, 0);
   const anyRan = rows.some((row) => row.status === "ok");
 
-  const tone = result.incomplete ? "warn" : scoreTone(result.score);
   let summary = result.incomplete ? "Incomplete, re-scan" : getRating(result.score);
   if (showSideScores) {
     for (const side of sides) {
@@ -130,6 +172,11 @@ export default function ReportCardTab() {
     ? {}
     : { initial: { opacity: 0, y: 14 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.45, delay, ease: [0.22, 1, 0.36, 1] } });
 
+  // Starts when the list scrolls into view. Without it the rows just show as they are.
+  const listMotion = reduceMotion
+    ? {}
+    : { variants: ROW_LIST, initial: "hidden", whileInView: "show", viewport: { once: true, amount: 0.2 } };
+
   return (
     <div className="flex flex-col gap-4">
       <motion.section className={styles.card} aria-labelledby="grade-title" {...reveal(0.08)}>
@@ -137,10 +184,15 @@ export default function ReportCardTab() {
         <div className="grid items-center gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,34rem)]">
           <div>
             <div className="flex items-center gap-5">
-              <span className={`text-8xl leading-none font-bold ${TONE_TEXT[tone]}`}>
-                <span aria-hidden="true">{result.grade ?? "?"}</span>
-                <span className="sr-only">{result.grade ? `Grade ${result.grade}` : "No grade yet"}</span>
-              </span>
+              {/* Lands like a stamp once the card is in */}
+              <motion.span
+                className="flex flex-none"
+                initial={reduceMotion ? false : { scale: 1.4, opacity: 0, rotate: -10 }}
+                animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                transition={{ duration: 0.45, delay: 0.3, ease: "backOut" }}
+              >
+                <GradeBadge grade={result.grade} size="lg" />
+              </motion.span>
               <div>
                 <p className="m-0 font-mono text-3xl font-semibold text-ink">
                   {result.score} <span className="text-base font-normal text-muted">/ 100</span>
@@ -178,16 +230,20 @@ export default function ReportCardTab() {
             <h3 className="m-0 font-mono text-[10px] font-semibold tracking-wider text-muted uppercase">
               {side.label}
             </h3>
-            <ul className="m-0 list-none p-0">
-              {side.rows.map((row) => (
-                <li key={row.category} className={`${ROW_GRID} items-center gap-y-1.5 border-b border-line py-3 last:border-b-0`}>
-                  <span className="text-sm font-medium text-ink">{row.label}</span>
+            <motion.ul className="m-0 list-none p-0" {...listMotion}>
+              {side.rows.map((row, index) => (
+                <motion.li key={row.category} variants={ROW_ITEM} className={`${ROW_GRID} items-center gap-y-1.5 border-b border-line py-3 last:border-b-0`}>
+                  <span className="flex min-w-0 items-center gap-2.5">
+                    <RowGrade row={row} />
+                    <span className="text-sm font-medium text-ink">{row.label}</span>
+                  </span>
                   <RowScore row={row} />
-                  <RowLost row={row} />
-                  <span className="col-span-2 text-sm text-muted md:col-span-1">{rowReason(row)}</span>
-                </li>
+                  {/* On phones these line up under the label, not the grade */}
+                  <span className="max-md:pl-9.5"><RowLost row={row} delay={0.15 + index * 0.06} /></span>
+                  <span className="col-span-2 text-sm text-muted max-md:pl-9.5 md:col-span-1">{rowReason(row)}</span>
+                </motion.li>
               ))}
-            </ul>
+            </motion.ul>
           </div>
         ))}
 
@@ -215,12 +271,24 @@ export default function ReportCardTab() {
             {topFixes.map((finding, index) => (
               <li key={finding.id} className="flex gap-3 rounded-lg border border-line bg-surface p-3">
                 <span className="font-mono text-sm font-semibold text-muted" aria-hidden="true">{index + 1}</span>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="m-0 text-sm font-semibold text-ink">
-                    {finding.title}
-                    <span className={`ml-2 font-mono text-[10px] tracking-wider uppercase ${RISK_TONES[finding.severity]}`}>{RISK_LABELS[finding.severity]}</span>
+                    <Link href={`/scan/${id}#finding-${finding.id}`} className="no-underline hover:text-accent! hover:underline">
+                      {finding.title}
+                    </Link>
                   </p>
-                  <p className="m-0 mt-1 text-sm break-words whitespace-pre-wrap text-muted">{finding.fix}</p>
+                  <p className="m-0 mt-1 flex flex-wrap gap-x-3 gap-y-1 font-mono text-[10px] font-semibold tracking-wider uppercase">
+                    <span className={RISK_TONES[finding.severity]}>{RISK_LABELS[finding.severity]}</span>
+                    {showGain(finding, result.incomplete) && (
+                      <span className="text-accent" title={gainLabel(finding)} aria-label={gainLabel(finding)}>
+                        <span aria-hidden="true">↑ </span>
+                        {finding.sharedCheck ? "up to " : ""}+{finding.gain} pts
+                      </span>
+                    )}
+                  </p>
+                  <div className="text-sm break-words text-muted">
+                    <FixText text={finding.fix} />
+                  </div>
                 </div>
               </li>
             ))}

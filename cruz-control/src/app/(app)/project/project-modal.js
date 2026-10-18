@@ -34,7 +34,7 @@ const ProjectModal = ({ editing, modalRef, form, updateField, onSubmit, error, l
     };
 
     return (
-        <dialog ref={modalRef} className="m-auto w-[min(560px,calc(100%-32px))] p-0 rounded-2xl border border-line bg-surface text-ink shadow-2xl backdrop:bg-black/40 backdrop:backdrop-blur-sm">
+        <dialog ref={modalRef} className="m-auto w-[min(560px,calc(100%-32px))] p-0 rounded-2xl border border-line bg-surface text-ink shadow-2xl backdrop:bg-black/40 backdrop:backdrop-blur-sm open:animate-auth-dialog backdrop:animate-auth-fade-in">
             <form onSubmit={onSubmit} className="grid gap-5 p-8">
                 <div className="flex items-start justify-between gap-4">
                     <div className="grid gap-1">
