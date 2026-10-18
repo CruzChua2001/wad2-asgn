@@ -2,11 +2,15 @@
 
 import dynamic from "next/dynamic";
 import { motion, useReducedMotion } from "motion/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { LuChevronDown, LuCircleCheck, LuTriangleAlert } from "react-icons/lu";
 import NumberTicker from "./number-ticker";
 import { Term, withTerms } from "./glossary";
+import FixText from "./fix-text";
 import { useTheme } from "@/lib/theme-store";
+import GradeBadge from "@/components/grade-badge";
 import { useScan } from "../scan-context";
+import { getRating } from "../scan-result";
 import styles from "@/styles/overview/scan-results.module.css";
 
 const ExposureGlobe = dynamic(() => import("./exposure-globe"), {
@@ -47,118 +51,6 @@ function checkTone(check) {
   if (check.status !== "ok") return "text-muted";
   if (check.score === 10) return "text-ink";
   return check.score === 0 ? "text-critical" : "text-warm";
-}
-
-// A fix is plain text: one line, or numbered steps with `code`, ``` blocks and a Tip: line
-function parseFix(text) {
-  const blocks = [];
-  let fence = null;
-  let steps = null;
-
-  for (const line of text.split("\n")) {
-    if (line.trim() === "```") {
-      if (fence) {
-        blocks.push({ kind: "pre", text: fence.join("\n") });
-        fence = null;
-      } else {
-        fence = [];
-      }
-      steps = null;
-      continue;
-    }
-
-    if (fence) {
-      fence.push(line);
-      continue;
-    }
-
-    const step = line.match(/^(\d+)\.\s+(.*)$/);
-    if (step) {
-      if (!steps) {
-        steps = { kind: "steps", start: Number(step[1]), steps: [] };
-        blocks.push(steps);
-      }
-      steps.steps.push(step[2]);
-      continue;
-    }
-
-    steps = null;
-
-    if (line.trim().startsWith("Tip:")) {
-      blocks.push({ kind: "tip", text: line.trim().slice(4).trim() });
-    } else if (line.trim()) {
-      blocks.push({ kind: "p", text: line.trim() });
-    }
-  }
-
-  if (fence) {
-    blocks.push({ kind: "pre", text: fence.join("\n") });
-  }
-
-  return blocks;
-}
-
-// `code` stays as typed, and the words around it still get T19's glossary terms
-function fixInline(text) {
-  return text.split("`").map((part, index) => (index % 2 === 1
-    ? <code key={index} className="rounded bg-surface-soft px-1 font-mono text-xs! break-all">{part}</code>
-    : <span key={index}>{withTerms(part)}</span>));
-}
-
-// Each step reads "Label: what to do", so the label is bold
-function fixStep(text) {
-  const colon = text.indexOf(":");
-  const tick = text.indexOf("`");
-
-  if (colon === -1 || (tick !== -1 && tick < colon)) {
-    return fixInline(text);
-  }
-
-  return <><strong>{text.slice(0, colon + 1)}</strong> {fixInline(text.slice(colon + 1).trim())}</>;
-}
-
-function FixText({ text }) {
-  const blocks = parseFix(text);
-
-  // A one-line fix reads as a sentence after the label, like it always has
-  if (blocks.length === 1 && blocks[0].kind === "p") {
-    return <span className="mt-1.5 block"><strong>What to do:</strong> {fixInline(blocks[0].text)}</span>;
-  }
-
-  return (
-    <div className="mt-1.5">
-      <strong>What to do:</strong>
-      <div className="mt-1 flex flex-col gap-1.5">
-        {blocks.map((block, index) => {
-          if (block.kind === "pre") {
-            return (
-              <pre key={index} className="m-0 overflow-x-auto rounded border border-line bg-surface-soft p-2 font-mono text-xs!">
-                {block.text}
-              </pre>
-            );
-          }
-
-          if (block.kind === "steps") {
-            return (
-              <ol key={index} start={block.start} className="m-0 list-decimal space-y-1 pl-5">
-                {block.steps.map((step, stepIndex) => <li key={stepIndex}>{fixStep(step)}</li>)}
-              </ol>
-            );
-          }
-
-          if (block.kind === "tip") {
-            return (
-              <p key={index} className="m-0 text-muted">
-                <span aria-hidden="true">💡 </span><strong>Tip:</strong> {fixInline(block.text)}
-              </p>
-            );
-          }
-
-          return <p key={index} className="m-0">{fixInline(block.text)}</p>;
-        })}
-      </div>
-    </div>
-  );
 }
 
 // Only link out to https pages, so a bad url can't turn into something else
@@ -261,6 +153,13 @@ function FindingDetails({ details }) {
   );
 }
 
+// The Report Card links to /scan/<id>#finding-<finding id>, so that finding opens first
+function linkedFindingId(findings) {
+  if (typeof window === "undefined") return null;
+  const hash = decodeURIComponent(window.location.hash);
+  return findings.find((finding) => hash === `#finding-${finding.id}`)?.id ?? null;
+}
+
 // ip-api's org is the hosting company; older cached scans only have isp.
 function hostingProvider(node) {
   return node.org || node.provider || "Unknown";
@@ -316,7 +215,9 @@ function ScoreBreakdown({ breakdown, checks, reduceMotion }) {
     <div className="w-full">
       <p className="m-0 mb-2 font-mono text-[10px] tracking-[.08em] text-muted uppercase">Points lost by category</p>
       <ul className="m-0 flex w-full list-none flex-col gap-2.5 p-0" aria-label="Score breakdown">
-        {shown.map((item) => {
+        {shown.map((item, index) => {
+          // Bars fill one after another, worst first
+          const delay = 0.35 + index * 0.12;
           const weight = ran.filter((check) => check.category === item.category).reduce((sum, check) => sum + check.weight, 0);
           const most = totalWeight > 0 ? (100 * weight) / totalWeight : 0;
           const share = most > 0 ? Math.min(100, (100 * item.lost) / most) : 0;
@@ -335,7 +236,7 @@ function ScoreBreakdown({ breakdown, checks, reduceMotion }) {
             value = "Not checked";
             tone = "text-muted";
           } else if (item.lost > 0) {
-            value = <>-{item.lost}<span className="sr-only"> points</span></>;
+            value = <>-<NumberTicker value={item.lost} delay={delay} /><span className="sr-only"> points</span></>;
             tone = share >= 50 ? "text-critical" : "text-warm";
           } else if (imperfect) {
             // Lost less than a point, which rounds to 0
@@ -358,7 +259,7 @@ function ScoreBreakdown({ breakdown, checks, reduceMotion }) {
                     className={`block h-full rounded-full ${barColor}`}
                     initial={reduceMotion ? false : { width: 0 }}
                     animate={{ width: `${share}%` }}
-                    transition={{ duration: 0.8, delay: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                    transition={{ duration: 0.8, delay, ease: [0.22, 1, 0.36, 1] }}
                   />
                 )}
               </div>
@@ -441,15 +342,24 @@ export default function OverviewTab() {
   const [theme] = useTheme();
   const reduceMotion = Boolean(useReducedMotion());
   const findings = [...result.findings].sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
-  const [selectedFindingId, setSelectedFindingId] = useState(findings[0]?.id);
-  const [selectedNodeId, setSelectedNodeId] = useState(findings[0]?.nodeId || result.nodes[0]?.id);
+  const [linkedId] = useState(() => linkedFindingId(findings));
+  const firstFinding = findings.find((finding) => finding.id === linkedId) ?? findings[0];
+  const [selectedFindingId, setSelectedFindingId] = useState(firstFinding?.id);
+  const [selectedNodeId, setSelectedNodeId] = useState(firstFinding?.nodeId || result.nodes[0]?.id);
   const [logOpen, setLogOpen] = useState(false);
   const [showAllServers, setShowAllServers] = useState(false);
   const [mapOpen, setMapOpen] = useState(false);
   const [mapView, setMapView] = useState("globe");
-  const [openFindingIds, setOpenFindingIds] = useState(() => new Set(findings[0] ? [findings[0].id] : []));
+  const [openFindingIds, setOpenFindingIds] = useState(() => new Set(firstFinding ? [firstFinding.id] : []));
   const [detailsOpenIds, setDetailsOpenIds] = useState(() => new Set());
   const [filterNodeId, setFilterNodeId] = useState(null);
+  const [ruleOpen, setRuleOpen] = useState(false);
+
+  useEffect(() => {
+    if (linkedId) {
+      document.getElementById(`finding-${linkedId}`)?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "center" });
+    }
+  }, [linkedId, reduceMotion]);
 
   const countryGroups = [];
   for (const node of result.nodes) {
@@ -490,6 +400,8 @@ export default function OverviewTab() {
 
   // The repo's scored checks, so the card always matches the score
   const repoChecks = (result.checks ?? []).filter((check) => REPO_CATEGORIES.includes(check.category));
+
+  const seriousFindings = findings.filter((finding) => finding.severity === "critical" || finding.severity === "high");
 
   // How much of the scan the score is really based on (T20)
   const ranChecks = (result.checks ?? []).filter((check) => check.status === "ok").length;
@@ -538,6 +450,15 @@ export default function OverviewTab() {
     }
 
     setOpenFindingIds(open);
+  }
+
+  // "Show them" in the score card opens the serious findings and scrolls to them
+  function showSerious() {
+    setFilterNodeId(null);
+    setOpenFindingIds(new Set(seriousFindings.map((finding) => finding.id)));
+    setSelectedFindingId(seriousFindings[0].id);
+    setSelectedNodeId(seriousFindings[0].nodeId);
+    document.getElementById("findings-title")?.closest("section").scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
   }
 
   function toggleDetails(id) {
@@ -777,20 +698,40 @@ export default function OverviewTab() {
             <div className={styles.cardHead}>
               <h2 id="score-title">Exposure score</h2>
               <span className={styles.ratingBadge} data-tone={result.incomplete ? "warn" : scoreTone(result.score)}>
-                {result.incomplete ? "Incomplete, re-scan" : result.rating}
+                {result.incomplete ? "Incomplete, re-scan" : getRating(result.score)}
               </span>
             </div>
             <div className={styles.scoreBody}>
-              <ScoreRing score={result.score} reduceMotion={reduceMotion} />
+              {/* The grade sits on the ring like a stamp */}
+              <div className="relative">
+                <ScoreRing score={result.score} reduceMotion={reduceMotion} />
+                <motion.span
+                  className="absolute -right-2 -bottom-1 rotate-[-8deg] rounded-xl bg-surface-strong shadow-md"
+                  initial={reduceMotion ? false : { scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ duration: 0.35, delay: 1.1, ease: [0.22, 1, 0.36, 1] }}
+                >
+                  <GradeBadge grade={result.grade} size="md" />
+                </motion.span>
+              </div>
               {result.checks?.length > 0 && (
                 <ScoreBreakdown breakdown={result.breakdown} checks={result.checks} reduceMotion={reduceMotion} />
               )}
             </div>
-            {result.checks?.length > 0 && (
-              <p className="m-0 mt-3 text-xs text-muted">
-                Based on {ranChecks} checks.
-                {missedChecks > 0 && ` ${missedChecks} couldn't run and ${missedChecks === 1 ? "isn't" : "aren't"} counted.`}
-              </p>
+
+            {seriousFindings.length > 0 ? (
+              <div className="mt-4 flex items-start gap-2.5 rounded-lg border border-critical/30 bg-critical/8 p-3 text-sm text-ink">
+                <LuTriangleAlert aria-hidden="true" className="mt-0.5 flex-none text-critical" />
+                <p className="m-0 flex-1">{result.summary}</p>
+                <button type="button" onClick={showSerious} className="flex-none cursor-pointer text-xs! font-semibold! text-critical hover:underline">
+                  Show {seriousFindings.length === 1 ? "it" : "them"}
+                </button>
+              </div>
+            ) : (
+              <div className="mt-4 flex items-start gap-2.5 rounded-lg border border-accent/30 bg-accent/8 p-3 text-sm text-ink">
+                <LuCircleCheck aria-hidden="true" className="mt-0.5 flex-none text-accent" />
+                <p className="m-0">{result.summary}</p>
+              </div>
             )}
             {result.cap?.applied && result.uncappedScore > result.score && (
               <p className="m-0 mt-3 text-xs text-critical">
@@ -812,8 +753,25 @@ export default function OverviewTab() {
                 &quot;Not checked&quot; means the check doesn&apos;t apply here, or this scan is older than the check. Re-scan to run every check.
               </p>
             )}
-            <p className={styles.scoreSummary}>{result.summary}</p>
-            <p className="m-0 mt-2 text-xs leading-relaxed text-muted">{SCORE_RULE}</p>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-line pt-3 text-xs text-muted">
+              {result.checks?.length > 0 && (
+                <span>
+                  Based on {ranChecks} checks.
+                  {missedChecks > 0 && ` ${missedChecks} couldn't run and ${missedChecks === 1 ? "isn't" : "aren't"} counted.`}
+                </span>
+              )}
+              <button
+                type="button"
+                aria-expanded={ruleOpen}
+                aria-controls="score-rule"
+                onClick={() => setRuleOpen(!ruleOpen)}
+                className="ml-auto inline-flex cursor-pointer items-center gap-1 text-xs! font-semibold! text-accent hover:underline"
+              >
+                How is this scored?
+                <LuChevronDown aria-hidden="true" className={`transition-transform ${ruleOpen ? "rotate-180" : ""}`} />
+              </button>
+            </div>
+            {ruleOpen && <p id="score-rule" className="m-0 mt-2 text-xs leading-relaxed text-muted">{SCORE_RULE}</p>}
           </motion.section>
 
           <motion.section className={`${styles.card} ${styles.findingsCard}`} aria-labelledby="findings-title" {...reveal(0.27)}>
@@ -838,7 +796,7 @@ export default function OverviewTab() {
             )}
             <ul className={styles.findings}>
               {shownFindings.map((finding) => (
-                <li key={finding.id}>
+                <li key={finding.id} id={`finding-${finding.id}`} className="scroll-mt-4">
                   <button
                     type="button"
                     data-severity={finding.severity}

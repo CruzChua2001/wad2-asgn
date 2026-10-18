@@ -25,7 +25,36 @@ const getProjects = async (req, res) => {
         return res.status(500).json({ error: "Could not load projects. Please try again." });
     }
 
-    res.json(data.map(m => ({ ...m.projects, role: m.role })));
+    const projects = data.map(m => ({ ...m.projects, role: m.role, latestScan: null, scores: [] }));
+
+    if (projects.length === 0) {
+        return res.json(projects);
+    }
+
+    // One query for the scans of every project, newest first
+    const ids = projects.map(p => p.id);
+    const { data: scans, error: scanError } = await supabase.from("scans").select("id, project_id, created_at, domain_scans(result), repo_scans(result)")
+        .in("project_id", ids).order("created_at", { ascending: false });
+
+    // Still send the projects, just without scores
+    if (scanError) {
+        console.error("Load project scores failed:", scanError);
+        return res.json(projects);
+    }
+
+    for (const project of projects) {
+        const recent = scans.filter(scan => scan.project_id === project.id).slice(0, 8).map(scan => {
+            const { score, grade } = buildFindings(scan);
+            return { id: scan.id, created_at: scan.created_at, score, grade };
+        });
+
+        if (recent.length > 0) {
+            project.latestScan = recent[0];
+            project.scores = recent.map(scan => scan.score).reverse();
+        }
+    }
+
+    res.json(projects);
 };
 
 const createProject = async (req, res) => {
