@@ -100,7 +100,6 @@
 
 .identity strong { margin-bottom: 3px; font-size: 12px; }
 .identity div > span { overflow: hidden; color: var(--muted); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
-.previewBadge { padding: 4px 6px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font: 650 7px var(--font-geist-mono), monospace; letter-spacing: .06em; text-transform: uppercase; }
 
 .section { padding: 13px 15px 14px; border-bottom: 1px solid var(--line); }
 .sectionHeading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; color: var(--muted); font: 650 8px var(--font-geist-mono), monospace; letter-spacing: .1em; text-transform: uppercase; }

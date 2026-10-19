@@ -1,14 +1,14 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { LuChevronDown, LuLogOut } from "react-icons/lu";
+import { LuChevronDown, LuFolder, LuLogOut } from "react-icons/lu";
 import { useAuth } from "@/components/auth/auth-provider";
 import styles from "@/styles/overview/profile-menu.module.css";
 
 export default function ProfileMenu() {
   const { status, user: profile, signOut, openAuth } = useAuth();
-  const [projects, setProjects] = useState([])
   const [open, setOpen] = useState(false);
   const rootRef = useRef(null);
   const router = useRouter();
@@ -66,31 +66,24 @@ export default function ProfileMenu() {
       </button>
 
       {open && (
-        <section className={styles.menu} role="dialog" aria-label="Profile and tracked assets">
+        <section className={styles.menu} role="dialog" aria-label="Profile menu">
           <div className={styles.identity}>
             <span className={styles.identityAvatar} aria-hidden="true">{profile.initials}</span>
             <div>
               <strong>{profile.name}</strong>
               <span>{profile.email}</span>
             </div>
-            <span className={styles.previewBadge}>Preview</span>
           </div>
 
-          <div className={styles.section}>
-            <div className={styles.sectionHeading}>
-              <span>Recently Opened Projects</span>
-              <strong></strong>
-            </div>
-            <div className={styles.assetList}>
-              {/* {profile.repositories.map((repository) => (
-                <div className={styles.repository} key={repository.name}>
-                  <span className={styles.assetIcon} aria-hidden="true">&lt;/&gt;</span>
-                  <div><strong>{repository.name}</strong><small>{repository.detail}</small></div>
-                  <span className={styles.statusDot} aria-label="Tracked" />
-                </div>
-              ))} */}
-            </div>
-          </div>
+          {/* text-muted! because the global "a { color: inherit }" rule beats Tailwind colours */}
+          <Link
+            href="/project"
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-[9px] min-h-[45px] px-[15px] border-b border-line text-[10px] text-muted! no-underline hover:text-accent! hover:bg-surface-soft transition-colors duration-200"
+          >
+            <LuFolder size={16} aria-hidden="true" />
+            My projects
+          </Link>
 
           <button type="button" className={styles.signOut} onClick={handleSignOut}>
             <LuLogOut aria-hidden="true" />

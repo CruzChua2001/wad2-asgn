@@ -1,6 +1,6 @@
 const SOURCE_LABELS = { domain: "Website", repo: "Repository" };
 
-const getRating = score => {
+export const getRating = score => {
     if (score >= 80) {
         return "Good";
     }
@@ -17,15 +17,16 @@ const lastScanTime = date => {
         return "just now"
     } 
     if (minutes < 60) {
-        return `${minutes} minute(s) ago`;
+        return `${minutes} ${minutes === 1 ? "minute" : "minutes"} ago`;
     }
 
     const hours = Math.floor(minutes / 60);
     if (hours < 24) {
-        return `${hours} hour(s) ago`;
+        return `${hours} ${hours === 1 ? "hour" : "hours"} ago`;
     }
 
-    return new Date(date).toLocaleDateString();
+    // Fixed format so every browser shows the same date, e.g. "17 Oct 2026"
+    return new Date(date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 }
 
 const getHostName = (ip, domainScan) => {
@@ -73,6 +74,17 @@ const getServerStatus = (ip, portRecord, findings, isCdn = false) => {
 const getFindings = data => {
     let findings = [];
 
+    // Several findings can share one check, so fixing one doesn't win back the whole gain
+    let checkUses = {};
+    for (let finding of data.findings) {
+        if (finding.checkId) {
+            checkUses[finding.checkId] = (checkUses[finding.checkId] ?? 0) + 1;
+        }
+    }
+
+    // The API works out how many points a check is worth (gain), we only read it
+    const gainOf = checkId => (data.checks ?? []).find(check => check.id === checkId)?.gain ?? 0;
+
     for (let finding of data.findings) {
         let nodeId = null;
         if (finding.hosts) {
@@ -81,13 +93,19 @@ const getFindings = data => {
 
         findings.push({
             id: finding.id,
+            category: finding.category,
+            checkId: finding.checkId,
+            kind: finding.kind,
             severity: finding.severity,
             title: finding.title,
             why: finding.explain,
             fix: finding.fix,
+            learnMore: finding.learnMore,
             source: SOURCE_LABELS[finding.source],
             hosts: finding.hosts,
-            files: finding.files,
+            details: finding.details,
+            gain: gainOf(finding.checkId),
+            sharedCheck: checkUses[finding.checkId] > 1,
             nodeId: nodeId,
         });
     }
@@ -106,9 +124,8 @@ const getServers = (domainScan, findings) => {
     const cdn = new Set(records.cdnIps ?? []);
 
     for (let geo of records.geo) {
-        if (geo.status !== "ok"){
-            continue;
-        }
+        // Servers we couldn't locate stay in the list, so their ports and status still count
+        const located = geo.status === "ok";
 
         let portRecord = records.ports.find(item => item.ip === geo.ip);
         let ports = [];
@@ -131,7 +148,9 @@ const getServers = (domainScan, findings) => {
             }   
 
             
-            summary = `${ports.length} open service(s) found on this server.`;
+            summary = ports.length === 1
+                ? "1 open service found on this server."
+                : `${ports.length} open services found on this server.`;
         }
 
         if (isCdn) {
@@ -142,11 +161,15 @@ const getServers = (domainScan, findings) => {
             id: geo.ip,
             host: getHostName(geo.ip, domainScan),
             ip: geo.ip,
-            city: geo.city,
-            country: geo.country,
-            lat: geo.lat,
-            lng: geo.lon,
+            city: located ? geo.city : "",
+            country: located ? geo.country : "",
+            lat: located ? geo.lat : null,
+            lng: located ? geo.lon : null,
+            located: located,
             provider: geo.isp,
+            org: geo.org,
+            as: geo.as,
+            asname: geo.asname,
             service: service,
             status: getServerStatus(geo.ip, portRecord, findings, isCdn),
             summary: summary,
@@ -164,17 +187,19 @@ export const toResult = data => {
     let findings = getFindings(data);
     let servers = getServers(data.domain_scans, findings);
     let domain = null;
+    let geoStatus = null;
     let openServices = 0;
     let linkedRepository = null;
     let repo = null;
     let serious = 0;
-    let summary = "No serious issues found.";
+    let summary = "No serious problems found.";
     const arcs = [];
     let stats = []
      let scannedAt = null;
 
     if (data.domain_scans) {
         domain = data.domain_scans.domain;
+        geoStatus = data.domain_scans.result.checks.geo ?? null;
         for (let item of data.domain_scans.result.records.ports) {
             openServices += item.ports.length;
         }
@@ -191,12 +216,26 @@ export const toResult = data => {
         }
     }
 
-    if(serious > 0) {
-        summary = `${serious} serious issue(s) are pulling your score down. Fix those first.`;
+    if (serious === 1) {
+        summary = "1 serious problem is lowering your score. Start with that one.";
+    } else if (serious > 1) {
+        summary = `${serious} serious problems are lowering your score. Start with those.`;
     }
 
-    for (let i = 1; i < servers.length; i++) {
-        arcs.push({ id: servers[i].id, from: servers[0], to: servers[i], status: servers[i].status });    
+    // Arcs run from the main site's server to the others: they show structure, not traffic
+    if (data.domain_scans) {
+        const records = data.domain_scans.result.records;
+        const locatedServers = servers.filter(server => server.located);
+        const mainIps = new Set([...(records.a ?? []), ...(records.aaaa ?? [])]);
+        const mainSite = locatedServers.find(server => mainIps.has(server.ip));
+
+        if (mainSite) {
+            for (const server of locatedServers) {
+                if (server.id !== mainSite.id) {
+                    arcs.push({ id: server.id, from: mainSite, to: server, status: server.status });
+                }
+            }
+        }
     }
 
     if (data.domain_scans) {
@@ -223,11 +262,17 @@ export const toResult = data => {
     return {
         title: domain || linkedRepository,
         domain: domain,
+        geoStatus: geoStatus,
         linkedRepository: linkedRepository,
         repo: repo,
         score: data.score,
         grade: data.grade,
         rating: `Grade ${data.grade} · ${getRating(data.score)}`,
+        breakdown: data.breakdown,
+        checks: data.checks,
+        cap: data.cap,
+        incomplete: data.incomplete,
+        uncappedScore: data.uncappedScore,
         summary,
         nodes: servers,
         arcs,
@@ -235,7 +280,8 @@ export const toResult = data => {
         stats,
         scannedAt: scannedAt,
         scannedAgo: lastScanTime(scannedAt),
-        projectId: data.project_id
+        projectId: data.project_id,
+        role: data.role
     }
 }
 

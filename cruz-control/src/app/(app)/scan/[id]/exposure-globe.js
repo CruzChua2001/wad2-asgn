@@ -23,6 +23,9 @@ const PALETTES = {
 };
 
 const STATUS_LABELS = { healthy: "Healthy", attention: "Needs attention", critical: "Critical" };
+
+// The tooltip is raw HTML inside the canvas overlay, so the CDN tag uses the theme tokens directly
+const CDN_TAG_STYLE = "margin-left:4px;padding:0 3px;border:1px solid var(--line);border-radius:3px;color:var(--muted);font-size:9px;font-weight:500";
 const MIN_DISTANCE = 180;
 const MAX_DISTANCE = 420;
 const MIN_ALTITUDE = MIN_DISTANCE / 100 - 1;
@@ -38,13 +41,21 @@ function withAlpha(hex, alpha) {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-export default function ExposureGlobe({ nodes, arcs, selectedId, onSelect, theme = "light", reduceMotion = false }) {
+export default function ExposureGlobe({ nodes, arcs, selectedId, highlightIds = [], onSelect, theme = "light", reduceMotion = false }) {
   const containerRef = useRef(null);
   const globeRef = useRef(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [countries, setCountries] = useState([]);
   const palette = PALETTES[theme] || PALETTES.light;
-  const selected = nodes.find((node) => node.id === selectedId);
+
+  // Only servers we located have coordinates to draw
+  const located = useMemo(() => nodes.filter((node) => node.located), [nodes]);
+  const locatedArcs = useMemo(() => arcs.filter((arc) => arc.from.located && arc.to.located), [arcs]);
+  const selected = located.find((node) => node.id === selectedId);
+  // The selected server, plus every server the selected finding affects
+  const marked = located.filter((node) => node.id === selectedId || highlightIds.includes(node.id));
+  // Critical servers always pulse so they stand out
+  const pulsing = located.filter((node) => node.status === "critical" || marked.includes(node));
 
   const material = useMemo(
     () => new MeshPhongMaterial({ color: palette.globe, emissive: palette.emissive, emissiveIntensity: 0.35, shininess: 4 }),
@@ -80,7 +91,8 @@ export default function ExposureGlobe({ nodes, arcs, selectedId, onSelect, theme
     const controls = globe.controls();
     controls.autoRotate = !reduceMotion;
     controls.autoRotateSpeed = 0.45;
-    controls.enableZoom = true;
+    // The + and - buttons zoom, so the scroll wheel keeps scrolling the page
+    controls.enableZoom = false;
     controls.minDistance = MIN_DISTANCE;
     controls.maxDistance = MAX_DISTANCE;
     globe.pointOfView({ lat: 20, lng: 60, altitude: 2.3 }, 0);
@@ -125,20 +137,20 @@ export default function ExposureGlobe({ nodes, arcs, selectedId, onSelect, theme
           hexPolygonMargin={0.55}
           hexPolygonUseDots
           hexPolygonColor={() => palette.land}
-          pointsData={nodes}
+          pointsData={located}
           pointLat="lat"
           pointLng="lng"
           pointColor={statusColor}
-          pointAltitude={(node) => (node.id === selectedId ? 0.12 : 0.06)}
-          pointRadius={(node) => (node.id === selectedId ? 0.75 : 0.55)}
+          pointAltitude={(node) => (marked.includes(node) ? 0.12 : 0.06)}
+          pointRadius={(node) => (marked.includes(node) ? 0.75 : 0.55)}
           pointsMerge={false}
           pointLabel={(node) => `
             <div class="globe-tooltip">
-              <strong>${escapeHtml(node.host)}</strong>
+              <strong>${escapeHtml(node.host)}${node.isCdn ? ` <span style="${CDN_TAG_STYLE}">CDN</span>` : ""}</strong>
               <span>${escapeHtml(node.city)}, ${escapeHtml(node.country)} · ${escapeHtml(STATUS_LABELS[node.status])}</span>
             </div>`}
           onPointClick={(node) => onSelect?.(node.id)}
-          arcsData={arcs}
+          arcsData={locatedArcs}
           arcStartLat={(arc) => arc.from.lat}
           arcStartLng={(arc) => arc.from.lng}
           arcEndLat={(arc) => arc.to.lat}
@@ -149,13 +161,13 @@ export default function ExposureGlobe({ nodes, arcs, selectedId, onSelect, theme
           arcDashLength={0.45}
           arcDashGap={0.18}
           arcDashAnimateTime={reduceMotion ? 0 : 2600}
-          ringsData={selected ? [selected] : []}
+          ringsData={reduceMotion ? [] : pulsing}
           ringLat="lat"
           ringLng="lng"
           ringColor={(node) => (t) => withAlpha(statusColor(node), Math.max(0, 1 - t))}
           ringMaxRadius={4.5}
           ringPropagationSpeed={2.4}
-          ringRepeatPeriod={reduceMotion ? 0 : 1100}
+          ringRepeatPeriod={1100}
         />
       )}
     </div>

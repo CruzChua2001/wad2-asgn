@@ -5,8 +5,12 @@ import { LuX, LuTrash2 } from "react-icons/lu";
 
 import api from "@/lib/api";
 import { useAuth } from "@/components/auth/auth-provider";
+import RoleSelect from "./role-select";
 
-const ROLES = [{ value: "viewer", text: "Viewer" }, { value: "owner", text: "Owner" }]
+const ROLES = [
+    { value: "viewer", text: "Viewer", hint: "Can see the results" },
+    { value: "owner", text: "Owner", hint: "Can edit, re-scan and invite" },
+]
 
 const MemberModal = ({project, modalRef}) => {
     const { user } = useAuth();
@@ -21,19 +25,23 @@ const MemberModal = ({project, modalRef}) => {
 
     useEffect(() => {
         if (!project) return;
+        let ignore = false;
 
         const getMembers = async _ => {
             try {
                 const response = await api.get(`/api/project/${project.id}/member`);
+                if (ignore) return;
 
                 setMembers(response.data.members);
                 setInvites(response.data.invites);
             } catch (e) {
-                setErrorMsg(e.response?.data?.error ?? "Could not load members.")
+                if (!ignore) setErrorMsg(e.response?.data?.error ?? "Could not load members.")
             }
         }
 
         getMembers();
+        // A slow answer for the last project opened mustn't replace this one's list
+        return () => { ignore = true; };
     }, [project])
 
     const sendInvite = async event => {
@@ -72,18 +80,26 @@ const MemberModal = ({project, modalRef}) => {
         }
     }
 
-    const closeModal = _ => {
+    // Runs for the close button and for Escape, so the next project opens with an empty dialog
+    const resetModal = _ => {
         setErrorMsg("");
+        setEmail("");
+        setMembers([]);
+        setInvites([]);
+    }
+
+    const closeModal = _ => {
         modalRef.current.close();
     }
 
     return (
-        <dialog ref={modalRef} className="m-auto w-[min(520px,calc(100%-32px))] p-0 rounded-2xl border border-line bg-surface text-ink shadow-2xl backdrop:bg-black/40 backdrop:backdrop-blur-sm">
-            <div className="grid gap-5 p-8">
+        // overflow-visible lets the role list hang below the dialog
+        <dialog ref={modalRef} onClose={resetModal} aria-labelledby="member-modal-title" className="m-auto w-[min(520px,calc(100%-32px))] p-0 overflow-visible rounded-2xl border border-line bg-surface text-ink shadow-2xl backdrop:bg-black/40 backdrop:backdrop-blur-sm open:animate-auth-dialog backdrop:animate-auth-fade-in">
+            <div className="grid gap-5 p-6 sm:p-8">
                 <div className="flex items-start justify-between gap-4">
                     <div className="grid gap-1">
                         <span className="font-mono text-[11px] tracking-[0.18em] text-muted">MEMBERS</span>
-                        <h2 className="text-2xl font-semibold">{project?.name}</h2>
+                        <h2 id="member-modal-title" className="text-2xl font-semibold"><span className="sr-only">Members of </span>{project?.name}</h2>
                     </div>
                     <button aria-label="Close" onClick={closeModal} className="p-2 rounded-lg text-muted hover:text-ink cursor-pointer">
                         <LuX size={18} />
@@ -92,7 +108,8 @@ const MemberModal = ({project, modalRef}) => {
 
                 {errorMsg && <p role="alert" className="text-sm text-critical">{errorMsg}</p>}
 
-                <ul className="grid gap-2 text-sm">
+                {/* Long lists scroll here, and the cap shrinks on short screens, so the invite form stays on screen */}
+                <ul className="grid gap-2 max-h-[min(12rem,30vh)] overflow-y-auto text-sm">
                     {members.map(member => (
                         <li key={member.user_id} className="flex justify-between gap-2">
                             <span className="break-all">{member.email}</span>
@@ -132,15 +149,13 @@ const MemberModal = ({project, modalRef}) => {
                         className="flex-1 min-w-48 h-10 px-3 border border-line rounded-xl bg-page text-sm outline-none focus:border-accent"    
                     />
 
-                    <select value={role} onChange={e => setRole(e.target.value)} aria-label="Role" className="h-10 px-2 border border-line rounded-xl bg-page text-sm">
-                        {ROLES.map(role => (
-                            <option key={role.value} value={role.value}>{role.text}</option>
-                        ))}
-                    </select>
+                    <div className="flex gap-2 ml-auto">
+                        <RoleSelect roles={ROLES} value={role} onChange={setRole} />
 
-                    <button type="submit" disabled={loading} className="auth-primaryButton w-fit!">
-                        {loading ? "Sending Invite..." : "Invite"}
-                    </button>
+                        <button type="submit" disabled={loading} className="auth-primaryButton w-fit!">
+                            {loading ? "Sending Invite..." : "Invite"}
+                        </button>
+                    </div>
                 </form>
             </div>
         </dialog>

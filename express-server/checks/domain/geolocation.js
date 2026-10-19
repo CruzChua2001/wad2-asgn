@@ -1,6 +1,6 @@
 const TIMER_MS = 5000; // timeout of 5s in case ip-api takes too long to respond
 const BATCH_SIZE = 100; // ip-api's free batch endpoint cap of 100 ips per request
-const GLOBE_FIELDS = "status,query,country,city,lat,lon,isp"; // required fields for frontend's globe to work
+const GLOBE_FIELDS = "status,query,country,city,lat,lon,isp,org,as,asname"; // required fields for frontend's globe to work
 
 /**
  * Given a batch of 100 ips, returns each ip's geolocation details using ip-api's API
@@ -15,7 +15,7 @@ async function fetchGeolocation(ips) {
             signal: AbortSignal.timeout(TIMER_MS)
         });
         if (!response.ok) {   // rate limits, server errors, etc.
-            return ips.map((ip) => ({ status: "unavailable", ip, lat: null, lon: null, city: "", country: "", isp: "" }));
+            return ips.map((ip) => ({ status: "unavailable", ip, lat: null, lon: null, city: "", country: "", isp: "", org: "", as: "", asname: "" }));
         }
 
         const data = await response.json();
@@ -27,10 +27,13 @@ async function fetchGeolocation(ips) {
             lon: entry.lon ?? null,
             city: entry.city ?? "",
             country: entry.country ?? "",
-            isp: entry.isp ?? ""
+            isp: entry.isp ?? "",
+            org: entry.org ?? "",
+            as: entry.as ?? "",
+            asname: entry.asname ?? ""
         }));
     } catch (error) {   // network issues or timeout
-        return ips.map((ip) => ({ status: "unavailable", ip, lat: null, lon: null, city: "", country: "", isp: "" }));
+        return ips.map((ip) => ({ status: "unavailable", ip, lat: null, lon: null, city: "", country: "", isp: "", org: "", as: "", asname: "" }));
     }
 }
 

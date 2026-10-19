@@ -28,14 +28,14 @@ const SAMPLE_TARGETS = {
 
 const CHECKS = {
   website: [
-    { step: "01", title: "DNS & certificates", detail: "Maps public records, certificate history, and candidate subdomains." },
-    { step: "02", title: "Headers & exposure", detail: "Reviews bounded HTTP headers and pre-indexed public service data." },
-    { step: "03", title: "Guided findings", detail: "Turns evidence into prioritized explanations and practical next steps." },
+    { step: "01", title: "DNS & email", detail: "Reads public DNS records, checks SPF, DMARC and CAA, and finds subdomains in certificate logs." },
+    { step: "02", title: "Servers & software", detail: "Looks up open ports and known bugs in Shodan's public data, and maps where your servers are." },
+    { step: "03", title: "HTTPS & headers", detail: "Checks your certificate, the HTTPS redirect and the security headers on your home page." },
   ],
   repository: [
-    { step: "01", title: "Dependencies", detail: "Checks supported manifests against public vulnerability records." },
-    { step: "02", title: "Configuration", detail: "Reviews public files for risky defaults and redacted secret patterns." },
-    { step: "03", title: "Project hygiene", detail: "Explains ignore rules, documentation gaps, and remediation priorities." },
+    { step: "01", title: "Dependencies", detail: "Checks the npm packages in package.json against the OSV.dev vulnerability database." },
+    { step: "02", title: "Secret files", detail: "Looks for committed .env files and private keys by file name, without reading them." },
+    { step: "03", title: "Project basics", detail: "Checks your .gitignore rules, README, SECURITY.md, Dependabot and lockfile." },
   ],
 };
 
@@ -77,7 +77,6 @@ export default function OverviewPage() {
   const [target, setTarget] = useState("");
   const [linkRepository, setLinkRepository] = useState(false);
   const [repository, setRepository] = useState("");
-  const [submissionMessage, setSubmissionMessage] = useState("");
   const [forceScan, setForceScan] = useState(false);
 
   const targetStatus = useMemo(() => normalizeTarget(target, mode), [target, mode]);
@@ -87,20 +86,16 @@ export default function OverviewPage() {
   function changeMode(nextMode) {
     setMode(nextMode);
     setTarget("");
-    setSubmissionMessage("");
     if (nextMode === "repository") setLinkRepository(false);
   }
 
   function fillSample(sample) {
     setTarget(sample);
-    setSubmissionMessage("");
   }
 
   function handleSubmit(event) {
     event.preventDefault();
     if (!canSubmit) return;
-
-    setSubmissionMessage("")
 
     if (mode === "repository") {
       startScan({ githubRepo: targetStatus.normalized, force: forceScan });
@@ -145,7 +140,7 @@ export default function OverviewPage() {
               </button>
               <button type="button" className={mode === "repository" ? styles.modeActive : ""} aria-pressed={mode === "repository"} onClick={() => changeMode("repository")}>
                 <span className={styles.modeIcon}><Icon name="code" /></span>
-                <span><strong>GitHub repository</strong><small>Dependencies, configuration, and hygiene</small></span>
+                <span><strong>GitHub repository</strong><small>Packages, secret files, and project basics</small></span>
                 <i className={styles.modeCheck}><Icon name="check" size={14} /></i>
               </button>
             </div>
@@ -158,7 +153,7 @@ export default function OverviewPage() {
                   id="scan-target"
                   type="text"
                   value={target}
-                  onChange={(event) => { setTarget(event.target.value); setSubmissionMessage(""); }}
+                  onChange={(event) => setTarget(event.target.value)}
                   placeholder={mode === "website" ? "example.com or https://example.com" : "github.com/owner/repository"}
                   autoComplete="off"
                   spellCheck="false"
@@ -177,14 +172,14 @@ export default function OverviewPage() {
               {mode === "website" && (
                 <div className={styles.linkedRepository}>
                   <label className={styles.checkLabel}>
-                    <input type="checkbox" checked={linkRepository} onChange={(event) => { setLinkRepository(event.target.checked); setSubmissionMessage(""); }} />
+                    <input type="checkbox" checked={linkRepository} onChange={(event) => setLinkRepository(event.target.checked)} />
                     <span className={styles.fakeCheckbox}><Icon name="check" size={12} /></span>
                     <span><Icon name="link" size={15} /> Link a public GitHub repository for more context</span>
                   </label>
                   {linkRepository && (
                     <motion.div className={styles.linkedInput} initial={reduceMotion ? false : { opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}>
                       <label htmlFor="linked-repository">GitHub repository</label>
-                      <input id="linked-repository" value={repository} onChange={(event) => { setRepository(event.target.value); setSubmissionMessage(""); }} placeholder="github.com/owner/repository" aria-invalid={Boolean(repository && !repositoryStatus.valid)} />
+                      <input id="linked-repository" value={repository} onChange={(event) => setRepository(event.target.value)} placeholder="github.com/owner/repository" aria-invalid={Boolean(repository && !repositoryStatus.valid)} />
                       <small>{repositoryStatus.message}</small>
                     </motion.div>
                   )}
@@ -198,8 +193,6 @@ export default function OverviewPage() {
                   <span>Run a fresh scan (ignore saved results from the last 12 hours)</span>
                 </label>
               </div>
-
-              {submissionMessage && <p className={styles.integrationNotice} role="status"><Icon name="shield" size={16} /> {submissionMessage}</p>}
             </form>
 
             <div className={styles.samples}>
@@ -209,7 +202,7 @@ export default function OverviewPage() {
           </div>
 
           <aside className={styles.deckAside} aria-label="Scan coverage preview">
-            <div className={styles.asideTopline}><span><Icon name="radar" size={16} /> SCAN SEQUENCE</span><strong>03 MODULES</strong></div>
+            <div className={styles.asideTopline}><span><Icon name="radar" size={16} /> SCAN SEQUENCE</span><strong>3 STEPS</strong></div>
             <div className={styles.checkList}>
               {CHECKS[mode].map((item, index) => (
                 <motion.article key={item.title} initial={reduceMotion ? false : { opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.18 + index * 0.08 }}>
@@ -220,13 +213,13 @@ export default function OverviewPage() {
             </div>
             <div className={styles.coverageNote}>
               <Icon name="shield" size={18} />
-              <div><strong>Non-destructive by design</strong><p>Public records and bounded requests only. Coverage varies by provider and target.</p></div>
+              <div><strong>Non-destructive by design</strong><p>Public records and a few ordinary requests only. What we can see depends on the site or repo.</p></div>
             </div>
           </aside>
         </motion.div>
 
         <motion.div className={styles.trustStrip} {...(reduceMotion ? {} : { initial: { opacity: 0 }, animate: { opacity: 1 }, transition: { delay: 0.35 } })}>
-          <span><Icon name="shield" size={15} /> PUBLIC DATA + BOUNDED CHECKS</span>
+          <span><Icon name="shield" size={15} /> PUBLIC DATA + READ-ONLY CHECKS</span>
           <i />
           <span><Icon name="spark" size={15} /> CLEAR, GUIDED EXPLANATIONS</span>
           <i />
@@ -235,24 +228,33 @@ export default function OverviewPage() {
         </motion.div>
         )}
 
-        {/* Also shown once finished, while moving to /overview/scan or after pressing Back from it. */}
+        {/* Also shown once finished, while moving to /scan/[id], after pressing Back from it, or after a failed scan. */}
         {phase !== "idle" && scan && (
           <motion.div key="scanning" className={styles.scanning} {...viewTransition}>
             <div className={styles.scanningIntro}>
-              <h1>{phase === "scanning" ? "Scanning" : "Scanned"} <em>{scan.domain ?? scan.githubRepo}</em></h1>
+              <h1>{phase === "scanning" ? "Scanning" : phase === "failed" ? "Couldn't scan" : "Scanned"} <em>{scan.domain ?? scan.githubRepo}</em></h1>
             </div>
 
-            <LiveScanTerminal lines={lines} theme={theme} domain={scan.domain ?? scan.githubRepo} />
+            <LiveScanTerminal
+              lines={lines}
+              theme={theme}
+              domain={scan.domain ?? scan.githubRepo}
+              status={phase === "scanning" ? "RUNNING" : phase === "failed" ? "STOPPED" : "DONE"}
+            />
             <div className={styles.scanProgress}>
-              <div className={styles.progressMeta}><span>Checks in progress</span><strong>{progress}%</strong></div>
+              <div className={styles.progressMeta}><span>{phase === "failed" ? "Scan stopped" : "Checks in progress"}</span><strong>{progress}%</strong></div>
               <div className={styles.progressTrack} role="progressbar" aria-label="Scan progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>
                 <span style={{ width: `${progress}%` }} />
               </div>
             </div>
             <div className={styles.scanActions}>
-              {phase === "scanning" ? (
+              {phase === "scanning" && (
                 <button type="button" className={styles.ghostButton} onClick={cancelScan}>Cancel scan</button>
-              ) : (
+              )}
+              {phase === "failed" && (
+                <button type="button" className={styles.ghostButton} onClick={cancelScan}>+ New scan</button>
+              )}
+              {phase === "results" && (
                 <>
                   <button type="button" className={styles.ghostButton} onClick={cancelScan}>+ New scan</button>
                   <RippleButton className={styles.scanButton} href={`/scan/${scan.id}`}>View results <Icon name="arrow" size={17} /></RippleButton>
