@@ -287,8 +287,6 @@ function ScoreBreakdown({ breakdown, checks, reduceMotion }) {
   );
 }
 
-const DOT_COLORS = { healthy: "bg-accent", attention: "bg-warm", critical: "bg-critical" };
-
 // Servers whose location lookup failed stay in the lists, without a place
 function locationLabel(node) {
   if (!node.located) {
@@ -300,42 +298,6 @@ function locationLabel(node) {
 function CdnBadge() {
   return (
     <span className="ml-1.5 rounded-sm border border-line px-1 text-[9px] font-medium text-muted align-middle">CDN</span>
-  );
-}
-
-// Phone-sized replacement for the globe's server list: servers grouped by country.
-function ServerGroups({ groups, selectedId, highlightIds, onSelect }) {
-  return (
-    <div className="flex flex-col gap-4 p-3.5" role="group" aria-label="Servers by country">
-      {groups.map((group) => (
-        <section key={group.label} aria-label={group.label}>
-          <h3 className="mb-2 text-xs font-semibold text-muted">
-            {group.label} · {group.nodes.length} {group.nodes.length === 1 ? "server" : "servers"}
-          </h3>
-          <ul className="flex flex-col gap-2">
-            {group.nodes.map((node) => (
-              <li key={node.id}>
-                <button
-                  type="button"
-                  aria-pressed={node.id === selectedId}
-                  onClick={() => onSelect(node.id)}
-                  className={`flex w-full min-w-0 cursor-pointer items-start gap-2.5 rounded-md border bg-surface px-2.5 py-2 text-left text-ink ${node.id === selectedId ? "border-accent" : "border-line"} ${highlightIds.includes(node.id) ? "ring-1 ring-accent" : ""}`}
-                >
-                  <i aria-hidden="true" className={`mt-1.5 size-2 flex-none rounded-full ${DOT_COLORS[node.status]}`} />
-                  <span className="sr-only">{STATUS_LABELS[node.status]}:</span>
-                  <span className="min-w-0 flex-1">
-                    <strong className="block truncate font-mono text-xs font-semibold">
-                      {node.host}{node.isCdn && <CdnBadge />}
-                    </strong>
-                    <small className="block break-words text-xs text-muted">{hostingProvider(node)} · {node.service}</small>
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ))}
-    </div>
   );
 }
 
@@ -353,7 +315,6 @@ export default function OverviewTab() {
   const [selectedNodeId, setSelectedNodeId] = useState(firstFinding?.nodeId || result.nodes[0]?.id);
   const [logOpen, setLogOpen] = useState(false);
   const [showAllServers, setShowAllServers] = useState(false);
-  const [mapOpen, setMapOpen] = useState(false);
   const [mapView, setMapView] = useState("globe");
   const [openFindingIds, setOpenFindingIds] = useState(() => new Set(firstFinding ? [firstFinding.id] : []));
   const [detailsOpenIds, setDetailsOpenIds] = useState(() => new Set());
@@ -366,17 +327,6 @@ export default function OverviewTab() {
     }
   }, [linkedId, reduceMotion]);
 
-  const countryGroups = [];
-  for (const node of result.nodes) {
-    const label = locationLabel(node);
-    let group = countryGroups.find((item) => item.label === label);
-    if (!group) {
-      group = { label, nodes: [] };
-      countryGroups.push(group);
-    }
-    group.nodes.push(node);
-  }
-
   const locatedNodes = result.nodes.filter((node) => node.located);
 
   const selectedNode = result.nodes.find((node) => node.id === selectedNodeId) || result.nodes[0];
@@ -384,7 +334,8 @@ export default function OverviewTab() {
   // Light up every server the selected finding affects. DNS and repo findings have no hosts
   const highlightIds = selectedFinding?.hosts ?? [];
 
-  // The short list still shows every server the selected finding affects
+  // The short list still shows every server the selected finding affects.
+  // Bigger screens show the first 6, and phones hide all but the first 3 in the list below
   let shownNodes = result.nodes;
   if (!showAllServers) {
     shownNodes = result.nodes.filter((node, index) => index < 6 || highlightIds.includes(node.id));
@@ -415,6 +366,10 @@ export default function OverviewTab() {
   // How much of the scan the score is really based on (T20)
   const ranChecks = (result.checks ?? []).filter((check) => check.status === "ok").length;
   const missedChecks = (result.checks ?? []).filter((check) => check.status === "unavailable").length;
+
+  // Viewers of a project scan can't re-scan, so the notes tell them who can
+  const canRescan = !result.projectId || result.role === "owner";
+  const retryText = canRescan ? "Re-scan to try again." : "A project owner can re-scan to try again.";
 
   function openFinding(id) {
     setOpenFindingIds((open) => new Set(open).add(id));
@@ -521,27 +476,9 @@ export default function OverviewTab() {
             </div>
           </div>
 
-          {result.nodes.length > 0 && (
-            <div className="md:hidden">
-              <ServerGroups groups={countryGroups} selectedId={selectedNode.id} highlightIds={highlightIds} onSelect={selectNode} />
-              {locatedNodes.length > 0 && (
-                <div className="border-t border-line px-3.5 py-3">
-                  <button
-                    type="button"
-                    aria-expanded={mapOpen}
-                    aria-controls="map-stage"
-                    onClick={() => setMapOpen((open) => !open)}
-                    className="w-full cursor-pointer rounded-md border border-line bg-surface px-3 py-2 text-sm font-semibold text-accent"
-                  >
-                    {mapOpen ? "Hide map" : "Show map"}
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-
+          {/* Phones get the same map and server list as bigger screens, just smaller */}
           {locatedNodes.length > 0 ? (
-            <div id="map-stage" className={`${styles.globeStage} flex-none h-75 md:h-[clamp(300px,38vh,380px)] ${mapOpen ? "" : "max-md:hidden"}`}>
+            <div id="map-stage" className={`${styles.globeStage} flex-none h-75 md:h-[clamp(300px,38vh,380px)]`}>
               <div role="group" aria-label="Map view" className="absolute top-3 left-3 z-[2] flex overflow-hidden rounded-md border border-line bg-surface-strong text-xs font-semibold">
                 {Object.entries(MAP_VIEWS).map(([view, label]) => (
                   <button
@@ -588,19 +525,19 @@ export default function OverviewTab() {
           )}
 
           {result.arcs.length > 0 && (
-            <p className={`m-0 px-4 py-2 text-center text-xs text-muted ${mapOpen ? "" : "max-md:hidden"}`}>
+            <p className="m-0 px-4 py-2 text-center text-xs text-muted">
               Lines connect your main site to your other servers. They don&apos;t show real traffic.
             </p>
           )}
 
           {result.nodes.length > 0 && (
-          <div className={`${styles.nodeList} max-md:hidden!`} role="group" aria-label="Servers">
-            {shownNodes.map((node) => (
+          <div className={styles.nodeList} role="group" aria-label="Servers">
+            {shownNodes.map((node, index) => (
               <button
                 key={node.id}
                 type="button"
                 data-status={node.status}
-                className={`${node.id === selectedNode.id ? styles.nodeActive : ""} ${highlightIds.includes(node.id) ? "ring-1 ring-accent" : ""}`}
+                className={`${node.id === selectedNode.id ? styles.nodeActive : ""} ${highlightIds.includes(node.id) ? "ring-1 ring-accent" : ""} ${!showAllServers && index >= 3 && !highlightIds.includes(node.id) ? "max-md:hidden!" : ""}`}
                 aria-pressed={node.id === selectedNode.id}
                 onClick={() => selectNode(node.id)}
               >
@@ -612,8 +549,8 @@ export default function OverviewTab() {
               </button>
             ))}
 
-            {result.nodes.length > 6 && (
-              <button type="button" className="col-span-full justify-self-start border-0! bg-transparent! p-0! text-sm! text-accent! font-semibold mt-1 cursor-pointer" onClick={() => setShowAllServers(!showAllServers)}>
+            {result.nodes.length > 3 && (
+              <button type="button" className={`col-span-full justify-self-start border-0! bg-transparent! p-0! text-sm! text-accent! font-semibold! mt-1 cursor-pointer ${result.nodes.length > 6 ? "" : "md:hidden!"}`} onClick={() => setShowAllServers(!showAllServers)}>
                 {showAllServers ? "Show fewer servers" : `Show all ${result.nodes.length} servers`}
               </button>
             )}
@@ -708,7 +645,7 @@ export default function OverviewTab() {
             <div className={styles.cardHead}>
               <h2 id="score-title">Exposure score</h2>
               <span className={styles.ratingBadge} data-tone={result.incomplete ? "warn" : scoreTone(result.score)}>
-                {result.incomplete ? "Incomplete, re-scan" : getRating(result.score)}
+                {result.incomplete ? (canRescan ? "Incomplete, re-scan" : "Incomplete") : getRating(result.score)}
               </span>
             </div>
             <div className={styles.scoreBody}>
@@ -755,22 +692,22 @@ export default function OverviewTab() {
             )}
             {result.cap?.applied && result.uncappedScore > result.score && (
               <p className="m-0 mt-3 text-xs text-critical">
-                Capped at 50 until the critical problem is fixed. Without it, you&apos;d score {result.uncappedScore}.
+                Capped at 50 until the critical {result.cap.checkIds.length > 1 ? "problems are" : "problem is"} fixed. Without the cap, you&apos;d score {result.uncappedScore}.
               </p>
             )}
             {result.incomplete && (
               <p className="m-0 mt-3 text-xs text-warm">
-                A critical check couldn&apos;t run, so there&apos;s no grade yet. Re-scan to try again.
+                A critical check couldn&apos;t run, so there&apos;s no grade yet. {retryText}
               </p>
             )}
             {result.breakdown?.some((item) => item.status === "unavailable") && (
               <p className="m-0 mt-3 text-xs text-muted">
-                &quot;Couldn&apos;t check&quot; means a free lookup service didn&apos;t answer. It isn&apos;t counted in your score. Re-scan to try again.
+                &quot;Couldn&apos;t check&quot; means a free lookup service didn&apos;t answer. It isn&apos;t counted in your score. {retryText}
               </p>
             )}
             {result.breakdown?.some((item) => item.status === "not_checked") && (
               <p className="m-0 mt-3 text-xs text-muted">
-                &quot;Not checked&quot; means the check doesn&apos;t apply here, or this scan is older than the check. Re-scan to run every check.
+                &quot;Not checked&quot; means the check doesn&apos;t apply here, or this scan is older than the check. {canRescan ? "Re-scan to run every check." : "A new scan runs every check."}
               </p>
             )}
             <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-line pt-3 text-xs text-muted">
@@ -799,7 +736,7 @@ export default function OverviewTab() {
               <h2 id="findings-title">Findings · worst first</h2>
               <span className="flex items-center gap-3">
                 {shownFindings.length > 0 && (
-                  <button type="button" onClick={toggleAllFindings} className="cursor-pointer text-xs! font-semibold text-accent">
+                  <button type="button" onClick={toggleAllFindings} className="cursor-pointer text-xs! font-semibold! text-accent">
                     {allFindingsOpen ? "Collapse all" : "Expand all"}
                   </button>
                 )}
@@ -881,7 +818,7 @@ export default function OverviewTab() {
                         aria-expanded={detailsOpenIds.has(finding.id)}
                         aria-controls={`finding-details-${finding.id}`}
                         onClick={() => toggleDetails(finding.id)}
-                        className="w-auto! cursor-pointer border-0! bg-transparent! p-0! text-xs! font-semibold text-accent"
+                        className="w-auto! cursor-pointer border-0! bg-transparent! p-0! text-xs! font-semibold! text-accent"
                       >
                         Technical details {detailsOpenIds.has(finding.id) ? "▲" : "▼"}
                       </button>

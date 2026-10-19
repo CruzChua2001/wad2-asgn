@@ -231,8 +231,8 @@ const ProjectPage = _ => {
                                             <Targets domain={invite.projects?.domain} repo={invite.projects?.github_repo} />
 
                                             <div className="flex items-center justify-end gap-2 text-sm font-semibold">
-                                                <button type="button" onClick={() => declineInvite(invite)} disabled={busyInviteId === invite.id} className="h-9 px-3 rounded-lg text-muted hover:text-critical cursor-pointer transition-colors duration-200 disabled:cursor-default disabled:opacity-60">Decline</button>
-                                                <button type="button" onClick={() => acceptInvite(invite)} disabled={busyInviteId === invite.id} className="h-9 px-4 rounded-lg bg-accent text-page hover:bg-accent-bright cursor-pointer transition-colors duration-200 disabled:cursor-default disabled:opacity-60">Accept</button>
+                                                <button type="button" onClick={() => declineInvite(invite)} disabled={busyInviteId === invite.id} className="h-9 px-3 rounded-lg text-muted hover:text-critical cursor-pointer transition-colors duration-200 disabled:cursor-default disabled:opacity-60">Decline<span className="sr-only"> the invite to {invite.projects?.name}</span></button>
+                                                <button type="button" onClick={() => acceptInvite(invite)} disabled={busyInviteId === invite.id} className="h-9 px-4 rounded-lg bg-accent text-page hover:bg-accent-bright cursor-pointer transition-colors duration-200 disabled:cursor-default disabled:opacity-60">Accept<span className="sr-only"> the invite to {invite.projects?.name}</span></button>
                                             </div>
                                         </motion.li>
                                     ))}

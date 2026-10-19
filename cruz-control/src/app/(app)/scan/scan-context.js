@@ -25,6 +25,7 @@ export function ScanProvider({ children }) {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const abortRef = useRef(null);
+  const loadingId = useRef(null);
   const { status, openAuth } = useAuth();
 
   const startScan = useCallback(async ({domain, githubRepo, projectId, force}) => {
@@ -140,15 +141,17 @@ export function ScanProvider({ children }) {
   }, [router])
 
   const loadResult = useCallback(async (id) => {
+    // Only the latest scan opened may set the result, so a slow earlier load can't overwrite it
+    loadingId.current = id;
     setResult(null);
     setSaveError("");
 
     try {
       const { data } = await api.get(`/api/scan/${id}`);
 
-      setResult(toResult(data));
+      if (loadingId.current === id) setResult(toResult(data));
     } catch (e) {
-      setResult({ error: e.response?.data?.error ?? "Could not load this scan." });
+      if (loadingId.current === id) setResult({ error: e.response?.data?.error ?? "Could not load this scan." });
     }
   }, []);
 

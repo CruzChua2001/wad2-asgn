@@ -91,7 +91,8 @@ export default function ExposureGlobe({ nodes, arcs, selectedId, highlightIds = 
     const controls = globe.controls();
     controls.autoRotate = !reduceMotion;
     controls.autoRotateSpeed = 0.45;
-    controls.enableZoom = true;
+    // The + and - buttons zoom, so the scroll wheel keeps scrolling the page
+    controls.enableZoom = false;
     controls.minDistance = MIN_DISTANCE;
     controls.maxDistance = MAX_DISTANCE;
     globe.pointOfView({ lat: 20, lng: 60, altitude: 2.3 }, 0);

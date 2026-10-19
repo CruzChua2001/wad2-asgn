@@ -45,7 +45,7 @@ function ResultTabs({ hasRepository, findingsCount }) {
               />
             )}
             <span className="relative">{tab.label}</span>
-            {tab.showsCount && <span className={`${styles.tabCount} relative`}>{findingsCount}</span>}
+            {tab.showsCount && <span className={`${styles.tabCount} relative`}>{findingsCount}<span className="sr-only">{findingsCount === 1 ? " finding" : " findings"}</span></span>}
           </Link>
         )
       })}
@@ -63,7 +63,7 @@ export default function ScanResultsLayout({ children }) {
     loadResult(id);
   }, [id, loadResult]);
 
-  if (!result) return <p className="text-muted">Loading scan...</p>;
+  if (!result) return <p role="status" className="text-muted">Loading scan...</p>;
 
   if (result.error) return <p role="alert" className="text-critical">{result.error}</p>;
 

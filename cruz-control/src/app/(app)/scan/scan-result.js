@@ -25,7 +25,8 @@ const lastScanTime = date => {
         return `${hours} ${hours === 1 ? "hour" : "hours"} ago`;
     }
 
-    return new Date(date).toLocaleDateString();
+    // Fixed format so every browser shows the same date, e.g. "17 Oct 2026"
+    return new Date(date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 }
 
 const getHostName = (ip, domainScan) => {
