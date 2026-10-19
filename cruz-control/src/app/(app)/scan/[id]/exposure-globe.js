@@ -160,13 +160,13 @@ export default function ExposureGlobe({ nodes, arcs, selectedId, highlightIds = 
           arcDashLength={0.45}
           arcDashGap={0.18}
           arcDashAnimateTime={reduceMotion ? 0 : 2600}
-          ringsData={pulsing}
+          ringsData={reduceMotion ? [] : pulsing}
           ringLat="lat"
           ringLng="lng"
           ringColor={(node) => (t) => withAlpha(statusColor(node), Math.max(0, 1 - t))}
           ringMaxRadius={4.5}
           ringPropagationSpeed={2.4}
-          ringRepeatPeriod={reduceMotion ? 0 : 1100}
+          ringRepeatPeriod={1100}
         />
       )}
     </div>

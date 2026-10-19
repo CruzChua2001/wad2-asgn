@@ -13,20 +13,34 @@ const getMembersByProjectId = async (req, res) => {
         return { ...member, email: tmp.user?.email };
     }))
 
-    const { data: invites } = await supabase.from("project_invites").select("id, email, role, expires_at").eq("project_id", req.params.id);
+    // Expired invites can't be accepted any more, so don't show them as pending
+    const { data: invites, error: inviteError } = await supabase.from("project_invites").select("id, email, role, expires_at")
+        .eq("project_id", req.params.id).gt("expires_at", new Date().toISOString());
+
+    if (inviteError) {
+        console.error("Failed to load invites:", inviteError);
+    }
 
     res.json({ members: withEmails, invites: invites ?? [] });
 }
 
 const inviteMember = async (req, res) => {
-    const email = req.body.email?.trim().toLowerCase();
+    const email = typeof req.body.email === "string" ? req.body.email.trim().toLowerCase() : "";
     const role = req.body.role === "owner" ? "owner" : "viewer";
 
     if (!email) {
         return res.status(400).json({ error: "Enter an email address." });
     }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return res.status(400).json({ error: "Enter a valid email address." });
+    }
 
-    const { data:members } = await supabase.from("project_members").select("user_id").eq("project_id", req.params.id);
+    const { data:members, error: memberError } = await supabase.from("project_members").select("user_id").eq("project_id", req.params.id);
+
+    if (memberError) {
+        console.error("Failed to load members:", memberError);
+        return res.status(500).json({ error: "Could not send the invite. Please try again." });
+    }
 
     const memberEmails = await Promise.all(members.map(async member => {
         const { data:tmp } = await supabase.auth.admin.getUserById(member.user_id);

@@ -77,7 +77,6 @@ export default function OverviewPage() {
   const [target, setTarget] = useState("");
   const [linkRepository, setLinkRepository] = useState(false);
   const [repository, setRepository] = useState("");
-  const [submissionMessage, setSubmissionMessage] = useState("");
   const [forceScan, setForceScan] = useState(false);
 
   const targetStatus = useMemo(() => normalizeTarget(target, mode), [target, mode]);
@@ -87,20 +86,16 @@ export default function OverviewPage() {
   function changeMode(nextMode) {
     setMode(nextMode);
     setTarget("");
-    setSubmissionMessage("");
     if (nextMode === "repository") setLinkRepository(false);
   }
 
   function fillSample(sample) {
     setTarget(sample);
-    setSubmissionMessage("");
   }
 
   function handleSubmit(event) {
     event.preventDefault();
     if (!canSubmit) return;
-
-    setSubmissionMessage("")
 
     if (mode === "repository") {
       startScan({ githubRepo: targetStatus.normalized, force: forceScan });
@@ -158,7 +153,7 @@ export default function OverviewPage() {
                   id="scan-target"
                   type="text"
                   value={target}
-                  onChange={(event) => { setTarget(event.target.value); setSubmissionMessage(""); }}
+                  onChange={(event) => setTarget(event.target.value)}
                   placeholder={mode === "website" ? "example.com or https://example.com" : "github.com/owner/repository"}
                   autoComplete="off"
                   spellCheck="false"
@@ -177,14 +172,14 @@ export default function OverviewPage() {
               {mode === "website" && (
                 <div className={styles.linkedRepository}>
                   <label className={styles.checkLabel}>
-                    <input type="checkbox" checked={linkRepository} onChange={(event) => { setLinkRepository(event.target.checked); setSubmissionMessage(""); }} />
+                    <input type="checkbox" checked={linkRepository} onChange={(event) => setLinkRepository(event.target.checked)} />
                     <span className={styles.fakeCheckbox}><Icon name="check" size={12} /></span>
                     <span><Icon name="link" size={15} /> Link a public GitHub repository for more context</span>
                   </label>
                   {linkRepository && (
                     <motion.div className={styles.linkedInput} initial={reduceMotion ? false : { opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}>
                       <label htmlFor="linked-repository">GitHub repository</label>
-                      <input id="linked-repository" value={repository} onChange={(event) => { setRepository(event.target.value); setSubmissionMessage(""); }} placeholder="github.com/owner/repository" aria-invalid={Boolean(repository && !repositoryStatus.valid)} />
+                      <input id="linked-repository" value={repository} onChange={(event) => setRepository(event.target.value)} placeholder="github.com/owner/repository" aria-invalid={Boolean(repository && !repositoryStatus.valid)} />
                       <small>{repositoryStatus.message}</small>
                     </motion.div>
                   )}
@@ -198,8 +193,6 @@ export default function OverviewPage() {
                   <span>Run a fresh scan (ignore saved results from the last 12 hours)</span>
                 </label>
               </div>
-
-              {submissionMessage && <p className={styles.integrationNotice} role="status"><Icon name="shield" size={16} /> {submissionMessage}</p>}
             </form>
 
             <div className={styles.samples}>
@@ -235,24 +228,33 @@ export default function OverviewPage() {
         </motion.div>
         )}
 
-        {/* Also shown once finished, while moving to /overview/scan or after pressing Back from it. */}
+        {/* Also shown once finished, while moving to /scan/[id], after pressing Back from it, or after a failed scan. */}
         {phase !== "idle" && scan && (
           <motion.div key="scanning" className={styles.scanning} {...viewTransition}>
             <div className={styles.scanningIntro}>
-              <h1>{phase === "scanning" ? "Scanning" : "Scanned"} <em>{scan.domain ?? scan.githubRepo}</em></h1>
+              <h1>{phase === "scanning" ? "Scanning" : phase === "failed" ? "Couldn't scan" : "Scanned"} <em>{scan.domain ?? scan.githubRepo}</em></h1>
             </div>
 
-            <LiveScanTerminal lines={lines} theme={theme} domain={scan.domain ?? scan.githubRepo} />
+            <LiveScanTerminal
+              lines={lines}
+              theme={theme}
+              domain={scan.domain ?? scan.githubRepo}
+              status={phase === "scanning" ? "RUNNING" : phase === "failed" ? "STOPPED" : "DONE"}
+            />
             <div className={styles.scanProgress}>
-              <div className={styles.progressMeta}><span>Checks in progress</span><strong>{progress}%</strong></div>
+              <div className={styles.progressMeta}><span>{phase === "failed" ? "Scan stopped" : "Checks in progress"}</span><strong>{progress}%</strong></div>
               <div className={styles.progressTrack} role="progressbar" aria-label="Scan progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>
                 <span style={{ width: `${progress}%` }} />
               </div>
             </div>
             <div className={styles.scanActions}>
-              {phase === "scanning" ? (
+              {phase === "scanning" && (
                 <button type="button" className={styles.ghostButton} onClick={cancelScan}>Cancel scan</button>
-              ) : (
+              )}
+              {phase === "failed" && (
+                <button type="button" className={styles.ghostButton} onClick={cancelScan}>+ New scan</button>
+              )}
+              {phase === "results" && (
                 <>
                   <button type="button" className={styles.ghostButton} onClick={cancelScan}>+ New scan</button>
                   <RippleButton className={styles.scanButton} href={`/scan/${scan.id}`}>View results <Icon name="arrow" size={17} /></RippleButton>

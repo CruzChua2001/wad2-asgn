@@ -25,19 +25,23 @@ const MemberModal = ({project, modalRef}) => {
 
     useEffect(() => {
         if (!project) return;
+        let ignore = false;
 
         const getMembers = async _ => {
             try {
                 const response = await api.get(`/api/project/${project.id}/member`);
+                if (ignore) return;
 
                 setMembers(response.data.members);
                 setInvites(response.data.invites);
             } catch (e) {
-                setErrorMsg(e.response?.data?.error ?? "Could not load members.")
+                if (!ignore) setErrorMsg(e.response?.data?.error ?? "Could not load members.")
             }
         }
 
         getMembers();
+        // A slow answer for the last project opened mustn't replace this one's list
+        return () => { ignore = true; };
     }, [project])
 
     const sendInvite = async event => {
@@ -76,14 +80,21 @@ const MemberModal = ({project, modalRef}) => {
         }
     }
 
-    const closeModal = _ => {
+    // Runs for the close button and for Escape, so the next project opens with an empty dialog
+    const resetModal = _ => {
         setErrorMsg("");
+        setEmail("");
+        setMembers([]);
+        setInvites([]);
+    }
+
+    const closeModal = _ => {
         modalRef.current.close();
     }
 
     return (
         // overflow-visible lets the role list hang below the dialog
-        <dialog ref={modalRef} className="m-auto w-[min(520px,calc(100%-32px))] p-0 overflow-visible rounded-2xl border border-line bg-surface text-ink shadow-2xl backdrop:bg-black/40 backdrop:backdrop-blur-sm open:animate-auth-dialog backdrop:animate-auth-fade-in">
+        <dialog ref={modalRef} onClose={resetModal} className="m-auto w-[min(520px,calc(100%-32px))] p-0 overflow-visible rounded-2xl border border-line bg-surface text-ink shadow-2xl backdrop:bg-black/40 backdrop:backdrop-blur-sm open:animate-auth-dialog backdrop:animate-auth-fade-in">
             <div className="grid gap-5 p-6 sm:p-8">
                 <div className="flex items-start justify-between gap-4">
                     <div className="grid gap-1">

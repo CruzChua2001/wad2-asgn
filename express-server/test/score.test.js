@@ -216,6 +216,13 @@ test("a domain with no servers skips the port and software checks", () => {
     assert.strictEqual(result.breakdown.find(item => item.category === "software").status, "not_checked");
 });
 
+test("a failed DNS lookup makes the scan incomplete instead of skipping the servers", () => {
+    const result = buildFindings(domainScan({ records: { a: null, ports: [] }, checks: { a: "unavailable", aaaa: "none" } }));
+    assert.strictEqual(result.incomplete, true);
+    assert.strictEqual(result.grade, null);
+    assert.strictEqual(result.breakdown.find(item => item.category === "ports").status, "unavailable");
+});
+
 test("a failed file lookup doesn't count packages as passed", () => {
     const result = buildFindings(repoScan({
         records: { basics: null, gitignore: null, readme: null },

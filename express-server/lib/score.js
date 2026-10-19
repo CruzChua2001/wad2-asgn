@@ -51,8 +51,11 @@ const getDomainChecks = (result, findings) => {
     const has = id => findings.some(finding => finding.id === id);
     const count = checkId => findings.filter(finding => finding.checkId === checkId).length;
 
-    // No servers means there was nothing for Shodan to check
-    const ports = (result.records.ports ?? []).length === 0 ? "not_checked" : statusOf(checks.ports);
+    // No servers means there was nothing for Shodan to check, unless the DNS lookup itself failed
+    let ports = statusOf(checks.ports);
+    if ((result.records.ports ?? []).length === 0) {
+        ports = checks.a === "unavailable" || checks.aaaa === "unavailable" ? "unavailable" : "not_checked";
+    }
 
     // Without Shodan's ports there are no cve ids to look up, so the software checks didn't run either
     let software = ports;

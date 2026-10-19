@@ -42,7 +42,8 @@ export function ScanProvider({ children }) {
     const expected = (domain ? 7 : 0) + (githubRepo ? 3 : 0); // domain modules + repo modules
     let completed = 0;
 
-    // Cancel switch for the request
+    // Cancel switch for the request, stopping any scan that is still running first
+    abortRef.current?.abort();
     abortRef.current = new AbortController();
 
     try {
@@ -68,6 +69,7 @@ export function ScanProvider({ children }) {
           message = body.error ?? message;
         } catch (_) { /* non-JSON body */ }
         addLine("bad", message);
+        setPhase("failed");
         return;
       }
 
@@ -93,6 +95,7 @@ export function ScanProvider({ children }) {
         } else if (event.type === "error") {
           finished = true;
           addLine("bad", event.message ?? "Scan failed. Please try again.");
+          setPhase("failed");
         }
       };
 
@@ -127,10 +130,12 @@ export function ScanProvider({ children }) {
 
       if (!finished) {
         addLine("bad", "Scan failed. Please try again.");
+        setPhase("failed");
       }
     } catch (error) {
       if (error.name === "AbortError") return; // user cancelled, terminal was reset
       addLine("bad", "Scan failed. Please try again.");
+      setPhase("failed");
     }
   }, [router])
 
@@ -156,7 +161,8 @@ export function ScanProvider({ children }) {
     setSaveError("");
 
     try {
-      await api.post("/api/project", { name: result.title, domain: result.domain, githubRepo: result.linkedRepository, scanId });
+      // Project names can be up to 60 characters, and long hostnames or repo names are longer
+      await api.post("/api/project", { name: result.title.slice(0, 60), domain: result.domain, githubRepo: result.linkedRepository, scanId });
       setSavedScanId(scanId);
     } catch (e) {
       setSaveError(e.response?.data?.error ?? "Could not save to project.");

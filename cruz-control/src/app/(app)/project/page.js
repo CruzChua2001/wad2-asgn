@@ -58,6 +58,7 @@ const ProjectPage = _ => {
     const [memberProject, setMemberProject] = useState(null);
     const [deletingProject, setDeletingProject] = useState(null);
     const [invites, setInvites] = useState([]);
+    const [busyInviteId, setBusyInviteId] = useState(null);
     const [loaded, setLoaded] = useState(false);
 
     useEffect(() => {
@@ -106,7 +107,8 @@ const ProjectPage = _ => {
     }
 
     const openMemberModal = project => {
-        setMemberProject(project);
+        // A new object each time, so reopening the same project loads its members again
+        setMemberProject({ ...project });
         memberRef.current.showModal();
     }
 
@@ -150,7 +152,10 @@ const ProjectPage = _ => {
         setProjects(projects.filter(tmp => tmp.id !== project.id));
     }
 
+    // busyInviteId stops a double click sending the same request twice
     const acceptInvite = async invite => {
+        setBusyInviteId(invite.id);
+        setError("");
         try {
             await api.post(`/api/invite/${invite.id}/accept`);
             setInvites(invites.filter(i => i.id !== invite.id));
@@ -159,15 +164,21 @@ const ProjectPage = _ => {
             setProjects(response.data);
         } catch (e) {
             setError(e.response?.data?.error ?? "Could not accept the invite.");
+        } finally {
+            setBusyInviteId(null);
         }
     }
 
     const declineInvite = async invite => {
+        setBusyInviteId(invite.id);
+        setError("");
         try {
             await api.delete(`/api/invite/${invite.id}`);
             setInvites(invites.filter(i => i.id !== invite.id));
         } catch (e) {
             setError(e.response?.data?.error ?? "Could not decline the invite.");
+        } finally {
+            setBusyInviteId(null);
         }
     }
 
@@ -220,8 +231,8 @@ const ProjectPage = _ => {
                                             <Targets domain={invite.projects?.domain} repo={invite.projects?.github_repo} />
 
                                             <div className="flex items-center justify-end gap-2 text-sm font-semibold">
-                                                <button type="button" onClick={() => declineInvite(invite)} className="h-9 px-3 rounded-lg text-muted hover:text-critical cursor-pointer transition-colors duration-200">Decline</button>
-                                                <button type="button" onClick={() => acceptInvite(invite)} className="h-9 px-4 rounded-lg bg-accent text-page hover:bg-accent-bright cursor-pointer transition-colors duration-200">Accept</button>
+                                                <button type="button" onClick={() => declineInvite(invite)} disabled={busyInviteId === invite.id} className="h-9 px-3 rounded-lg text-muted hover:text-critical cursor-pointer transition-colors duration-200 disabled:cursor-default disabled:opacity-60">Decline</button>
+                                                <button type="button" onClick={() => acceptInvite(invite)} disabled={busyInviteId === invite.id} className="h-9 px-4 rounded-lg bg-accent text-page hover:bg-accent-bright cursor-pointer transition-colors duration-200 disabled:cursor-default disabled:opacity-60">Accept</button>
                                             </div>
                                         </motion.li>
                                     ))}
@@ -263,7 +274,10 @@ const ProjectPage = _ => {
                                         <p className="flex flex-wrap items-baseline gap-x-1.5 min-w-0">
                                             <span className="text-3xl font-semibold leading-none tabular-nums">{p.latestScan.score}</span>
                                             <span className="text-sm text-muted">/100</span>
-                                            <span className={`ml-1 text-sm font-semibold ${scoreTone(p.latestScan.score)}`}>{getRating(p.latestScan.score)}</span>
+                                            {/* No grade means a critical check couldn't run, like "Incomplete, re-scan" on the Overview */}
+                                            <span className={`ml-1 text-sm font-semibold ${p.latestScan.grade ? scoreTone(p.latestScan.score) : "text-warm"}`}>
+                                                {p.latestScan.grade ? getRating(p.latestScan.score) : "Incomplete"}
+                                            </span>
                                         </p>
                                     ) : (
                                         <p className="text-sm text-muted">Not scanned yet</p>
