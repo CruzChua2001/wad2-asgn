@@ -69,17 +69,17 @@ function fixStep(text) {
 }
 
 // Used by the Overview's findings and the Report Card's "Fix these first"
-export default function FixText({ text }) {
+export default function FixText({ text, label = "What to do:" }) {
   const blocks = parseFix(text);
 
   // A one-line fix reads as a sentence after the label, like it always has
   if (blocks.length === 1 && blocks[0].kind === "p") {
-    return <span className="mt-1.5 block"><strong>What to do:</strong> {fixInline(blocks[0].text)}</span>;
+    return <span className="mt-1.5 block">{label && <strong>{label} </strong>}{fixInline(blocks[0].text)}</span>;
   }
 
   return (
     <div className="mt-1.5">
-      <strong>What to do:</strong>
+      {label && <strong>{label}</strong>}
       <div className="mt-1 flex flex-col gap-1.5">
         {blocks.map((block, index) => {
           if (block.kind === "pre") {
