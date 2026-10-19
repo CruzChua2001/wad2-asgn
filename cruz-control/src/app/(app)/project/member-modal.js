@@ -94,12 +94,12 @@ const MemberModal = ({project, modalRef}) => {
 
     return (
         // overflow-visible lets the role list hang below the dialog
-        <dialog ref={modalRef} onClose={resetModal} className="m-auto w-[min(520px,calc(100%-32px))] p-0 overflow-visible rounded-2xl border border-line bg-surface text-ink shadow-2xl backdrop:bg-black/40 backdrop:backdrop-blur-sm open:animate-auth-dialog backdrop:animate-auth-fade-in">
+        <dialog ref={modalRef} onClose={resetModal} aria-labelledby="member-modal-title" className="m-auto w-[min(520px,calc(100%-32px))] p-0 overflow-visible rounded-2xl border border-line bg-surface text-ink shadow-2xl backdrop:bg-black/40 backdrop:backdrop-blur-sm open:animate-auth-dialog backdrop:animate-auth-fade-in">
             <div className="grid gap-5 p-6 sm:p-8">
                 <div className="flex items-start justify-between gap-4">
                     <div className="grid gap-1">
                         <span className="font-mono text-[11px] tracking-[0.18em] text-muted">MEMBERS</span>
-                        <h2 className="text-2xl font-semibold">{project?.name}</h2>
+                        <h2 id="member-modal-title" className="text-2xl font-semibold"><span className="sr-only">Members of </span>{project?.name}</h2>
                     </div>
                     <button aria-label="Close" onClick={closeModal} className="p-2 rounded-lg text-muted hover:text-ink cursor-pointer">
                         <LuX size={18} />
@@ -108,8 +108,8 @@ const MemberModal = ({project, modalRef}) => {
 
                 {errorMsg && <p role="alert" className="text-sm text-critical">{errorMsg}</p>}
 
-                {/* Long lists scroll here, so the dialog never grows off screen */}
-                <ul className="grid gap-2 max-h-48 overflow-y-auto text-sm">
+                {/* Long lists scroll here, and the cap shrinks on short screens, so the invite form stays on screen */}
+                <ul className="grid gap-2 max-h-[min(12rem,30vh)] overflow-y-auto text-sm">
                     {members.map(member => (
                         <li key={member.user_id} className="flex justify-between gap-2">
                             <span className="break-all">{member.email}</span>

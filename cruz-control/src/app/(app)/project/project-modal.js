@@ -34,14 +34,14 @@ const ProjectModal = ({ editing, modalRef, form, updateField, onSubmit, error, l
     };
 
     return (
-        <dialog ref={modalRef} className="m-auto w-[min(560px,calc(100%-32px))] p-0 rounded-2xl border border-line bg-surface text-ink shadow-2xl backdrop:bg-black/40 backdrop:backdrop-blur-sm open:animate-auth-dialog backdrop:animate-auth-fade-in">
+        <dialog ref={modalRef} aria-labelledby="project-modal-title" className="m-auto w-[min(560px,calc(100%-32px))] p-0 rounded-2xl border border-line bg-surface text-ink shadow-2xl backdrop:bg-black/40 backdrop:backdrop-blur-sm open:animate-auth-dialog backdrop:animate-auth-fade-in">
             <form onSubmit={onSubmit} className="grid gap-5 p-8">
                 <div className="flex items-start justify-between gap-4">
                     <div className="grid gap-1">
                         <span className="font-mono text-[11px] tracking-[0.18em] text-muted">
                             {editing ? "EDIT PROJECT" : "NEW PROJECT"}
                         </span>
-                        <h2 className="text-2xl font-semibold">
+                        <h2 id="project-modal-title" className="text-2xl font-semibold">
                             {editing ? "Update your project" : "Track a site or repo"}
                         </h2>
                         <p className="text-sm text-muted">
@@ -61,14 +61,14 @@ const ProjectModal = ({ editing, modalRef, form, updateField, onSubmit, error, l
 
                 <fieldset className="grid gap-3 p-4 border border-dashed border-line rounded-xl">
                     <legend className="px-2 font-mono text-[11px] tracking-[0.18em] text-muted">CHOOSE WHAT TO SCAN · PICK ONE OR BOTH</legend>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-2 text-sm">
                          {TARGETS.map(t => (
                             <button
                                 key={t.key}
                                 type="button"
                                 aria-pressed={isShown(t.key)}
                                 onClick={() => toggleTarget(t.key)}
-                                className={`flex items-center gap-2 h-9 px-3 rounded-full border text-sm ${isShown(t.key) ? "border-accent bg-accent-soft/20 text-ink" : "border-line text-muted hover:text-ink cursor-pointer"}`}
+                                className={`flex items-center gap-2 h-9 px-3 rounded-full border ${isShown(t.key) ? "border-accent bg-accent-soft/20 text-ink" : "border-line text-muted hover:text-ink cursor-pointer"}`}
                             >
                                 {isShown(t.key) ? <LuCheck size={14} /> : <LuPlus size={14} />} {t.label}
                             </button>

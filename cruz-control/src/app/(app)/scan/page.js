@@ -35,7 +35,7 @@ const CHECKS = {
   repository: [
     { step: "01", title: "Dependencies", detail: "Checks the npm packages in package.json against the OSV.dev vulnerability database." },
     { step: "02", title: "Secret files", detail: "Looks for committed .env files and private keys by file name, without reading them." },
-    { step: "03", title: "Project hygiene", detail: "Checks your .gitignore rules, README, SECURITY.md, Dependabot and lockfile." },
+    { step: "03", title: "Project basics", detail: "Checks your .gitignore rules, README, SECURITY.md, Dependabot and lockfile." },
   ],
 };
 
@@ -140,7 +140,7 @@ export default function OverviewPage() {
               </button>
               <button type="button" className={mode === "repository" ? styles.modeActive : ""} aria-pressed={mode === "repository"} onClick={() => changeMode("repository")}>
                 <span className={styles.modeIcon}><Icon name="code" /></span>
-                <span><strong>GitHub repository</strong><small>Dependencies, configuration, and hygiene</small></span>
+                <span><strong>GitHub repository</strong><small>Packages, secret files, and project basics</small></span>
                 <i className={styles.modeCheck}><Icon name="check" size={14} /></i>
               </button>
             </div>
@@ -202,7 +202,7 @@ export default function OverviewPage() {
           </div>
 
           <aside className={styles.deckAside} aria-label="Scan coverage preview">
-            <div className={styles.asideTopline}><span><Icon name="radar" size={16} /> SCAN SEQUENCE</span><strong>03 MODULES</strong></div>
+            <div className={styles.asideTopline}><span><Icon name="radar" size={16} /> SCAN SEQUENCE</span><strong>3 STEPS</strong></div>
             <div className={styles.checkList}>
               {CHECKS[mode].map((item, index) => (
                 <motion.article key={item.title} initial={reduceMotion ? false : { opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.18 + index * 0.08 }}>
@@ -213,13 +213,13 @@ export default function OverviewPage() {
             </div>
             <div className={styles.coverageNote}>
               <Icon name="shield" size={18} />
-              <div><strong>Non-destructive by design</strong><p>Public records and bounded requests only. Coverage varies by provider and target.</p></div>
+              <div><strong>Non-destructive by design</strong><p>Public records and a few ordinary requests only. What we can see depends on the site or repo.</p></div>
             </div>
           </aside>
         </motion.div>
 
         <motion.div className={styles.trustStrip} {...(reduceMotion ? {} : { initial: { opacity: 0 }, animate: { opacity: 1 }, transition: { delay: 0.35 } })}>
-          <span><Icon name="shield" size={15} /> PUBLIC DATA + BOUNDED CHECKS</span>
+          <span><Icon name="shield" size={15} /> PUBLIC DATA + READ-ONLY CHECKS</span>
           <i />
           <span><Icon name="spark" size={15} /> CLEAR, GUIDED EXPLANATIONS</span>
           <i />

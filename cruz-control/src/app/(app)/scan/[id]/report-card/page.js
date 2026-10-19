@@ -69,7 +69,7 @@ function categoryRows(breakdown, checks, findings) {
 }
 
 function rowReason(row) {
-  if (row.status === "unavailable") return "Couldn't check this time. Re-scan to try again.";
+  if (row.status === "unavailable") return "Couldn't check this time. A new scan can try again.";
   if (row.status === "not_checked") return "Doesn't apply here, or this scan is older than the check.";
   if (row.related.length === 0) return "No problems found";
 
@@ -155,7 +155,10 @@ export default function ReportCardTab() {
   const lostTotal = rows.reduce((sum, row) => sum + row.lost, 0);
   const anyRan = rows.some((row) => row.status === "ok");
 
-  let summary = result.incomplete ? "Incomplete, re-scan" : getRating(result.score);
+  // Viewers of a project scan can't re-scan, so the notes tell them who can
+  const canRescan = !result.projectId || result.role === "owner";
+
+  let summary = result.incomplete ? (canRescan ? "Incomplete, re-scan" : "Incomplete") : getRating(result.score);
   if (showSideScores) {
     for (const side of sides) {
       if (side.score !== null) summary += ` · ${side.label} ${side.score}`;
@@ -203,12 +206,12 @@ export default function ReportCardTab() {
 
             {result.cap?.applied && result.uncappedScore > result.score && (
               <p className="m-0 mt-4 text-xs text-critical">
-                Capped at 50 until the critical problem is fixed. Without it, you&apos;d score {result.uncappedScore}.
+                Capped at 50 until the critical {result.cap.checkIds.length > 1 ? "problems are" : "problem is"} fixed. Without the cap, you&apos;d score {result.uncappedScore}.
               </p>
             )}
             {result.incomplete && (
               <p className="m-0 mt-4 text-xs text-warm">
-                A critical check couldn&apos;t run, so there&apos;s no grade yet. Re-scan to try again.
+                A critical check couldn&apos;t run, so there&apos;s no grade yet. {canRescan ? "Re-scan to try again." : "A project owner can re-scan to try again."}
               </p>
             )}
           </div>
