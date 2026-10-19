@@ -17,12 +17,12 @@ const lastScanTime = date => {
         return "just now"
     } 
     if (minutes < 60) {
-        return `${minutes} minute(s) ago`;
+        return `${minutes} ${minutes === 1 ? "minute" : "minutes"} ago`;
     }
 
     const hours = Math.floor(minutes / 60);
     if (hours < 24) {
-        return `${hours} hour(s) ago`;
+        return `${hours} ${hours === 1 ? "hour" : "hours"} ago`;
     }
 
     return new Date(date).toLocaleDateString();
@@ -102,8 +102,6 @@ const getFindings = data => {
             learnMore: finding.learnMore,
             source: SOURCE_LABELS[finding.source],
             hosts: finding.hosts,
-            files: finding.files,
-            cves: finding.cves,
             details: finding.details,
             gain: gainOf(finding.checkId),
             sharedCheck: checkUses[finding.checkId] > 1,

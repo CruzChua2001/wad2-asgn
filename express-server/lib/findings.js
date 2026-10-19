@@ -86,11 +86,10 @@ const getDomainFindings = result => {
             checkId: "software-kev",
             kind: "issue",
             severity: "critical",
-            title: `Server software may have ${exploited.length} bug(s) attackers are already using`,
+            title: `Server software may have ${exploited.length} ${exploited.length === 1 ? "bug" : "bugs"} attackers are already using`,
             explain: `Your servers report software versions that are listed as affected by bugs being used in real attacks right now. ${VERSION_GUESS}`,
             fix: `Update the software on ${nameList(groupHosts(exploited)) || "these servers"} to the latest version as soon as possible.`,
             source: "domain",
-            cves: exploited.map(cve => cve.id),
             hosts: groupHosts(exploited),
             details: { cves: exploited },
         });
@@ -103,11 +102,10 @@ const getDomainFindings = result => {
             checkId: "software-serious",
             kind: "issue",
             severity: "high",
-            title: `Server software may have ${serious.length} serious known bug(s)`,
+            title: `Server software may have ${serious.length} serious known ${serious.length === 1 ? "bug" : "bugs"}`,
             explain: `Your servers report software versions that are listed as affected by publicly known, high-risk bugs. ${VERSION_GUESS}`,
             fix: `Update the software on ${nameList(groupHosts(serious)) || "these servers"} to the latest version.`,
             source: "domain",
-            cves: serious.map(cve => cve.id),
             hosts: groupHosts(serious),
             details: { cves: serious },
         });
@@ -120,11 +118,10 @@ const getDomainFindings = result => {
             checkId: "software-other",
             kind: "issue",
             severity: "medium",
-            title: `Server software may have ${other.length} smaller known bug(s)`,
+            title: `Server software may have ${other.length} smaller known ${other.length === 1 ? "bug" : "bugs"}`,
             explain: `Your servers report software versions that are listed as affected by publicly known bugs that are less likely to be used in attacks. ${VERSION_GUESS}`,
             fix: `Plan to update the software on ${nameList(groupHosts(other)) || "these servers"}.`,
             source: "domain",
-            cves: other.map(cve => cve.id),
             hosts: groupHosts(other),
             details: { cves: other },
         });
@@ -147,7 +144,7 @@ const getDomainFindings = result => {
             kind: "issue",
             severity,
             title: `${name} is open to the internet`,
-            explain: `Port ${port} is reachable on ${servers.length} server(s), so anyone online can try to break in.`,
+            explain: `Port ${port} is reachable on ${servers.length} ${servers.length === 1 ? "server" : "servers"}, so anyone online can try to break in.`,
             fix: `Close port ${port} on ${nameList(servers.map(item => item.ip))} in your firewall, or only allow access through a VPN.`,
             source: "domain",
             hosts: servers.map(item => item.ip),
@@ -401,10 +398,11 @@ const getRepoFindings = result => {
             kind: "issue",
             severity: "critical",
             title: "Secret files are committed to the repo",
-            explain: `${records.sensitiveFiles.length} file(s) like .env or private keys are public. Anyone can download them and use the passwords or keys inside.`,
+            explain: records.sensitiveFiles.length === 1
+                ? "1 file like .env or a private key is public. Anyone can download it and use the passwords or keys inside."
+                : `${records.sensitiveFiles.length} files like .env or private keys are public. Anyone can download them and use the passwords or keys inside.`,
             fix: `Delete ${nameList(records.sensitiveFiles)} from ${repoName}, add them to .gitignore, then change (rotate) every password or key inside. They stay in the git history, so deleting alone isn't enough.`,
             source: "repo",
-            files: records.sensitiveFiles,
             details: { files: records.sensitiveFiles },
         });
     }
@@ -418,7 +416,7 @@ const getRepoFindings = result => {
             kind: "issue",
             severity: "high",
             title: `${pkg.name} ${pkg.version} has known vulnerabilities`,
-            explain: `This package has ${pkg.vulns.length} known security bug(s): ${pkg.vulns.join(", ")}.`,
+            explain: `This package has ${pkg.vulns.length} known security ${pkg.vulns.length === 1 ? "bug" : "bugs"}: ${pkg.vulns.join(", ")}.`,
             fix: `You have ${pkg.name} ${pkg.version}. Run npm install ${pkg.name}@latest (or npm audit fix), then check your app still works.`,
             source: "repo",
             details: { package: pkg.name, version: pkg.version, vulns: pkg.vulns },
@@ -441,7 +439,7 @@ const getRepoFindings = result => {
             details: {},
         });
     }
-    if (basics && !basics.dependabot) {
+    if (basics?.packageJson && !basics.dependabot) {
         findings.push({
             id: "repo-dependabot",
             category: "repo-basics",
@@ -552,7 +550,6 @@ const getRepoFindings = result => {
                 explain: "Your GitHub Actions workflow puts text from an issue, pull request or commit message straight into a command. Anyone can write that text, so they can put commands in it and your workflow will run them with access to your secrets.",
                 fix: `Keep the text out of your commands in ${nameList(places)}.\n1. Move it into a variable: add an \`env:\` block to the step, like \`MY_TEXT: \${{ github.event.issue.title }}\`.\n2. Use the variable: in your \`run:\` step, write \`"$MY_TEXT"\` instead of \`\${{ ... }}\`.\nTip: keep the double quotes, so spaces in the text can't start a second command.`,
                 source: "repo",
-                files: dangerous.map(item => item.file),
                 details: { lines: dangerous },
             });
         }
@@ -568,7 +565,6 @@ const getRepoFindings = result => {
                 explain: `${noPermissions.length === 1 ? "One workflow doesn't" : `${noPermissions.length} workflows don't`} say what the workflow is allowed to do, so GitHub may give it write access to your whole repository. A mistake or a bad action could then change your code or releases.`,
                 fix: `Say what each workflow may do in ${nameList(noPermissions)}.\n1. Open the file: the top of it, above \`jobs:\`.\n2. Paste these two lines there:\n\`\`\`\npermissions:\n  contents: read\n\`\`\`\nTip: if one job really needs to write, give that job its own permissions: block.`,
                 source: "repo",
-                files: noPermissions,
                 details: { files: noPermissions },
             });
         }
@@ -589,7 +585,6 @@ const getRepoFindings = result => {
                 fix: `Lock these actions to an exact version: ${nameList(actions)}.\n1. Find the commit ID: open the action on GitHub, go to Releases, pick the version you use, and copy its full 40-character commit ID.\n2. Replace the tag: change \`uses: ${actions[0]}\` to \`uses: ${name}@<commit ID> # ${tag}\`.\nTip: Dependabot can keep these up to date for you.`,
                 source: "repo",
                 learnMore: { label: "Read about the tj-actions incident", url: "https://github.com/advisories/GHSA-mrrh-fwg8-r2c3" },
-                files: [...new Set(unpinned.map(item => item.file))],
                 details: { actions: unpinned },
             });
         }

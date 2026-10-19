@@ -58,6 +58,15 @@ function safeLearnMore(learnMore) {
   return learnMore?.url?.startsWith("https://") ? learnMore : null;
 }
 
+// Findings with no server name what was scanned, so the line never starts with a stray dot
+function findingWhere(finding, result) {
+  const host = result.nodes.find((node) => node.id === finding.nodeId)?.host;
+  // source is already the label from SOURCE_LABELS
+  const target = finding.source === "Repository" ? result.linkedRepository : result.domain;
+
+  return host ?? target ?? null;
+}
+
 // T18: what fixing this finding would win back. The API works out gain, we only read it.
 function showGain(finding, incomplete) {
   return !incomplete && Boolean(finding.checkId) && Boolean(finding.gain);
@@ -640,7 +649,7 @@ export default function OverviewTab() {
                 {selectedFinding ? (
                   <div className={styles.fix}>
                     <h3>What to do</h3>
-                    <p>{selectedFinding.fix}</p>
+                    <FixText text={selectedFinding.fix} label={null} />
                   </div>
                 ) : (
                   <p className={styles.noIssue}>No issues were listed for this server.</p>
@@ -819,7 +828,7 @@ export default function OverviewTab() {
                       )}
                     </span>
                     <strong>{finding.title}</strong>
-                    <small>{result.nodes.find((node) => node.id === finding.nodeId)?.host} · {finding.source}</small>
+                    <small>{findingWhere(finding, result) ? `${findingWhere(finding, result)} · ` : ""}{finding.source}</small>
                   </button>
 
                   {openFindingIds.has(finding.id) && (
