@@ -17,6 +17,9 @@ const checkTargets = (domain, githubRepo) => {
     return { domain: site?.hostname ?? null, githubRepo: repo?.repo ?? null };
 }
 
+// The projects table allows names of 1 to 60 characters
+const cleanName = name => (typeof name === "string" ? name.trim() : "");
+
 const getProjects = async (req, res) => {
     const { data, error } = await supabase.from("project_members").select("role, projects(*)").eq("user_id", req.user.id);
 
@@ -25,7 +28,9 @@ const getProjects = async (req, res) => {
         return res.status(500).json({ error: "Could not load projects. Please try again." });
     }
 
-    const projects = data.map(m => ({ ...m.projects, role: m.role, latestScan: null, scores: [] }));
+    // Newest project first, the same order the page adds new ones in
+    const projects = data.map(m => ({ ...m.projects, role: m.role, latestScan: null, scores: [] }))
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
     if (projects.length === 0) {
         return res.json(projects);
@@ -58,10 +63,14 @@ const getProjects = async (req, res) => {
 };
 
 const createProject = async (req, res) => {
-    const { name, domain, githubRepo, scanId } = req.body;
+    const { domain, githubRepo, scanId } = req.body;
+    const name = cleanName(req.body.name);
 
     if (!name || (!domain && !githubRepo)) {
         return res.status(400).json({ error: "Add a name and at least a domain or GitHub repo." });
+    }
+    if (name.length > 60) {
+        return res.status(400).json({ error: "Keep the project name to 60 characters or fewer." });
     }
 
     const targets = checkTargets(domain, githubRepo);
@@ -113,9 +122,14 @@ const createProject = async (req, res) => {
 };
 
 const updateProjectById = async (req, res) => {
-    const { name, domain, githubRepo } = req.body;
+    const { domain, githubRepo } = req.body;
+    const name = cleanName(req.body.name);
+
     if (!name || (!domain && !githubRepo)) {
         return res.status(400).json({ error: "Add a name and at least a domain or GitHub repo." });
+    }
+    if (name.length > 60) {
+        return res.status(400).json({ error: "Keep the project name to 60 characters or fewer." });
     }
 
     const targets = checkTargets(domain, githubRepo);

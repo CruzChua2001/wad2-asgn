@@ -251,13 +251,15 @@ const getDomainFindings = result => {
                 details: certDetails,
             });
         } else if (cert.daysLeft < 30) {
+            const expiresIn = cert.daysLeft === 0 ? "today" : `in ${cert.daysLeft} ${cert.daysLeft === 1 ? "day" : "days"}`;
+
             findings.push({
                 id: "cert-expiring",
                 category: "certificate",
                 checkId: "cert-validity",
                 kind: "issue",
                 severity: "medium",
-                title: `Your HTTPS certificate expires in ${cert.daysLeft} day(s)`,
+                title: `Your HTTPS certificate expires ${expiresIn}`,
                 explain: "Once it expires, browsers show visitors a security warning instead of your site.",
                 fix: `Renew the certificate for ${host} now, and turn on automatic renewal so it can't lapse.`,
                 source: "domain",
@@ -325,7 +327,9 @@ const getDomainFindings = result => {
                 severity: "medium",
                 title: headers.hsts ? "HSTS is too short" : "HSTS is missing",
                 explain: "HSTS tells browsers to always use HTTPS for your site, so nobody can quietly switch visitors back to plain HTTP.",
-                fix: `Once HTTPS works on every page of ${host}, add the header Strict-Transport-Security: max-age=31536000.`,
+                fix: headers.hsts
+                    ? `Raise max-age in the Strict-Transport-Security header on ${host} to 31536000 (one year).`
+                    : `Once HTTPS works on every page of ${host}, add the header Strict-Transport-Security: max-age=31536000.`,
                 source: "domain",
                 details: webDetails("Strict-Transport-Security", headers.hsts),
             });

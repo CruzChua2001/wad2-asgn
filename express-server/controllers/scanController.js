@@ -20,6 +20,9 @@ const cacheLimit = _ => new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString()
 
 const ev = (kind, text, module = null) => ({ type: "event", kind, text, module });
 
+// "1 server", "3 servers"
+const plural = (count, word) => `${count} ${count === 1 ? word : `${word}s`}`;
+
 // Count DNS records
 const dnsRecordCount = dns => {
     const r = dns.records;
@@ -36,7 +39,7 @@ const certLabel = certificate => {
 
     if (certificate.checks.certificate === "none") return "no HTTPS found";
     if (!cert) return "couldn't check";
-    return `${cert.trusted ? "trusted" : "not trusted"}, ${cert.daysLeft < 0 ? "expired" : `${cert.daysLeft} day(s) left`}`;
+    return `${cert.trusted ? "trusted" : "not trusted"}, ${cert.daysLeft < 0 ? "expired" : `${plural(cert.daysLeft, "day")} left`}`;
 }
 
 // Count how many of the 4 security headers the home page sends
@@ -70,7 +73,13 @@ async function* scanDomainSteps(hostname, domain) {
         checkSubdomains(domain)
     ]);
 
-    yield ev(dns.checks.a === "unavailable" ? "warn" : "ok", `DNS: ${dnsRecordCount(dns)} record(s) found.`, "dns");
+    // No address and no name servers means the domain doesn't exist, so there's nothing to scan
+    if (dns.checks.a === "none" && dns.checks.aaaa === "none" && dns.checks.ns === "none") {
+        yield ev("bad", "DNS: no records found for this domain.", "dns");
+        return null;
+    }
+
+    yield ev(dns.checks.a === "unavailable" ? "warn" : "ok", `DNS: ${plural(dnsRecordCount(dns), "record")} found.`, "dns");
     yield ev(subdomains.checks.subdomains === "unavailable" ? "warn" : "ok",
         `Subdomains: ${subdomains.records.subdomains.length} found.`, "subdomains");
 
@@ -86,7 +95,7 @@ async function* scanDomainSteps(hostname, domain) {
     const ips = [...new Set([...hostIps, ...subdomainIps])];
 
     // Find open ports via Shodan using each ip and the server location for the globe
-    yield ev("info", `Checking open ports on ${ips.length} server(s)...`, "open-ports");
+    yield ev("info", `Checking open ports on ${plural(ips.length, "server")}...`, "open-ports");
     yield ev("info", "Locating servers around the world...", "geolocation");
     yield ev("info", "Checking the HTTPS certificate...", "certificate");
     yield ev("info", "Checking website security settings...", "headers");
@@ -98,7 +107,7 @@ async function* scanDomainSteps(hostname, domain) {
         checkHeaders(hostname)
     ]);
 
-    yield ev("ok", `Ports: ${openPortCount(ports)} open across ${ips.length} server(s).`, "open-ports");
+    yield ev("ok", `Ports: ${openPortCount(ports)} open across ${plural(ips.length, "server")}.`, "open-ports");
     yield ev("ok", "Server locations mapped.", "geolocation");
     yield ev(certificate.records.certificate?.trusted ? "ok" : "warn", `Certificate: ${certLabel(certificate)}.`, "certificate");
     yield ev(headerCount(headers) === 4 ? "ok" : "warn",
@@ -144,6 +153,7 @@ async function* getDomainScanIdSteps(site, force) {
     }
 
     const result = yield* scanDomainSteps(site.hostname, site.domain);
+    if (!result) return null;
 
     const { data, error } = await supabase.from("domain_scans").insert({ domain: site.hostname, result }).select("id").single();
     if (error) throw error;
@@ -269,6 +279,12 @@ const createScan = async (req, res) => {
 
     try {
         const domainScanId = site ? await drain(getDomainScanIdSteps(site, force), write) : null;
+
+        if (site && !domainScanId) {
+            write({ type: "error", message: "We couldn't find that website. Check the spelling and try again." });
+            return res.end();
+        }
+
         const repoScan = repo ? await drain(getRepoScanIdSteps(repo.repo, force), write) : null;
 
         if (repo && !repoScan.id) {

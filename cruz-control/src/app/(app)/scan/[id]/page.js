@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useSearchParams } from "next/navigation";
 import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useState } from "react";
 import { LuChevronDown, LuCircleCheck, LuTriangleAlert } from "react-icons/lu";
@@ -162,13 +163,6 @@ function FindingDetails({ details }) {
   );
 }
 
-// The Report Card links to /scan/<id>#finding-<finding id>, so that finding opens first
-function linkedFindingId(findings) {
-  if (typeof window === "undefined") return null;
-  const hash = decodeURIComponent(window.location.hash);
-  return findings.find((finding) => hash === `#finding-${finding.id}`)?.id ?? null;
-}
-
 // ip-api's org is the hosting company; older cached scans only have isp.
 function hostingProvider(node) {
   return node.org || node.provider || "Unknown";
@@ -195,7 +189,7 @@ function ScoreRing({ score, reduceMotion }) {
           transition={{ duration: 1.1, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
         />
       </svg>
-      <div className={styles.ringNumber} aria-label={`${score} out of 100`}>
+      <div className={styles.ringNumber} role="img" aria-label={`${score} out of 100`}>
         <strong aria-hidden="true"><NumberTicker value={score} delay={0.25} /></strong>
         <span className={styles.ringScale} aria-hidden="true">/100</span>
       </div>
@@ -351,7 +345,9 @@ export default function OverviewTab() {
   const [theme] = useTheme();
   const reduceMotion = Boolean(useReducedMotion());
   const findings = [...result.findings].sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
-  const [linkedId] = useState(() => linkedFindingId(findings));
+  // The Report Card links to /scan/<id>?finding=<finding id>, so that finding opens first
+  const searchParams = useSearchParams();
+  const [linkedId] = useState(() => findings.find((finding) => finding.id === searchParams.get("finding"))?.id ?? null);
   const firstFinding = findings.find((finding) => finding.id === linkedId) ?? findings[0];
   const [selectedFindingId, setSelectedFindingId] = useState(firstFinding?.id);
   const [selectedNodeId, setSelectedNodeId] = useState(firstFinding?.nodeId || result.nodes[0]?.id);
@@ -395,6 +391,10 @@ export default function OverviewTab() {
   }
 
   const affectsNode = (finding, nodeId) => Boolean(finding.hosts?.includes(nodeId));
+  // Server details only shows the fix for a finding on that server
+  const nodeFinding = selectedNode && selectedFinding && affectsNode(selectedFinding, selectedNode.id)
+    ? selectedFinding
+    : findings.find((finding) => selectedNode && affectsNode(finding, selectedNode.id));
   const nodeFindingCount = selectedNode ? findings.filter((finding) => affectsNode(finding, selectedNode.id)).length : 0;
   const filterNode = result.nodes.find((node) => node.id === filterNodeId);
   const shownFindings = filterNode ? findings.filter((finding) => affectsNode(finding, filterNode.id)) : findings;
@@ -455,7 +455,8 @@ export default function OverviewTab() {
     } else {
       open.add(finding.id);
       setSelectedFindingId(finding.id);
-      setSelectedNodeId(finding.nodeId);
+      // DNS and repo findings have no server, so keep the one already selected
+      if (finding.nodeId) setSelectedNodeId(finding.nodeId);
     }
 
     setOpenFindingIds(open);
@@ -466,7 +467,7 @@ export default function OverviewTab() {
     setFilterNodeId(null);
     setOpenFindingIds(new Set(seriousFindings.map((finding) => finding.id)));
     setSelectedFindingId(seriousFindings[0].id);
-    setSelectedNodeId(seriousFindings[0].nodeId);
+    if (seriousFindings[0].nodeId) setSelectedNodeId(seriousFindings[0].nodeId);
     document.getElementById("findings-title")?.closest("section").scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
   }
 
@@ -548,7 +549,7 @@ export default function OverviewTab() {
                     type="button"
                     aria-pressed={mapView === view}
                     onClick={() => setMapView(view)}
-                    className={`cursor-pointer px-3 py-1.5 ${mapView === view ? "bg-accent-soft text-ink" : "text-muted"}`}
+                    className={`cursor-pointer px-3 py-1.5 focus-visible:-outline-offset-2! ${mapView === view ? "bg-accent-soft text-ink" : "text-muted"}`}
                   >
                     {label}
                   </button>
@@ -575,7 +576,7 @@ export default function OverviewTab() {
                 />
               )}
               <p className={styles.globeHint}>
-                {mapView === "globe" ? "Drag to spin · click a dot or a server below" : "Scroll to zoom, drag to move · click a dot or a server below"}
+                {mapView === "globe" ? "Drag to spin · click a dot or a server below" : "Ctrl + scroll or pinch to zoom, drag to move · click a dot or a server below"}
               </p>
             </div>
           ) : (
@@ -640,16 +641,16 @@ export default function OverviewTab() {
                   <p className="m-0 flex flex-wrap gap-x-2 text-xs text-muted">
                     {nodeFindingCount} {nodeFindingCount === 1 ? "finding" : "findings"} on this server
                     {filterNodeId !== selectedNode.id && (
-                      <button type="button" onClick={() => showNodeFindings(selectedNode.id)} className="cursor-pointer font-semibold text-accent">
+                      <button type="button" onClick={() => showNodeFindings(selectedNode.id)} className="cursor-pointer font-semibold! text-accent">
                         Show only these
                       </button>
                     )}
                   </p>
                 )}
-                {selectedFinding ? (
+                {nodeFinding ? (
                   <div className={styles.fix}>
                     <h3>What to do</h3>
-                    <FixText text={selectedFinding.fix} label={null} />
+                    <FixText text={nodeFinding.fix} label={null} />
                   </div>
                 ) : (
                   <p className={styles.noIssue}>No issues were listed for this server.</p>
@@ -736,10 +737,20 @@ export default function OverviewTab() {
                   Show {seriousFindings.length === 1 ? "it" : "them"}
                 </button>
               </div>
-            ) : (
+            ) : !result.incomplete && result.score >= 80 ? (
               <div className="mt-4 flex items-start gap-2.5 rounded-lg border border-accent/30 bg-accent/8 p-3 text-sm text-ink">
                 <LuCircleCheck aria-hidden="true" className="mt-0.5 flex-none text-accent" />
                 <p className="m-0">{result.summary}</p>
+              </div>
+            ) : (
+              // No serious problems, but the score is still low or not every check ran
+              <div className="mt-4 flex items-start gap-2.5 rounded-lg border border-warm/30 bg-warm/8 p-3 text-sm text-ink">
+                <LuTriangleAlert aria-hidden="true" className="mt-0.5 flex-none text-warm" />
+                <p className="m-0">
+                  {result.incomplete
+                    ? "No serious problems in the checks that ran."
+                    : "No serious problems, but the smaller ones add up. Start with the ones worth the most points."}
+                </p>
               </div>
             )}
             {result.cap?.applied && result.uncappedScore > result.score && (
@@ -765,7 +776,7 @@ export default function OverviewTab() {
             <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-line pt-3 text-xs text-muted">
               {result.checks?.length > 0 && (
                 <span>
-                  Based on {ranChecks} checks.
+                  Based on {ranChecks} {ranChecks === 1 ? "check" : "checks"}.
                   {missedChecks > 0 && ` ${missedChecks} couldn't run and ${missedChecks === 1 ? "isn't" : "aren't"} counted.`}
                 </span>
               )}
@@ -798,7 +809,7 @@ export default function OverviewTab() {
             {filterNode && (
               <p className="m-0 mb-3 text-xs text-muted">
                 Showing findings for <span className="font-mono text-ink">{filterNode.host}</span> ·{" "}
-                <button type="button" onClick={() => setFilterNodeId(null)} className="cursor-pointer font-semibold text-accent">
+                <button type="button" onClick={() => setFilterNodeId(null)} className="cursor-pointer font-semibold! text-accent">
                   Show all
                 </button>
               </p>

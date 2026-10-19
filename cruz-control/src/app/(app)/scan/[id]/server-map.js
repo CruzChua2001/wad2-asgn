@@ -65,15 +65,15 @@ export default function ServerMap({ nodes, arcs, selectedId, highlightIds = [], 
     const element = containerRef.current;
     if (!element) return undefined;
     function handleWheel(event) {
-      // Fully zoomed out and scrolling down: let the page scroll instead
-      if (view.k === 1 && event.deltaY > 0) return;
+      // Only zoom with Ctrl held (a trackpad pinch sends it too), so a plain scroll still scrolls the page
+      if (!event.ctrlKey) return;
       event.preventDefault();
       const box = element.getBoundingClientRect();
-      setView(zoomAround(view, Math.exp(-event.deltaY / 500), event.clientX - box.left, event.clientY - box.top, size));
+      setView((current) => zoomAround(current, Math.exp(-event.deltaY / 500), event.clientX - box.left, event.clientY - box.top, size));
     }
     element.addEventListener("wheel", handleWheel, { passive: false });
     return () => element.removeEventListener("wheel", handleWheel);
-  }, [view, size]);
+  }, [size]);
 
   const located = nodes.filter((node) => node.located);
   const serverCountries = new Set(located.map(countryName));

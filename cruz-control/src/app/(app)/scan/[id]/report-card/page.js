@@ -273,7 +273,7 @@ export default function ReportCardTab() {
                 <span className="font-mono text-sm font-semibold text-muted" aria-hidden="true">{index + 1}</span>
                 <div className="min-w-0 flex-1">
                   <p className="m-0 text-sm font-semibold text-ink">
-                    <Link href={`/scan/${id}#finding-${finding.id}`} className="no-underline hover:text-accent! hover:underline">
+                    <Link href={`/scan/${id}?finding=${encodeURIComponent(finding.id)}`} className="no-underline hover:text-accent! hover:underline">
                       {finding.title}
                     </Link>
                   </p>

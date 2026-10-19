@@ -16,7 +16,7 @@ const Field = ({ icon: Icon, label, ...props }) => (
 
 const TARGETS = [
     { key: "domain", label: "Domain", icon: LuGlobe, placeholder: "example.com" },
-    { key: "githubRepo", label: "GitHub repository", icon: LuCodeXml, placeholder: "github.com/repo" },
+    { key: "githubRepo", label: "GitHub repository", icon: LuCodeXml, placeholder: "github.com/owner/repo" },
 ];
 
 const ProjectModal = ({ editing, modalRef, form, updateField, onSubmit, error, loading }) => {
@@ -44,7 +44,11 @@ const ProjectModal = ({ editing, modalRef, form, updateField, onSubmit, error, l
                         <h2 className="text-2xl font-semibold">
                             {editing ? "Update your project" : "Track a site or repo"}
                         </h2>
-                        <p className="text-sm text-muted">Add a domain, a GitHub repository, or both. We&apos;ll scan it straight away.</p>
+                        <p className="text-sm text-muted">
+                            {editing
+                                ? "Changes apply from your next scan."
+                                : "Add a domain, a GitHub repository, or both. We'll scan it straight away."}
+                        </p>
                     </div>
                     <button type="button" aria-label="Close" onClick={() => modalRef.current.close()} className="p-2 rounded-lg text-muted hover:text-ink hover:bg-surface-soft">
                         <LuX size={18} />

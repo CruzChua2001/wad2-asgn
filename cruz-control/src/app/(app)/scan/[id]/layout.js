@@ -34,7 +34,7 @@ function ResultTabs({ hasRepository, findingsCount }) {
         const href = `/scan/${id}${tab.href}`;
         const active = href === pathname;
         return (
-          <Link key={href} href={href} className={active ? styles.tabActive : ""} aria-current={active ? "page" : undefined}>
+          <Link key={href} href={href} className={`${active ? styles.tabActive : ""} focus-visible:-outline-offset-2!`} aria-current={active ? "page" : undefined}>
             {/* One pill that slides to the active tab */}
             {active && (
               <motion.span
@@ -77,6 +77,9 @@ export default function ScanResultsLayout({ children }) {
     router.push("/scan");
   }
 
+  // Re-scan is hidden on a brand-new scan, unless a lookup failed and the page says to re-scan
+  const canRetry = result.incomplete || result.breakdown?.some((item) => item.status === "unavailable");
+
   const reveal = (delay = 0) => (reduceMotion
     ? {}
     : { initial: { opacity: 0, y: 14 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.45, delay, ease: [0.22, 1, 0.36, 1] } });
@@ -103,7 +106,7 @@ export default function ScanResultsLayout({ children }) {
               </button>
           )}
 
-          {result.scannedAgo !== "just now" && (!result.projectId || result.role === "owner") && (
+          {(result.scannedAgo !== "just now" || canRetry) && (!result.projectId || result.role === "owner") && (
             <button type="button" className={SECONDARY} onClick={rescan}><LuRefreshCw aria-hidden="true" /> Re-scan</button>
           )}
 
