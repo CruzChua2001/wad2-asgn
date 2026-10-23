@@ -84,7 +84,7 @@ export default function FixText({ text, label = "What to do:" }) {
         {blocks.map((block, index) => {
           if (block.kind === "pre") {
             return (
-              <pre key={index} className="m-0 overflow-x-auto rounded border border-line bg-surface-soft p-2 font-mono text-xs!">
+              <pre key={index} className="m-0 max-w-full overflow-x-auto rounded border border-line bg-surface-soft p-2 font-mono text-xs!">
                 {block.text}
               </pre>
             );
