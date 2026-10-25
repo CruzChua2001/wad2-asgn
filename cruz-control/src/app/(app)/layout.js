@@ -8,6 +8,8 @@ import { useTheme } from "@/lib/theme-store";
 import ProfileMenu from "./scan/profile-menu";
 import { ScanProvider, useScan } from "./scan/scan-context";
 import styles from "@/styles/overview/overview.module.css";
+import ProductTour from "@/components/tour/product-tour";  
+import { useState } from "react";
 
 const BrandMark = _ => {
   return <span className="brand-mark" aria-hidden="true"><span /><span /><span /><span /></span>;
@@ -40,6 +42,7 @@ export default function OverviewLayout({ children }) {
   const pathname = usePathname();
   const showingResults = pathname.startsWith("/scan/");
   const navProps = href => pathname.startsWith(href) ? { className: styles.navActive, "aria-current": "page" } : {};
+  const [tour, setTour] = useState(null);
 
   return (
     <ScanProvider>
@@ -57,6 +60,13 @@ export default function OverviewLayout({ children }) {
             <Link href="/learn" {...navProps("/learn")}>Learn</Link>
           </nav>
           <div className={styles.headerActions} aria-label="Account and display controls">
+            <button
+              type="button"
+              onClick={() => setTour(showingResults ? "results" : "intro")}
+              className="rounded-full border border-line px-3 py-1.5 text-xs! font-semibold! text-accent hover:bg-accent-soft"
+            >
+              Take the tour
+            </button>
             <AnimatedThemeToggler theme={theme} onThemeChange={updateTheme} />
             <ProfileMenu />
           </div>
@@ -66,6 +76,7 @@ export default function OverviewLayout({ children }) {
           {children}
         </section>
 
+        <ProductTour part={tour} onStart={setTour} onClose={() => setTour(null)} />
         {/* Placeholder for the AI assistant. No behaviour yet; hand off to the AI team. */}
         <button type="button" className={styles.askCruz} aria-label="Ask Cruz, AI assistant (coming soon)" title="AI assistant coming soon">
           {/* eslint-disable-next-line @next/next/no-img-element -- tiny static icon, next/image adds nothing here */}

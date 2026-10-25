@@ -1,0 +1,268 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
+import { LuBot } from "react-icons/lu";
+import { useAuth } from "@/components/auth/auth-provider";
+import { TOUR_PARTS } from "./tour-steps";
+
+// "Seen" is remembered separately for each part, for each signed-in account and for guests, in this browser.
+// To see the automatic tour again while testing, run this in the browser console, then refresh:
+//   Object.keys(localStorage).filter(k => k.startsWith("cruz-control-tour")).forEach(k => localStorage.removeItem(k))
+const STORAGE_KEY = "cruz-control-tour-seen-v1";
+const CARD_WIDTH = 352;
+const CARD_HEIGHT = 260; // a rough height, only used to decide whether the card fits below or above
+const GAP = 16;
+const PAD = 6;
+const RESULTS_READY = 'section[aria-labelledby="score-title"]'; // present once a scan's results have loaded
+
+// If storage is blocked we say "seen", so people are never nagged on every page load.
+const readSeen = (part, who) => {
+    try {
+        return localStorage.getItem(`${STORAGE_KEY}:${part}:${who}`) === "1";
+    } catch {
+        return true;
+    }
+};
+
+const markSeen = (part, who) => {
+    try {
+        localStorage.setItem(`${STORAGE_KEY}:${part}:${who}`, "1");
+    } catch {
+        // Storage blocked: nothing to do.
+    }
+};
+
+// Leave out steps that don't fit this scan (for example the map on a repository scan).
+// Only called from an effect, so document exists.
+const shouldSkip = step => {
+    if (step.skipIfMissing && step.selector && !document.querySelector(step.selector)) return true;
+    if (step.skipIfPresent && document.querySelector(step.skipIfPresent)) return true;
+    return false;
+};
+
+// part: "intro" | "results" | null (null = closed)
+export default function ProductTour({ part, onStart, onClose }) {
+    const { status, user } = useAuth();
+    const pathname = usePathname();
+    const who = status === "authenticated" ? user?.id : status === "guest" ? "guest" : null; // null while loading
+    const open = part !== null && part !== undefined;
+    const [step, setStep] = useState(0);
+    const [filtered, setFiltered] = useState({ part: null, list: [] }); // the steps that apply to this scan
+    const [view, setView] = useState(null); // { part, step, vw, vh, rect } for the step that was measured
+    const cardRef = useRef(null);
+    const nextRef = useRef(null);
+    const onStartRef = useRef(onStart);
+
+    useEffect(() => {
+        onStartRef.current = onStart;
+    });
+
+    // Automatic start, once for each part:
+    //  - intro: on the scan form
+    //  - results: as soon as a scan's results have loaded
+    useEffect(() => {
+        if (!who || open) return;
+
+        if (pathname === "/scan" && !readSeen("intro", who)) {
+            const timer = setTimeout(() => onStartRef.current("intro"), 900);
+            return () => clearTimeout(timer);
+        }
+
+        if (pathname.startsWith("/scan/") && !readSeen("results", who)) {
+            let tries = 0;
+            const poll = setInterval(() => {
+                tries += 1;
+                if (document.querySelector(RESULTS_READY)) {
+                    clearInterval(poll);
+                    onStartRef.current("results");
+                } else if (tries > 40) {
+                    clearInterval(poll); // gave up after about 12 seconds
+                }
+            }, 300);
+            return () => clearInterval(poll);
+        }
+    }, [who, pathname, open]);
+
+    // Work out which steps apply each time a part opens.
+    useEffect(() => {
+        if (!open) return;
+        const frame = requestAnimationFrame(() => {
+            setFiltered({ part, list: TOUR_PARTS[part].filter(s => !shouldSkip(s)) });
+        });
+        return () => cancelAnimationFrame(frame);
+    }, [open, part, pathname]);
+
+    const base = open ? TOUR_PARTS[part] : [];
+    const steps = filtered.part === part ? filtered.list : base;
+    const current = steps[step] ?? steps[steps.length - 1] ?? {};
+    const selector = current.selector;
+
+    // Find the highlighted element, scroll it into view and keep measuring it.
+    useEffect(() => {
+        if (!open) return;
+
+        const target = selector ? document.querySelector(selector) : null;
+        target?.scrollIntoView({ block: "center" });
+
+        const measure = () => {
+            const el = selector ? document.querySelector(selector) : null;
+            const r = el?.getBoundingClientRect();
+            const visible = r && r.width > 0 && r.height > 0;
+            setView({
+                part,
+                step,
+                vw: window.innerWidth,
+                vh: window.innerHeight,
+                rect: visible ? { top: r.top, left: r.left, width: r.width, height: r.height } : null,
+            });
+        };
+
+        const frame = requestAnimationFrame(measure);
+        window.addEventListener("resize", measure);
+        window.addEventListener("scroll", measure, true);
+        return () => {
+            cancelAnimationFrame(frame);
+            window.removeEventListener("resize", measure);
+            window.removeEventListener("scroll", measure, true);
+        };
+    }, [open, part, step, selector]);
+
+    // Move the keyboard focus into the card on every step.
+    useEffect(() => {
+        if (open) nextRef.current?.focus();
+    }, [open, part, step]);
+
+    if (!open) return null;
+
+    const finish = () => {
+        if (who) markSeen(part, who);
+        setStep(0);
+        setView(null);
+        onClose();
+    };
+
+    const isLast = step >= steps.length - 1;
+    const goNext = () => (isLast ? finish() : setStep(step + 1));
+    const goBack = () => setStep(Math.max(0, step - 1));
+
+    // Escape closes the tour. Tab stays inside the card.
+    const onKeyDown = e => {
+        if (e.key === "Escape") {
+            finish();
+            return;
+        }
+        if (e.key !== "Tab") return;
+        const items = cardRef.current?.querySelectorAll("button");
+        if (!items?.length) return;
+        const first = items[0];
+        const lastItem = items[items.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault();
+            lastItem.focus();
+        } else if (!e.shiftKey && document.activeElement === lastItem) {
+            e.preventDefault();
+            first.focus();
+        }
+    };
+
+    const ready = view?.part === part && view?.step === step; // false for a moment while the new step is being measured
+    const rect = ready ? view.rect : null;
+
+    // Where the card goes: next to the highlighted element, or in the middle of the screen.
+    const cardWidth = ready ? Math.min(CARD_WIDTH, view.vw - 32) : CARD_WIDTH;
+    let cardClass = "left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2";
+    let cardStyle = { width: cardWidth };
+
+    if (rect) {
+        cardClass = "";
+        const left = Math.min(Math.max(rect.left + rect.width / 2 - cardWidth / 2, 16), view.vw - cardWidth - 16);
+        const below = rect.top + rect.height + PAD + GAP;
+        if (below + CARD_HEIGHT <= view.vh) {
+            cardStyle = { width: cardWidth, left, top: below };
+        } else if (rect.top - PAD - GAP - CARD_HEIGHT >= 0) {
+            cardStyle = { width: cardWidth, left, bottom: view.vh - rect.top + PAD + GAP };
+        } else {
+            cardStyle = { width: cardWidth, left, bottom: 16 };
+        }
+    }
+
+    return (
+        <>
+            {/* Catches clicks so the page behind can't be used during the tour. preventDefault keeps focus in the card. */}
+            <div className="fixed inset-0 z-60" onMouseDown={e => e.preventDefault()} aria-hidden="true" />
+
+            {/* The dimmed background, with a hole around the highlighted element */}
+            {rect ? (
+                <div
+                    className="pointer-events-none fixed z-61 rounded-xl shadow-[0_0_0_9999px_rgba(0,0,0,0.6)] ring-2 ring-accent transition-all duration-300 motion-reduce:transition-none"
+                    style={{ top: rect.top - PAD, left: rect.left - PAD, width: rect.width + PAD * 2, height: rect.height + PAD * 2 }}
+                    aria-hidden="true"
+                />
+            ) : (
+                <div className="pointer-events-none fixed inset-0 z-61 bg-black/60" aria-hidden="true" />
+            )}
+
+            <section
+                ref={cardRef}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="tour-title"
+                aria-describedby="tour-text"
+                onKeyDown={onKeyDown}
+                className={`fixed z-62 rounded-2xl border border-accent/40 bg-surface p-5 shadow-2xl ${cardClass}`}
+                style={cardStyle}
+            >
+                <div className="flex items-center gap-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent">
+                        <LuBot className="h-5 w-5" aria-hidden="true" />
+                    </span>
+                    <div className="min-w-0">
+                        <h2 id="tour-title" className="font-semibold uppercase tracking-wide text-accent">
+                            {current.title}
+                        </h2>
+                        <p className="text-xs uppercase tracking-wide text-muted">
+                            Step {step + 1} of {steps.length}
+                        </p>
+                    </div>
+                </div>
+
+                <p id="tour-text" className="mt-3 text-sm text-ink">
+                    {current.text}
+                </p>
+
+                <div className="mt-4 flex items-center justify-between gap-3">
+                    <div className="flex gap-1.5" aria-hidden="true">
+                        {steps.map((s, i) => (
+                            <span key={s.id} className={`h-1.5 w-1.5 rounded-full ${i === step ? "bg-accent" : "bg-line"}`} />
+                        ))}
+                    </div>
+                    <div className="flex items-center gap-2">
+                        {!isLast && (
+                            <button type="button" onClick={finish} className="px-2 py-1.5 text-xs! text-muted hover:text-ink">
+                                Skip
+                            </button>
+                        )}
+                        {step > 0 && (
+                            <button
+                                type="button"
+                                onClick={goBack}
+                                className="rounded-full border border-line px-3 py-1.5 text-xs! font-semibold! tracking-wide text-accent hover:bg-accent-soft"
+                            >
+                                BACK
+                            </button>
+                        )}
+                        <button
+                            ref={nextRef}
+                            type="button"
+                            onClick={goNext}
+                            className="rounded-full border border-accent bg-accent-soft px-3 py-1.5 text-xs! font-semibold! tracking-wide text-accent hover:bg-accent hover:text-page"
+                        >
+                            {isLast ? (part === "intro" ? "GOT IT" : "DONE") : "NEXT"}
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </>
+    );
+}
