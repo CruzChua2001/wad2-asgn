@@ -133,6 +133,26 @@ function FindingDetails({ details }) {
         </div>
       )}
 
+      {details.lines && (
+        <div>
+          <dt className="font-semibold">Lines</dt>
+          {details.lines.map((item, index) => (
+            <dd key={index} className="ml-0 font-mono break-all">{item.file}:{item.line} {item.text}</dd>
+          ))}
+        </div>
+      )}
+
+      {details.actions && (
+        <div>
+          <dt className="font-semibold">Actions</dt>
+          {details.actions.map((item, index) => <dd key={index} className="ml-0 font-mono break-all">{item.file}: {item.uses}</dd>)}
+        </div>
+      )}
+
+      {details.missing && (
+        <div><dt className="inline font-semibold">Missing</dt><dd className="ml-2 inline">{details.missing.join(", ")}</dd></div>
+      )}
+
       {details.package && (
         <>
           <div><dt className="inline font-semibold">Package</dt><dd className="ml-2 inline font-mono">{details.package} {details.version}</dd></div>
@@ -161,6 +181,13 @@ function FindingDetails({ details }) {
       )}
     </dl>
   );
+}
+
+// Shown in the map card when no server can be placed on the map
+function noMapMessage(result) {
+  if (result.nodes.length === 0) return "We didn't find any servers for this website.";
+  if (result.geoStatus === "unavailable") return "We couldn't look up where these servers are right now. Try re-scanning later.";
+  return "We couldn't place these servers on a map.";
 }
 
 // ip-api's org is the hosting company; older cached scans only have isp.
@@ -518,9 +545,7 @@ export default function OverviewTab() {
             </div>
           ) : (
             <p className="m-0 border-b border-line px-4 py-8 text-center text-sm text-muted">
-              {result.geoStatus === "unavailable"
-                ? "We couldn't look up where these servers are right now. Try re-scanning later."
-                : "We couldn't place these servers on a map."}
+              {noMapMessage(result)}
             </p>
           )}
 

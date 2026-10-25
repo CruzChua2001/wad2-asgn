@@ -128,6 +128,8 @@ const getRepoChecks = (result, findings) => {
     }
 
     const missingIgnores = missing("repo-gitignore");
+    // .env and key files, plus node_modules when there's a package.json
+    const ignoreRules = noPackageJson ? 2 : 3;
     const missingReadme = missing("repo-readme");
 
     // CI workflows are scored from the raw results, since the scores are shares of all files and actions
@@ -152,7 +154,7 @@ const getRepoChecks = (result, findings) => {
         { id: "basics-dependabot", status: npmFiles, score: dependabot },
         { id: "basics-security-policy", status: files, score: has("repo-security-policy") ? 0 : 10 },
         { id: "basics-lockfile", status: npmFiles, score: has("repo-lockfile") ? 0 : 10 },
-        { id: "ignore-rules", status: statusOf(checks.gitignore), score: missingIgnores === 0 ? 10 : missingIgnores === 3 ? 0 : 5 },
+        { id: "ignore-rules", status: statusOf(checks.gitignore), score: missingIgnores === 0 ? 10 : missingIgnores === ignoreRules ? 0 : 5 },
         { id: "readme", status: statusOf(checks.readme), score: [10, 5, 0][missingReadme] },
         { id: "workflow-dangerous", status: statusOf(checks.workflows), score: dangerous },
         { id: "workflow-permissions", status: statusOf(checks.workflows), score: permissions },
