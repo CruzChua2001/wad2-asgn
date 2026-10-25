@@ -25,8 +25,6 @@ export default function FixItem({ scanId, finding, done, open, onToggleDone, onT
     const href = typeof finding.learnMore === "string" ? finding.learnMore : finding.learnMore?.url;
     const panelId = `fix-panel-${finding.id}`;
 
-    // Asks the backend to write a step-by-step guide for this one problem.
-    // The page only sends ids: the server builds the prompt itself.
     const askAi = async () => {
         if (status !== "authenticated") {
             openAuth("login");
@@ -45,7 +43,7 @@ export default function FixItem({ scanId, finding, done, open, onToggleDone, onT
     };
 
     return (
-        <li className={`relative overflow-hidden rounded-xl border border-line bg-white/60 transition-opacity ${done ? "opacity-60" : ""}`}>
+        <li className={`relative overflow-hidden rounded-xl border border-line bg-surface transition-opacity ${done ? "opacity-60" : ""}`}>
             <span className={`absolute inset-y-0 left-0 w-1 ${style.bar}`} aria-hidden="true" />
             <div className="flex items-center gap-3 py-3 pl-5 pr-3">
                 <button

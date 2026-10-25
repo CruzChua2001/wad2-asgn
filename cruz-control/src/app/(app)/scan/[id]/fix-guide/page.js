@@ -84,7 +84,7 @@ export default function FixGuidePage() {
                 <p className="mt-1 text-muted">Every problem we found, starting with the most serious.</p>
             </header>
 
-            <section className="flex items-center gap-5 rounded-2xl border border-line/60 bg-white/60 p-5 shadow-sm">
+            <section className="flex items-center gap-5 rounded-2xl border border-line/60 bg-surface p-5 shadow-sm">
                 <ProgressRing done={doneCount} total={issues.length} />
                 <div>
                     <p className="text-lg font-semibold text-ink">
