@@ -494,7 +494,8 @@ const getRepoFindings = result => {
         const missing = [];
 
         if (!gitignore?.env) missing.push(".env");
-        if (!gitignore?.nodeModules) missing.push("node_modules");
+        // node_modules only exists in JavaScript projects, which have a package.json
+        if (!gitignore?.nodeModules && records.basics?.packageJson !== false) missing.push("node_modules");
         if (!gitignore?.keys) missing.push("key files");
 
         if (missing.length > 0) {
