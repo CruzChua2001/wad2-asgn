@@ -17,6 +17,8 @@ export default defineConfig({
     },
     test: {
         environment: "jsdom",
+        // Vercel builds with NODE_ENV=production, and React's production build has no act() for the tests
+        env: { NODE_ENV: "test" },
         globals: true,
         passWithNoTests: true
     }
