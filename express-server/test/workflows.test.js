@@ -54,6 +54,49 @@ test("a run line using the issue title is dangerous, but the if line isn't", () 
     ]);
 });
 
+test("text in env:, with: or a concurrency group isn't dangerous, so our own fix passes", () => {
+    const text = [
+        "on: [issues, pull_request]",
+        "concurrency:",
+        "  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}",
+        "jobs:",
+        "  greet:",
+        "    steps:",
+        "      - uses: actions/checkout@v4",
+        "        with:",
+        "          ref: ${{ github.head_ref }}",
+        "      - env:",
+        "          MY_TEXT: ${{ github.event.issue.title }}",
+        '        run: echo "$MY_TEXT"',
+    ].join("\n");
+
+    assert.deepStrictEqual(readWorkflow("ci.yml", text).dangerous, []);
+});
+
+test("unsafe text inside a multi-line run: block is dangerous, and the block ends at the next key", () => {
+    const text = [
+        "jobs:",
+        "  greet:",
+        "    steps:",
+        "      - name: Greet",
+        "        run: |",
+        "          echo hello",
+        "          echo ${{ github.event.pull_request.title }}",
+        "      - name: Next step",
+        "        env:",
+        "          TITLE: ${{ github.event.pull_request.title }}",
+    ].join("\n");
+
+    assert.deepStrictEqual(readWorkflow("ci.yml", text).dangerous, [
+        { file: "ci.yml", line: 7, text: "echo ${{ github.event.pull_request.title }}" },
+    ]);
+});
+
+test("the branch name (github.head_ref) inside a run step is dangerous", () => {
+    const file = readWorkflow("ci.yml", "    steps:\n      - run: git checkout ${{ github.head_ref }}\n");
+    assert.strictEqual(file.dangerous.length, 1);
+});
+
 test("a pull_request_target workflow checking out the pull request's code is dangerous", () => {
     const text = [
         "on: pull_request_target",

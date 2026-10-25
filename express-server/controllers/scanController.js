@@ -1,5 +1,5 @@
 const { supabase } = require("../lib/supabase");
-const { checkWebsite } = require("../lib/domain");
+const { checkWebsite, isPrivateIp } = require("../lib/domain");
 const { checkDns } = require("../checks/domain/dns");
 const { checkSubdomains } = require("../checks/domain/subdomains");
 const { checkOpenPorts } = require("../checks/domain/open-ports");
@@ -41,6 +41,7 @@ const certLabel = certificate => {
     const cert = certificate.records.certificate;
 
     if (certificate.checks.certificate === "none") return "no HTTPS found";
+    if (certificate.checks.certificate === "not_applicable") return "skipped, the site points at a private address";
     if (!cert) return "couldn't check";
     return `${cert.trusted ? "trusted" : "not trusted"}, ${cert.daysLeft < 0 ? "expired" : `${plural(cert.daysLeft, "day")} left`}`;
 }
@@ -97,6 +98,9 @@ async function* scanDomainSteps(hostname, domain) {
     // Remove duplicated ips
     const ips = [...new Set([...hostIps, ...subdomainIps])];
 
+    // A site that only points at private or loopback addresses would make us connect to our own network, so skip it
+    const privateSite = hostIps.length > 0 && hostIps.every(isPrivateIp);
+
     // Find open ports via Shodan using each ip and the server location for the globe
     yield ev("info", `Checking open ports on ${plural(ips.length, "server")}...`, "open-ports");
     yield ev("info", "Locating servers around the world...", "geolocation");
@@ -106,15 +110,16 @@ async function* scanDomainSteps(hostname, domain) {
     const [ports, geolocations, certificate, headers] = await Promise.all([
         checkOpenPorts(ips),
         checkGeolocation(ips),
-        checkCertificate(hostname),
-        checkHeaders(hostname)
+        privateSite ? { records: { certificate: null }, checks: { certificate: "not_applicable" } } : checkCertificate(hostname),
+        privateSite ? { records: { headers: null }, checks: { headers: "not_applicable" } } : checkHeaders(hostname)
     ]);
 
     yield ev("ok", `Ports: ${openPortCount(ports)} open across ${plural(ips.length, "server")}.`, "open-ports");
     yield ev("ok", "Server locations mapped.", "geolocation");
     yield ev(certificate.records.certificate?.trusted ? "ok" : "warn", `Certificate: ${certLabel(certificate)}.`, "certificate");
-    yield ev(headerCount(headers) === 4 ? "ok" : "warn",
-        headers.checks.headers === "ok" ? `Website settings: ${headerCount(headers)} of 4 security headers found.` : "Website settings: couldn't check.", "headers");
+    let headerText = headers.checks.headers === "ok" ? `${headerCount(headers)} of 4 security headers found` : "couldn't check";
+    if (privateSite) headerText = "skipped, the site points at a private address";
+    yield ev(headerCount(headers) === 4 ? "ok" : "warn", `Website settings: ${headerText}.`, "headers");
 
     // Flag CDN edge IPs as their ports/CVEs are shared infrastructure so they must not become findings or dock the score (still keep them geolocated though)
     const geoByIp = new Map((geolocations.records.geo ?? []).map(g => [g.ip, g]));

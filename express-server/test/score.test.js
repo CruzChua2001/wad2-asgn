@@ -274,6 +274,26 @@ test("a missing .gitignore and README score 0 on both checks", () => {
     assert.strictEqual(result.score, 82);
 });
 
+test("a repo without a package.json doesn't need a node_modules rule", () => {
+    const result = buildFindings(repoScan({
+        records: { gitignore: { env: true, nodeModules: false, keys: true } },
+        checks: { gitignore: "ok" },
+        basics: { dependabot: false, lockfile: false, packageJson: false },
+    }));
+    assert.strictEqual(result.findings.some(finding => finding.id === "repo-gitignore"), false);
+    assert.strictEqual(result.checks.find(check => check.id === "ignore-rules").score, 10);
+});
+
+test("without a package.json, a .gitignore missing .env and key files still scores 0", () => {
+    const result = buildFindings(repoScan({
+        records: { gitignore: { env: false, nodeModules: false, keys: false } },
+        checks: { gitignore: "ok" },
+        basics: { dependabot: false, lockfile: false, packageJson: false },
+    }));
+    assert.deepStrictEqual(result.findings.find(finding => finding.id === "repo-gitignore").details.missing, [".env", "key files"]);
+    assert.strictEqual(result.checks.find(check => check.id === "ignore-rules").score, 0);
+});
+
 test("Dependabot is skipped without a package.json", () => {
     const result = buildFindings(repoScan({ basics: { dependabot: false, lockfile: false, packageJson: false } }));
     assert.strictEqual(result.checks.find(check => check.id === "basics-dependabot").status, "not_checked");
