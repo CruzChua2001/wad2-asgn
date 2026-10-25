@@ -48,13 +48,11 @@ const getHostName = (ip, domainScan) => {
     return ip;
 }
 
-const getServerStatus = (ip, portRecord, findings, isCdn = false) => {
+// A server's status comes from the findings on it, so a low CVE or a failed CVE lookup isn't critical
+const getServerStatus = (ip, findings, isCdn = false) => {
     let status = "healthy";
 
     // mark CDN edge's open ports/vulns as non-critical as they are shared infrastructure
-    if (!isCdn && portRecord && portRecord.vulns.length > 0) {
-        return "critical";
-    }
     if (isCdn) {
         return status;
     }
@@ -171,7 +169,7 @@ const getServers = (domainScan, findings) => {
             as: geo.as,
             asname: geo.asname,
             service: service,
-            status: getServerStatus(geo.ip, portRecord, findings, isCdn),
+            status: getServerStatus(geo.ip, findings, isCdn),
             summary: summary,
             isCdn: isCdn,
         });
