@@ -1,12 +1,18 @@
 const { githubGet } = require("../../lib/github");
 
 // get all sentitive files, e.g. .env .pems
-const SENSITIVE_FILES = [/^\.env$/, /^\.env\.(local|development|production|staging)$/, /\.pem$/, /\.key$/, /^id_rsa$/, /^id_ed25519$/, /^credentials\.json$/, /\.p12$/];
+const SENSITIVE_FILES = [/^\.env$/, /^\.env\.(local|development|production|staging)$/, /^id_rsa$/, /^id_ed25519$/, /^credentials\.json$/, /\.p12$/];
+
+// .pem files named like these hold public certificates (cert.pem, fullchain.pem, ca-bundle.pem), not keys
+const PUBLIC_CERT = /cert|chain|bundle|^ca[-_.]/i;
+
+// A private key is a few KB, but Keynote slides also end in .key and are far bigger
+const MAX_KEY_SIZE = 16 * 1024;
 
 // Renovate reads its config from any of these names, at the root or under .github/
 const RENOVATE_FILE = /^(\.github\/)?(renovate\.json5?|\.renovaterc(\.json5?)?)$/;
 
-const README_FILE = /^readme(\.md)?$/i;
+const README_FILE = /^readme(\.(md|markdown|rst|txt))?$/i;
 const README_SETUP = /setup|set up|install|usage|getting started/i;
 const README_SECURITY = /security|vulnerabilit/i;
 
@@ -22,7 +28,7 @@ const PINNED_REF = /^[0-9a-f]{40}$/;
 const OFFICIAL_OWNERS = ["actions", "github"];
 
 // Text anyone can write, so using it inside a run: step runs their commands with your secrets
-const UNSAFE_INPUT = /\$\{\{[^}]*github\.event\.(issue\.(title|body)|comment\.body|review\.body|pull_request\.(title|body|head\.ref)|head_commit\.message)[^}]*\}\}|github\.head_ref/;
+const UNSAFE_INPUT = /\$\{\{[^}]*(github\.event\.(issue\.(title|body)|comment\.body|review\.body|pull_request\.(title|body|head\.ref)|head_commit\.message)|github\.head_ref)[^}]*\}\}/;
 
 // A pull_request_target workflow that checks out the pull request's own code
 const PR_HEAD = /github\.event\.pull_request\.head\.(sha|ref)/;
@@ -38,6 +44,22 @@ const readFile = async (repo, sha, path) => {
     }
 
     return Buffer.from(data.content, "base64").toString("utf8");
+}
+
+/**
+ * Whether a file in the git tree ({ path, size }) looks like a committed secret
+ */
+const isSecretFile = ({ path, size }) => {
+    const name = path.split("/").pop();
+
+    if (/\.pem$/i.test(name)) {
+        return !PUBLIC_CERT.test(name);
+    }
+    if (/\.key$/i.test(name)) {
+        return size < MAX_KEY_SIZE;
+    }
+
+    return SENSITIVE_FILES.some(pattern => pattern.test(name));
 }
 
 /**
@@ -68,12 +90,25 @@ const readWorkflow = (name, text) => {
     const unpinned = [];
     const dangerous = [];
     const seen = new Set();
+    // Column of the run: key we're inside, so the lines of a "run: |" block count too
+    let runColumn = null;
 
     lines.forEach((line, index) => {
         const trimmed = line.trim();
 
         if (trimmed.startsWith("#")) {
             return;
+        }
+
+        // A step's first key is written as "- run:", so drop the list dash before checking
+        const key = trimmed.startsWith("- ") ? trimmed.slice(2).trim() : trimmed;
+        const indent = line.length - line.trimStart().length;
+
+        if (runColumn !== null && trimmed && indent <= runColumn) {
+            runColumn = null;
+        }
+        if (key.startsWith("run:")) {
+            runColumn = line.indexOf(key);
         }
 
         USES_LINE.lastIndex = 0;
@@ -92,10 +127,8 @@ const readWorkflow = (name, text) => {
             match = USES_LINE.exec(line);
         }
 
-        // An if: line only decides whether a step runs, so it isn't the injection itself.
-        // A step's first key is written as "- if:", so drop the list dash before checking.
-        const key = trimmed.startsWith("- ") ? trimmed.slice(2).trim() : trimmed;
-        const unsafe = !key.startsWith("if:") && UNSAFE_INPUT.test(line);
+        // Only a run: step runs the text as a command. In env:, with: or if: it's just a value.
+        const unsafe = runColumn !== null && UNSAFE_INPUT.test(line);
 
         if ((unsafe || (prTarget && PR_HEAD.test(line))) && !seen.has(index)) {
             seen.add(index);
@@ -121,12 +154,10 @@ const checkRepoFiles = async (repo, sha) => {
         };
     }
 
-    const paths = data.tree.filter(item => item.type === "blob").map(item => item.path);
+    const blobs = data.tree.filter(item => item.type === "blob");
+    const paths = blobs.map(item => item.path);
 
-    const sensitiveFiles = paths.filter(path => {
-        const name = path.split("/").pop();
-        return SENSITIVE_FILES.some(pattern => pattern.test(name));
-    })
+    const sensitiveFiles = blobs.filter(isSecretFile).map(item => item.path);
 
     const basics = {
         securityPolicy: paths.some(path => /^(\.github\/|docs\/)?security\.md$/i.test(path)),
@@ -198,4 +229,4 @@ const checkRepoFiles = async (repo, sha) => {
     };
 }
 
-module.exports = { checkRepoFiles, readWorkflow };
+module.exports = { checkRepoFiles, readWorkflow, isSecretFile, README_FILE };

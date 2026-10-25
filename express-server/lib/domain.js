@@ -29,4 +29,9 @@ function checkWebsite(url) {
     return { isValid: true, hostname, domain };
 }
 
-module.exports = { checkWebsite };
+// Loopback, private and link-local addresses, which aren't on the public internet
+const PRIVATE_IPS = [/^127\./, /^10\./, /^192\.168\./, /^172\.(1[6-9]|2\d|3[01])\./, /^169\.254\./, /^0\./, /^::1?$/, /^f[cd]/i, /^fe[89ab]/i];
+
+const isPrivateIp = ip => PRIVATE_IPS.some(pattern => pattern.test(ip));
+
+module.exports = { checkWebsite, isPrivateIp };
