@@ -217,14 +217,14 @@ const getScore = checkResults => {
     // A critical check that couldn't run means we can't give a fair grade
     const incomplete = checks.some(check => check.risk === "critical" && check.status === "unavailable");
 
-    // Points lost per category, which add up to 100 minus the uncapped score
+    // Points earned and lost per category, which add up to the uncapped score and 100 minus it
     const categories = [...new Set(checks.map(check => check.category))];
 
     const breakdown = categories.map(category => {
         const inCategory = checks.filter(check => check.category === category);
-        const lost = inCategory
-            .filter(check => check.status === "ok")
-            .reduce((sum, check) => sum + check.weight * (10 - check.score), 0);
+        const ran = inCategory.filter(check => check.status === "ok");
+        const earned = ran.reduce((sum, check) => sum + check.weight * check.score, 0);
+        const lost = ran.reduce((sum, check) => sum + check.weight * (10 - check.score), 0);
 
         let status = "not_checked";
         if (inCategory.some(check => check.status === "ok")) {
@@ -236,17 +236,28 @@ const getScore = checkResults => {
         return {
             category,
             label: CATEGORY_LABELS[category],
+            earned: totalWeight > 0 ? 10 * earned / totalWeight : 0,
             lost: totalWeight > 0 ? 10 * lost / totalWeight : 0,
             status,
         };
     });
 
     // Round down, then give the points left over to the biggest remainders, so the total still matches
-    let left = totalWeight > 0 ? 100 - uncappedScore - breakdown.reduce((sum, item) => sum + Math.floor(item.lost), 0) : 0;
+    const roundTo = (key, total) => {
+        let left = total - breakdown.reduce((sum, item) => sum + Math.floor(item[key]), 0);
 
-    for (const item of [...breakdown].sort((a, b) => b.lost % 1 - a.lost % 1)) {
-        item.lost = Math.floor(item.lost) + (left > 0 ? 1 : 0);
-        left--;
+        for (const item of [...breakdown].sort((a, b) => b[key] % 1 - a[key] % 1)) {
+            item[key] = Math.floor(item[key]) + (left > 0 ? 1 : 0);
+            left--;
+        }
+    }
+
+    roundTo("earned", totalWeight > 0 ? uncappedScore : 0);
+    roundTo("lost", totalWeight > 0 ? 100 - uncappedScore : 0);
+
+    // What each category is worth out of 100, so the worths add up to 100
+    for (const item of breakdown) {
+        item.worth = item.earned + item.lost;
     }
 
     breakdown.sort((a, b) => b.lost - a.lost);

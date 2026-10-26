@@ -19,7 +19,7 @@ const RISK_TONES = { critical: "text-critical", high: "text-critical", medium: "
 const TONE_TEXT = { good: "text-accent", warn: "text-warm", bad: "text-critical" };
 const TONE_BAR = { good: "bg-accent", warn: "bg-warm", bad: "bg-critical" };
 
-// Category, score, points lost and why side by side from md up; stacked on phones
+// Category, points earned, points lost and why side by side from md up; stacked on phones
 const ROW_GRID = "grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 md:grid-cols-[15rem_7.5rem_6rem_minmax(0,1fr)]";
 
 const SCORE_RULE = "Your score is out of 100, and higher is safer. Each check scores 0 to 10, and riskier checks count for more. A critical problem keeps your score at 50 or below until it's fixed.";
@@ -55,7 +55,7 @@ function sideScore(checks) {
   return score === null ? null : Math.round(10 * score);
 }
 
-// One row per category: its score out of 10, the points it lost, and the findings behind it
+// One row per category: its score out of 10 (for the grade and bar), its points, and the findings behind it
 function categoryRows(breakdown, checks, findings) {
   const rows = breakdown.map((item) => {
     const score = averageScore(checks.filter((check) => check.category === item.category));
@@ -102,7 +102,7 @@ function RowScore({ row }) {
       <span className={`h-1.5 w-12 overflow-hidden rounded-full ${track}`} aria-hidden="true">
         <span className={`block h-full rounded-full ${TONE_BAR[tone]}`} style={{ width: `${row.score * 10}%` }} />
       </span>
-      <span className={`font-mono text-sm font-semibold ${TONE_TEXT[tone]}`}>{row.score}/10</span>
+      <span className={`font-mono text-sm font-semibold ${TONE_TEXT[tone]}`}>{row.earned}/{row.worth}</span>
     </span>
   );
 }
@@ -223,7 +223,7 @@ export default function ReportCardTab() {
 
         <div className={`${ROW_GRID} mt-8 border-b border-line pb-2 font-mono text-[10px] font-semibold tracking-wider text-muted uppercase max-md:hidden!`} aria-hidden="true">
           <span>Check</span>
-          <span>Score</span>
+          <span>Points earned</span>
           <span>Points lost</span>
           <span>Why</span>
         </div>
@@ -250,13 +250,16 @@ export default function ReportCardTab() {
           </div>
         ))}
 
+        {/* What the rows add up to */}
         {anyRan && (
-          <p className="m-0 mt-1 border-t border-line pt-3 font-mono text-sm text-ink">
-            100 - {lostTotal} points lost = {result.uncappedScore}
+          <div className={`${ROW_GRID} mt-1 items-center gap-y-1.5 border-t border-line pt-3`}>
+            <span className="pl-9.5 text-sm font-semibold text-ink">Total</span>
+            <span className="font-mono text-sm font-semibold text-ink">{result.uncappedScore}/100</span>
+            <span className="font-mono text-sm font-semibold text-ink max-md:pl-9.5">-{lostTotal} pts</span>
             {result.cap?.applied && result.uncappedScore > result.score && (
-              <span className="text-critical">, capped at {result.score}</span>
+              <span className="col-span-2 text-sm text-critical max-md:pl-9.5 md:col-span-1">Capped at {result.score}</span>
             )}
-          </p>
+          </div>
         )}
 
         <p className="m-0 mt-4 text-[11px] leading-relaxed text-muted">{SCORE_RULE}</p>

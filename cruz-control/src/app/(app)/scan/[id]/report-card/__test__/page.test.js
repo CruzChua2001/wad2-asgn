@@ -42,7 +42,7 @@ const finding = (id, overrides = {}) => ({
     ...overrides,
 });
 
-// A website scan with an open MongoDB port: 76 without the cap, capped at 50
+// A website scan with an open MongoDB port: 76 without the cap, capped at 50. The worths add up to 100
 const websiteScan = (overrides = {}) => ({
     projectId: null,
     role: null,
@@ -52,11 +52,11 @@ const websiteScan = (overrides = {}) => ({
     cap: { applied: true, checkIds: ["ports-database-telnet"] },
     incomplete: false,
     breakdown: [
-        { category: "email-dns", label: "Email & DNS", lost: 3, status: "ok" },
-        { category: "software", label: "Server software", lost: 0, status: "unavailable" },
-        { category: "ports", label: "Open ports", lost: 21, status: "ok" },
-        { category: "certificate", label: "Certificate (HTTPS)", lost: 0, status: "ok" },
-        { category: "web-settings", label: "Website security settings", lost: 0, status: "ok" },
+        { category: "email-dns", label: "Email & DNS", earned: 6, lost: 3, worth: 9, status: "ok" },
+        { category: "software", label: "Server software", earned: 0, lost: 0, worth: 0, status: "unavailable" },
+        { category: "ports", label: "Open ports", earned: 0, lost: 21, worth: 21, status: "ok" },
+        { category: "certificate", label: "Certificate (HTTPS)", earned: 30, lost: 0, worth: 30, status: "ok" },
+        { category: "web-settings", label: "Website security settings", earned: 40, lost: 0, worth: 40, status: "ok" },
     ],
     checks: [
         check("ports-database-telnet", "ports", 0, 10),
@@ -85,9 +85,9 @@ const bothScan = (overrides = {}) => {
         uncappedScore: 71,
         breakdown: [
             ...website.breakdown,
-            { category: "secrets", label: "Secret files", lost: 0, status: "ok" },
-            { category: "packages", label: "Packages", lost: 5, status: "ok" },
-            { category: "workflows", label: "CI workflows", lost: 0, status: "not_checked" },
+            { category: "secrets", label: "Secret files", earned: 12, lost: 0, worth: 12, status: "ok" },
+            { category: "packages", label: "Packages", earned: 10, lost: 5, worth: 15, status: "ok" },
+            { category: "workflows", label: "CI workflows", earned: 0, lost: 0, worth: 0, status: "not_checked" },
         ],
         checks: [
             ...website.checks,
@@ -108,6 +108,7 @@ const showReport = result => {
 const rowsOf = side => within(screen.getByRole("heading", { name: side }).nextElementSibling).getAllByRole("listitem");
 const rowFor = (side, label) => rowsOf(side).find(row => row.textContent.includes(label));
 const topFixes = _ => within(screen.getByRole("heading", { name: "Fix these first" }).closest("section")).getAllByRole("listitem");
+const totalRow = _ => screen.getByText("Total").parentElement;
 
 beforeEach(() => {
     vi.clearAllMocks();
@@ -138,8 +139,8 @@ describe("Report Card grade and score", () => {
     test("doesn't mention the cap when the score is already under 50", () => {
         showReport(websiteScan({ score: 45, grade: "F", uncappedScore: 45 }));
 
-        expect(screen.queryByText(/Capped at 50/)).toBeNull();
-        expect(screen.getByText("100 - 24 points lost = 45").textContent).toBe("100 - 24 points lost = 45");
+        expect(screen.queryByText(/Capped at/)).toBeNull();
+        expect(totalRow().textContent).toBe("Total45/100-24 pts");
     });
 
     test("shows the score trend for this scan", () => {
@@ -195,20 +196,27 @@ describe("Report Card category rows", () => {
         expect(labels).toEqual(["Open ports", "Email & DNS", "Certificate (HTTPS)", "Website security settings", "Server software"]);
     });
 
-    test("a failed category shows 0/10, an F and the points it lost", () => {
+    test("a failed category earns none of its points, gets an F and shows the points it lost", () => {
         showReport(websiteScan());
         const row = rowFor("Website", "Open ports");
 
-        expect(row.textContent).toContain("0/10");
+        expect(row.textContent).toContain("0/21");
         expect(row.textContent).toContain("Grade F");
         expect(row.textContent).toContain("-21 pts");
         expect(within(row).getByText("21 points lost")).toBeTruthy();
     });
 
-    test("a category's score is the weighted average of its checks, rounded down", () => {
+    test("a category shows the points it earned out of what it's worth", () => {
         showReport(websiteScan());
 
-        expect(rowFor("Website", "Email & DNS").textContent).toContain("6/10");
+        expect(rowFor("Website", "Email & DNS").textContent).toContain("6/9");
+    });
+
+    test("a category's grade comes from the weighted average of its checks, rounded down", () => {
+        showReport(websiteScan());
+
+        // (5 x 5 + 10 x 2.5) / 7.5 = 6.7, so 6 out of 10 is a D
+        expect(rowFor("Website", "Email & DNS").textContent).toContain("Grade D");
     });
 
     test("names the first two findings behind a category and counts the rest", () => {
@@ -218,11 +226,11 @@ describe("Report Card category rows", () => {
         expect(rowFor("Website", "Email & DNS").textContent).toContain("DMARC only monitors · No CAA record");
     });
 
-    test("a perfect category shows 10/10, 0 pts and no problems", () => {
+    test("a perfect category earns all its points, with 0 pts lost and no problems", () => {
         showReport(websiteScan());
         const row = rowFor("Website", "Certificate (HTTPS)");
 
-        expect(row.textContent).toContain("10/10");
+        expect(row.textContent).toContain("30/30");
         expect(row.textContent).toContain("0 pts");
         expect(row.textContent).toContain("Grade A");
         expect(row.textContent).toContain("No problems found");
@@ -232,7 +240,7 @@ describe("Report Card category rows", () => {
         showReport(websiteScan());
         const row = rowFor("Website", "Website security settings");
 
-        expect(row.textContent).toContain("9/10");
+        expect(row.textContent).toContain("40/40");
         expect(row.textContent).toContain("Minor");
         expect(row.textContent).not.toContain("0 pts");
     });
@@ -262,20 +270,19 @@ describe("Report Card category rows", () => {
         expect(rowFor("Repository", "Secret files").textContent).toContain("No problems found");
     });
 
-    test("adds up the points lost to the score, plus the cap", () => {
+    test("adds up the rows to a total out of 100, plus the cap", () => {
         showReport(websiteScan());
-        const sum = screen.getByText("100 - 24 points lost = 76");
 
-        expect(sum.textContent).toBe("100 - 24 points lost = 76, capped at 50");
+        expect(totalRow().textContent).toBe("Total76/100-24 ptsCapped at 50");
     });
 
-    test("leaves out the sum when no category ran", () => {
+    test("leaves out the total when no category ran", () => {
         showReport(websiteScan({
-            breakdown: [{ category: "software", label: "Server software", lost: 0, status: "unavailable" }],
+            breakdown: [{ category: "software", label: "Server software", earned: 0, lost: 0, worth: 0, status: "unavailable" }],
             checks: [check("software-kev", "software", null, 10, "unavailable")],
         }));
 
-        expect(screen.queryByText(/points lost =/)).toBeNull();
+        expect(screen.queryByText("Total")).toBeNull();
     });
 });
 
@@ -311,7 +318,7 @@ describe("Report Card website and repository scores", () => {
         showReport(websiteScan({ breakdown: undefined, checks: undefined, findings: [], cap: undefined, uncappedScore: undefined }));
 
         expect(screen.getByText("At risk")).toBeTruthy();
-        expect(screen.queryByText(/points lost =/)).toBeNull();
+        expect(screen.queryByText("Total")).toBeNull();
         expect(screen.getByText(/Nothing to fix right now/)).toBeTruthy();
     });
 });
