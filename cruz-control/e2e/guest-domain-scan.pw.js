@@ -79,7 +79,7 @@ const scanResult = {
 };
 
 /*
-  USER JOURNEY TEST CASE 1:
+  USER JOURNEY TEST CASE: GUEST SCAN DOMAIN & VIEW RESULTS
     1. User starts on Landing page
     2. Continue as Guest to Scan page (Phase 1: Pre-Scan)
     3. Enter domain name (example.com)
