@@ -6,17 +6,13 @@ import { LuBot } from "react-icons/lu";
 import { useAuth } from "@/components/auth/auth-provider";
 import { TOUR_PARTS } from "./tour-steps";
 
-// "Seen" is remembered separately for each part, for each signed-in account and for guests, in this browser.
-// To see the automatic tour again while testing, run this in the browser console, then refresh:
-//   Object.keys(localStorage).filter(k => k.startsWith("cruz-control-tour")).forEach(k => localStorage.removeItem(k))
 const STORAGE_KEY = "cruz-control-tour-seen-v1";
 const CARD_WIDTH = 352;
-const CARD_HEIGHT = 260; // a rough height, only used to decide whether the card fits below or above
+const CARD_HEIGHT = 260;
 const GAP = 16;
 const PAD = 6;
-const RESULTS_READY = 'section[aria-labelledby="score-title"]'; // present once a scan's results have loaded
+const RESULTS_READY = 'section[aria-labelledby="score-title"]';
 
-// If storage is blocked we say "seen", so people are never nagged on every page load.
 const readSeen = (part, who) => {
     try {
         return localStorage.getItem(`${STORAGE_KEY}:${part}:${who}`) === "1";
@@ -29,27 +25,23 @@ const markSeen = (part, who) => {
     try {
         localStorage.setItem(`${STORAGE_KEY}:${part}:${who}`, "1");
     } catch {
-        // Storage blocked: nothing to do.
     }
 };
 
-// Leave out steps that don't fit this scan (for example the map on a repository scan).
-// Only called from an effect, so document exists.
 const shouldSkip = step => {
     if (step.skipIfMissing && step.selector && !document.querySelector(step.selector)) return true;
     if (step.skipIfPresent && document.querySelector(step.skipIfPresent)) return true;
     return false;
 };
 
-// part: "intro" | "results" | null (null = closed)
 export default function ProductTour({ part, onStart, onClose }) {
     const { status, user } = useAuth();
     const pathname = usePathname();
     const who = status === "authenticated" ? user?.id : status === "guest" ? "guest" : null; // null while loading
     const open = part !== null && part !== undefined;
     const [step, setStep] = useState(0);
-    const [filtered, setFiltered] = useState({ part: null, list: [] }); // the steps that apply to this scan
-    const [view, setView] = useState(null); // { part, step, vw, vh, rect } for the step that was measured
+    const [filtered, setFiltered] = useState({ part: null, list: [] });
+    const [view, setView] = useState(null);
     const cardRef = useRef(null);
     const nextRef = useRef(null);
     const onStartRef = useRef(onStart);
@@ -58,9 +50,6 @@ export default function ProductTour({ part, onStart, onClose }) {
         onStartRef.current = onStart;
     });
 
-    // Automatic start, once for each part:
-    //  - intro: on the scan form
-    //  - results: as soon as a scan's results have loaded
     useEffect(() => {
         if (!who || open) return;
 
@@ -77,14 +66,13 @@ export default function ProductTour({ part, onStart, onClose }) {
                     clearInterval(poll);
                     onStartRef.current("results");
                 } else if (tries > 40) {
-                    clearInterval(poll); // gave up after about 12 seconds
+                    clearInterval(poll);
                 }
             }, 300);
             return () => clearInterval(poll);
         }
     }, [who, pathname, open]);
 
-    // Work out which steps apply each time a part opens.
     useEffect(() => {
         if (!open) return;
         const frame = requestAnimationFrame(() => {
@@ -97,8 +85,6 @@ export default function ProductTour({ part, onStart, onClose }) {
     const steps = filtered.part === part ? filtered.list : base;
     const current = steps[step] ?? steps[steps.length - 1] ?? {};
     const selector = current.selector;
-
-    // Find the highlighted element, scroll it into view and keep measuring it.
     useEffect(() => {
         if (!open) return;
 
@@ -128,7 +114,6 @@ export default function ProductTour({ part, onStart, onClose }) {
         };
     }, [open, part, step, selector]);
 
-    // Move the keyboard focus into the card on every step.
     useEffect(() => {
         if (open) nextRef.current?.focus();
     }, [open, part, step]);
@@ -146,7 +131,6 @@ export default function ProductTour({ part, onStart, onClose }) {
     const goNext = () => (isLast ? finish() : setStep(step + 1));
     const goBack = () => setStep(Math.max(0, step - 1));
 
-    // Escape closes the tour. Tab stays inside the card.
     const onKeyDown = e => {
         if (e.key === "Escape") {
             finish();
@@ -166,10 +150,9 @@ export default function ProductTour({ part, onStart, onClose }) {
         }
     };
 
-    const ready = view?.part === part && view?.step === step; // false for a moment while the new step is being measured
+    const ready = view?.part === part && view?.step === step; 
     const rect = ready ? view.rect : null;
 
-    // Where the card goes: next to the highlighted element, or in the middle of the screen.
     const cardWidth = ready ? Math.min(CARD_WIDTH, view.vw - 32) : CARD_WIDTH;
     let cardClass = "left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2";
     let cardStyle = { width: cardWidth };

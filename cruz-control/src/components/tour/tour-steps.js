@@ -1,19 +1,3 @@
-// The walkthrough has two parts:
-//   intro   : shown on the scan form, before the user has scanned anything
-//   results : shown the first time a scan's results appear
-// Edit the wording here.
-//
-// selector (optional): a CSS selector for the thing to highlight.
-//   If it isn't on the page, the step is simply shown in the middle of the screen.
-//
-// Optional flags (used by the results part):
-//   skipIfMissing : leave this step out when its selector isn't on the page (e.g. the map on a repository scan)
-//   skipIfPresent : leave this step out when this other selector IS on the page
-//
-// The intro steps 2 and 3 use data-tour attributes that must be added in scan/page.js (the scan form):
-//   data-tour="target-type"  on the element that holds the Live website / Repository choice
-//   data-tour="scan-input"   on the element that holds the website or repository input
-
 const INTRO_STEPS = [
     {
         id: "welcome",
@@ -76,12 +60,6 @@ const RESULTS_STEPS = [
         title: "What is wrong",
         selector: 'section[aria-labelledby="findings-title"]',
         text: "Problems are listed worst first. Open one to see why it matters and how to fix it. If it affects a server, the map highlights it for you.",
-    },
-    {
-        id: "checklist",
-        title: "Before you launch",
-        selector: 'nav[aria-label="Scan result sections"] a[href$="/checklist"]',
-        text: "The Checklist is the one to open before you put a site online for the first time. Items marked AUTO fill themselves in from your scan.",
     },
     {
         id: "ask",
