@@ -44,7 +44,6 @@ export default function OverviewLayout({ children }) {
   const pathname = usePathname();
   const showingResults = pathname.startsWith("/scan/");
   const navProps = href => pathname.startsWith(href) ? { className: styles.navActive, "aria-current": "page" } : {};
-  console.log("askOpen:", askOpen);
 
   useEffect(() => {
     if (askOpen) return;
