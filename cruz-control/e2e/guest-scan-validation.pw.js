@@ -11,7 +11,7 @@ import { expect, test } from "@playwright/test";
     7. Guest sees invalid domain name error message
     8. Start scan button is disabled and cannot be clicked
 */
-test("Guest sees validation errors for invalid domain and repository inputs while staying on the scan page", async ({ page }) => {
+test("guest sees validation errors for invalid domain and repository inputs while staying on the scan page", async ({ page }) => {
   const scanRequests = [];
 
   await page.route("**/api/scan", async (route) => {
