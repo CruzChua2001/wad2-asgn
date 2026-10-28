@@ -7,6 +7,7 @@ import { useEffect } from "react";
 import { LuBookmarkCheck, LuBookmarkPlus, LuPlus, LuRefreshCw } from "react-icons/lu";
 
 import RippleButton from "@/components/ripple-button";
+import { useAuth } from "@/components/auth/auth-provider";
 import { useScan } from "../scan-context";
 import styles from "@/styles/overview/scan-results.module.css";
 
@@ -58,10 +59,12 @@ export default function ScanResultsLayout({ children }) {
   const reduceMotion = useReducedMotion();
   const { id } = useParams();
   const { result, loadResult, resetScan, startScan, saveToProject, savedScanId, saving, saveError } = useScan();
+  const { status } = useAuth();
 
+  // Loads again after logging in or out, since project scans are only shown to members
   useEffect(() => {
-    loadResult(id);
-  }, [id, loadResult]);
+    if (status !== "loading") loadResult(id);
+  }, [id, status, loadResult]);
 
   if (!result) return <p role="status" className="text-muted">Loading scan...</p>;
 

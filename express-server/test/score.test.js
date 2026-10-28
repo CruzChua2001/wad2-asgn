@@ -1,6 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert");
 const { buildFindings } = require("../lib/findings");
+const { getScore } = require("../lib/score");
 
 // A clean website scan saved before the certificate and headers checks existed
 const domainScan = ({ records = {}, checks = {} } = {}) => ({
@@ -107,7 +108,7 @@ test("website: an open MongoDB port is capped at 50, F", () => {
     assert.strictEqual(result.uncappedScore, 79);
     assert.strictEqual(result.score, 50);
     assert.strictEqual(result.grade, "F");
-    assert.deepStrictEqual(result.breakdown[0], { category: "ports", label: "Open ports", lost: 21, status: "ok" });
+    assert.deepStrictEqual(result.breakdown[0], { category: "ports", label: "Open ports", earned: 16, lost: 21, worth: 37, status: "ok" });
 });
 
 test("website: Shodan unreachable is incomplete, with no grade", () => {
@@ -180,7 +181,7 @@ test("website: frame-ancestors in the CSP counts as clickjacking protection", ()
 
 // Other rules
 
-test("breakdown always adds up to 100 minus the uncapped score", () => {
+test("breakdown always adds up to the uncapped score and 100", () => {
     // Every mix of 9 website problems, with and without a repo
     for (let mask = 0; mask < 512; mask++) {
         const on = bit => (mask & (1 << bit)) !== 0;
@@ -203,10 +204,39 @@ test("breakdown always adds up to 100 minus the uncapped score", () => {
 
         for (const withRepo of [false, true]) {
             const result = buildFindings(withRepo ? { ...scan, ...repoScan({ basics: { dependabot: false } }) } : scan);
-            const lost = result.breakdown.reduce((sum, item) => sum + item.lost, 0);
-            assert.strictEqual(lost, 100 - result.uncappedScore, `mask ${mask}, repo ${withRepo}`);
+            const total = key => result.breakdown.reduce((sum, item) => sum + item[key], 0);
+            assert.strictEqual(total("lost"), 100 - result.uncappedScore, `mask ${mask}, repo ${withRepo}`);
+            assert.strictEqual(total("earned"), result.uncappedScore, `mask ${mask}, repo ${withRepo}`);
+            assert.strictEqual(total("worth"), 100, `mask ${mask}, repo ${withRepo}`);
+
+            // A category that scored 0 earns nothing, and a perfect one loses nothing
+            for (const item of result.breakdown) {
+                const ran = result.checks.filter(check => check.category === item.category && check.status === "ok");
+                if (ran.every(check => check.score === 0)) assert.strictEqual(item.earned, 0, `mask ${mask}, ${item.category}`);
+                if (ran.every(check => check.score === 10)) assert.strictEqual(item.lost, 0, `mask ${mask}, ${item.category}`);
+            }
         }
     }
+});
+
+test("breakdown: each category earns points out of what it's worth", () => {
+    // smu.edu.sg on 27 Oct: exploited and serious CVEs, FTP open, no CAA, a certificate expiring soon and no CSP
+    const ok = (id, score) => ({ id, status: "ok", score });
+    const result = getScore([
+        ok("software-kev", 0), ok("software-serious", 0), ok("software-other", 0),
+        ok("ports-database-telnet", 10), ok("ports-remote-access", 0),
+        ok("email-spoofing", 10), ok("email-caa", 0),
+        ok("cert-validity", 5), ok("web-https-hsts", 10), ok("web-headers", 5),
+    ]);
+
+    assert.strictEqual(result.uncappedScore, 43);
+    assert.deepStrictEqual(result.breakdown.map(item => [item.category, item.earned, item.worth, item.lost]), [
+        ["software", 0, 33, 33],
+        ["ports", 15, 26, 11],
+        ["certificate", 6, 11, 5],
+        ["email-dns", 7, 11, 4],
+        ["web-settings", 15, 19, 4],
+    ]);
 });
 
 test("a domain with no servers skips the port and software checks", () => {
@@ -272,6 +302,26 @@ test("a missing .gitignore and README score 0 on both checks", () => {
     assert.strictEqual(result.checks.find(check => check.id === "ignore-rules").score, 0);
     assert.strictEqual(result.checks.find(check => check.id === "readme").score, 0);
     assert.strictEqual(result.score, 82);
+});
+
+test("a repo without a package.json doesn't need a node_modules rule", () => {
+    const result = buildFindings(repoScan({
+        records: { gitignore: { env: true, nodeModules: false, keys: true } },
+        checks: { gitignore: "ok" },
+        basics: { dependabot: false, lockfile: false, packageJson: false },
+    }));
+    assert.strictEqual(result.findings.some(finding => finding.id === "repo-gitignore"), false);
+    assert.strictEqual(result.checks.find(check => check.id === "ignore-rules").score, 10);
+});
+
+test("without a package.json, a .gitignore missing .env and key files still scores 0", () => {
+    const result = buildFindings(repoScan({
+        records: { gitignore: { env: false, nodeModules: false, keys: false } },
+        checks: { gitignore: "ok" },
+        basics: { dependabot: false, lockfile: false, packageJson: false },
+    }));
+    assert.deepStrictEqual(result.findings.find(finding => finding.id === "repo-gitignore").details.missing, [".env", "key files"]);
+    assert.strictEqual(result.checks.find(check => check.id === "ignore-rules").score, 0);
 });
 
 test("Dependabot is skipped without a package.json", () => {
