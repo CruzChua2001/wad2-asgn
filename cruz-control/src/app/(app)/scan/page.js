@@ -132,7 +132,7 @@ export default function OverviewPage() {
               <h2>Start a new assessment</h2>
             </div>
 
-            <div className={styles.modeGrid} role="group" aria-label="Select target type">
+            <div className={styles.modeGrid} role="group" aria-label="Select target type" data-tour="target-type">
               <button type="button" className={mode === "website" ? styles.modeActive : ""} aria-pressed={mode === "website"} onClick={() => changeMode("website")}>
                 <span className={styles.modeIcon}><Icon name="globe" /></span>
                 <span><strong>Live website</strong><small>Domain, DNS, certificates, and headers</small></span>

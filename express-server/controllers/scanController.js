@@ -16,6 +16,9 @@ const { checkDependencies } = require("../checks/github/deps");
 const { buildFindings } = require("../lib/findings");
 const { isCdnIp } = require("../lib/cdn");
 
+const { SYSTEM_PROMPT, buildPrompt } = require("../lib/guidePrompt");
+const guideCache = new Map();
+
 const cacheLimit = _ => new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString()
 
 const ev = (kind, text, module = null) => ({ type: "event", kind, text, module });
@@ -349,4 +352,79 @@ const getScanById = async (req, res) => {
     res.json({ ...scan, role, ...buildFindings(scan) });
 }
 
-module.exports = { createScan, getScanById }
+const getFindingGuide = async (req, res) => {
+    try {
+        const { id, findingId } = req.params;
+
+        const { data: scan, error } = await supabase.from("scans")
+            .select("id, project_id, created_at, domain_scans(domain, result, created_at), repo_scans(github_repo, result, created_at)")
+            .eq("id", id).maybeSingle();
+
+        if (error) {
+            console.error("Failed to load scan for guide:", error);
+            return res.status(500).json({ error: "Couldn't load the scan. Please try again." });
+        }
+
+        if (!scan) {
+            return res.status(404).json({ error: "Scan not found." });
+        }
+
+        if (scan.project_id) {
+            const { data: member } = await supabase.from("project_members").select("role")
+                .eq("project_id", scan.project_id).eq("user_id", req.user.id).maybeSingle();
+
+            if (!member) {
+                return res.status(404).json({ error: "Scan not found." });
+            }
+        }
+
+        const { findings } = buildFindings(scan);
+        const finding = findings.find(f => f.id === findingId);
+        const cacheKey = [finding.id, finding.title, finding.fix, (finding.hosts || []).join(",")].join("|");
+        if (guideCache.has(cacheKey)) {
+            return res.json({ guide: guideCache.get(cacheKey) });
+        }
+
+        if (!finding) {
+            return res.status(404).json({ error: "Finding not found." });
+        }
+
+        const response = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${process.env.GEMINI_MODEL}:generateContent`,
+            {
+                method: "POST",
+                headers: {
+                    "content-type": "application/json",
+                    "x-goog-api-key": process.env.GEMINI_API_KEY,
+                },
+                body: JSON.stringify({
+                    systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+                    contents: [{ parts: [{ text: buildPrompt(finding) }] }],
+                    generationConfig: {
+                        maxOutputTokens: 600,
+                    },
+                }),
+            }
+        );
+
+        const data = await response.json();
+
+        if (response.status === 429) {
+            return res.status(429).json({ error: "The guide writer is busy right now. Please try again in a minute." });
+        }
+
+        const guide = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+        if (!response.ok || !guide) {
+            console.error("Gemini request failed:", response.status, JSON.stringify(data));
+            throw new Error("AI request failed");
+        }
+        guideCache.set(cacheKey, guide);
+        res.json({ guide });
+    } catch (error) {
+        console.error("Error creating fix guide:", error);
+        res.status(500).json({ error: "Couldn't create the guide. Please try again." });
+    }
+};
+
+module.exports = { createScan, getScanById, getFindingGuide }
