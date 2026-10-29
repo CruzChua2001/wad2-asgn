@@ -91,8 +91,9 @@ export default function AskCruzPanel({ open, onClose }) {
             className="fixed bottom-24 right-4 z-50 flex h-[min(36rem,calc(100vh-7rem))] w-[min(26rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-xl"
         >
             <header className="flex items-center gap-3 border-b border-line px-4 py-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-accent-soft">
-                    <img src="/favicon.ico" alt="" className="h-6 w-6 object-contain" aria-hidden="true" />
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent">
+                    {/* eslint-disable-next-line @next/next/no-img-element -- tiny static icon, next/image adds nothing here */}
+    <img src="/favicon.ico" alt="" className="h-6 w-6" />
                 </span>
                 <div className="min-w-0 flex-1">
                     <h2 className="font-semibold tracking-wide text-accent">CRUZ</h2>
@@ -102,7 +103,7 @@ export default function AskCruzPanel({ open, onClose }) {
                     type="button"
                     onClick={onClose}
                     aria-label="Close Ask Cruz"
-                    className="rounded-full p-1.5 text-muted transition-colors hover:bg-accent-soft hover:text-ink"
+                    className="rounded-full cursor-pointer p-1.5 text-muted transition-colors hover:bg-accent-soft hover:text-ink"
                 >
                     <LuX className="h-4 w-4" aria-hidden="true" />
                 </button>
@@ -114,7 +115,7 @@ export default function AskCruzPanel({ open, onClose }) {
                     <button
                         type="button"
                         onClick={() => openAuth("login")}
-                        className="rounded-full border border-line px-4 py-1.5 text-sm font-medium text-accent transition-colors hover:bg-accent-soft"
+                        className="rounded-full cursor-pointer border border-line px-4 py-1.5 text-sm font-medium text-accent transition-colors hover:bg-accent-soft"
                     >
                         Log in
                     </button>
@@ -150,7 +151,7 @@ export default function AskCruzPanel({ open, onClose }) {
                                     type="button"
                                     onClick={() => send(s)}
                                     disabled={loading}
-                                    className="rounded-md border border-line px-2.5 py-1.5 text-muted transition-colors hover:bg-accent-soft hover:text-ink disabled:opacity-50"
+                                    className="rounded-md cursor-pointer border border-line px-2.5 py-1.5 text-muted transition-colors hover:bg-accent-soft hover:text-ink disabled:opacity-50"
                                 >
                                     {s}
                                 </button>
@@ -177,7 +178,7 @@ export default function AskCruzPanel({ open, onClose }) {
                         <button
                             type="submit"
                             disabled={loading || !input.trim()}
-                            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-accent transition-colors hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-40"
+                            className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-accent transition-colors hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-40"
                         >
                             <LuSend className="h-4 w-4" aria-hidden="true" />
                             Send

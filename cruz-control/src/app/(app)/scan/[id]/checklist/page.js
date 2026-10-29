@@ -88,7 +88,7 @@ const ChecklistRow = ({ item, status, findings, ticked, onToggle, fixGuideHref }
                         aria-checked={ticked}
                         aria-label={`Mark "${item.title}" as done`}
                         onClick={onToggle}
-                        className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
+                        className={`mt-0.5 cursor-pointer flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
                             ticked ? "border-accent bg-accent text-white" : "border-line text-transparent hover:border-accent"
                         }`}
                     >
@@ -182,7 +182,7 @@ export default function ChecklistPage() {
                                 type="button"
                                 onClick={selectAll}
                                 disabled={tickedCount === tickableRows.length}
-                                className="rounded-full border border-line px-3 py-1 font-medium text-accent transition-colors hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-40"
+                                className="rounded-full cursor-pointer border border-line px-3 py-1 font-medium text-accent transition-colors hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-40"
                             >
                                 Select all
                             </button>
@@ -190,7 +190,7 @@ export default function ChecklistPage() {
                                 type="button"
                                 onClick={deselectAll}
                                 disabled={tickedCount === 0}
-                                className="rounded-full border border-line px-3 py-1 font-medium text-muted transition-colors hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-40"
+                                className="rounded-full cursor-pointer border border-line px-3 py-1 font-medium text-muted transition-colors hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-40"
                             >
                                 Deselect all
                             </button>

@@ -52,7 +52,7 @@ export default function FixItem({ scanId, finding, done, open, onToggleDone, onT
                     aria-checked={done}
                     aria-label={`Mark "${finding.title}" as fixed`}
                     onClick={onToggleDone}
-                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
+                    className={`flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-full border-2 transition-colors ${
                         done ? "border-accent bg-accent text-white" : "border-line text-transparent hover:border-accent"
                     }`}
                 >
@@ -64,7 +64,7 @@ export default function FixItem({ scanId, finding, done, open, onToggleDone, onT
                     aria-expanded={open}
                     aria-controls={panelId}
                     onClick={onToggleOpen}
-                    className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                    className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left"
                 >
                     <span className="min-w-0 flex-1 text-sm font-semibold text-ink sm:text-base">
                         <span className={done ? "line-through" : ""}>{finding.title}</span>
@@ -99,7 +99,7 @@ export default function FixItem({ scanId, finding, done, open, onToggleDone, onT
                                 type="button"
                                 onClick={askAi}
                                 disabled={loading}
-                                className="inline-flex items-center gap-2 rounded-full border border-line px-3 py-1.5 font-medium text-accent transition-colors hover:bg-accent-soft disabled:cursor-wait disabled:opacity-60"
+                                className="inline-flex items-center cursor-pointer gap-2 rounded-full border border-line px-3 py-1.5 font-medium text-accent transition-colors hover:bg-accent-soft disabled:cursor-wait disabled:opacity-60"
                             >
                                 <LuSparkles className="h-4 w-4" aria-hidden="true" />
                                 {loading ? "Writing your guide..." : "Get step-by-step guide"}
