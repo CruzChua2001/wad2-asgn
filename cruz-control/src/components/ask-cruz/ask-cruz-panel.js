@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
-import { LuBot, LuSend, LuX } from "react-icons/lu";
+import { LuSend, LuX } from "react-icons/lu";
 import api from "@/lib/api";
 import { useAuth } from "@/components/auth/auth-provider";
 
@@ -92,7 +92,8 @@ export default function AskCruzPanel({ open, onClose }) {
         >
             <header className="flex items-center gap-3 border-b border-line px-4 py-3">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent">
-                    <LuBot className="h-5 w-5" aria-hidden="true" />
+                    {/* eslint-disable-next-line @next/next/no-img-element -- tiny static icon, next/image adds nothing here */}
+                    <img src="/favicon.ico" alt="" className="h-6 w-6" />
                 </span>
                 <div className="min-w-0 flex-1">
                     <h2 className="font-semibold tracking-wide text-accent">CRUZ</h2>
