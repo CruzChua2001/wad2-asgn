@@ -92,6 +92,7 @@ export default function AskCruzPanel({ open, onClose }) {
         >
             <header className="flex items-center gap-3 border-b border-line px-4 py-3">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-accent-soft">
+                    {/* eslint-disable-next-line @next/next/no-img-element -- tiny static icon, next/image adds nothing here */}
                     <img src="/favicon.ico" alt="" className="h-6 w-6 object-contain" aria-hidden="true" />
                 </span>
                 <div className="min-w-0 flex-1">

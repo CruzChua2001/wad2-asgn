@@ -13,7 +13,10 @@ import AskCruzPanel from "@/components/ask-cruz/ask-cruz-panel";
 import { useEffect, useState } from "react";
 
 const BrandMark = _ => {
-  return <img src="/favicon.ico" alt="" className="brand-mark" aria-hidden="true" />;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element -- tiny static icon, next/image adds nothing here
+    <img src="/favicon.ico" alt="" className="brand-mark" aria-hidden="true" />
+  );
 }
 
 const ScanLink = ({children, href = "/scan", ...props}) => {
