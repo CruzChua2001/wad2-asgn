@@ -91,9 +91,9 @@ export default function AskCruzPanel({ open, onClose }) {
             className="fixed bottom-24 right-4 z-50 flex h-[min(36rem,calc(100vh-7rem))] w-[min(26rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-xl"
         >
             <header className="flex items-center gap-3 border-b border-line px-4 py-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-accent-soft">
                     {/* eslint-disable-next-line @next/next/no-img-element -- tiny static icon, next/image adds nothing here */}
-    <img src="/favicon.ico" alt="" className="h-6 w-6" />
+                    <img src="/favicon.ico" alt="" className="h-6 w-6 object-contain" aria-hidden="true" />
                 </span>
                 <div className="min-w-0 flex-1">
                     <h2 className="font-semibold tracking-wide text-accent">CRUZ</h2>
