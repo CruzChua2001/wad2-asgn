@@ -409,3 +409,27 @@ button { font: inherit; }
 @media (prefers-reduced-motion: reduce) {
   .auth-panel, .auth-tab { transition: none; }
 }
+
+@keyframes ask-cruz-glow {
+    0%, 100% {
+        box-shadow:
+            0 14px 36px color-mix(in srgb, var(--accent) 32%, transparent),
+            0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent);
+    }
+    40% {
+        box-shadow:
+            0 14px 44px color-mix(in srgb, var(--accent) 55%, transparent),
+            0 0 0 10px color-mix(in srgb, var(--accent) 22%, transparent);
+    }
+    75% {
+        box-shadow:
+            0 14px 36px color-mix(in srgb, var(--accent) 32%, transparent),
+            0 0 0 22px color-mix(in srgb, var(--accent) 0%, transparent);
+    }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .ask-cruz-glow {
+        animation: ask-cruz-glow 1.5s ease-out 3;
+    }
+}
