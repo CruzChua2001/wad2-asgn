@@ -12,9 +12,11 @@ import TextAnimate from "./text-animate";
 import TypingAnimation from "./typing-animation";
 import { useTheme } from "@/lib/theme-store";
 
-// TEMPORARY LOGO
 function BrandMark() {
-  return <span className="brand-mark" aria-hidden="true"><span /><span /><span /><span /></span>;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element -- tiny static icon, next/image adds nothing here
+    <img src="/favicon.ico" alt="" className="brand-mark" aria-hidden="true" />
+  );
 }
 
 export default function Home() {
