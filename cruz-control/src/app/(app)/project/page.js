@@ -44,11 +44,12 @@ const Targets = ({ domain, repo }) => (
 const ProjectPage = _ => {
     const { status, user } = useAuth();
     const router = useRouter();
-    const { startScan } = useScan();
+    const { startScan, phase, scan } = useScan();
     const reduceMotion = useReducedMotion();
     const popupModalRef = useRef(null);
     const memberRef = useRef(null);
     const deleteRef = useRef(null);
+    const submitRef = useRef(false);
     const [projects, setProjects] = useState([]);
     const [error, setError] = useState("");
     const [formError, setFormError] = useState("");
@@ -124,6 +125,8 @@ const ProjectPage = _ => {
 
     const createProject = async event => {
         event.preventDefault();
+        if (submitRef.current) return;
+        submitRef.current = true;
         setLoading(true);
         setFormError("");
         try {
@@ -136,7 +139,7 @@ const ProjectPage = _ => {
             }
 
             const response = await api.post("/api/project", form);
-            setProjects([response.data, ...projects]);
+            setProjects(current => [response.data, ...current]);
             setForm({ name: "", domain: "", githubRepo: "" });
             popupModalRef.current.close();
 
@@ -144,6 +147,7 @@ const ProjectPage = _ => {
         } catch (e) {
             setFormError(e.response?.data?.error ?? "Could not create or update project.");
         } finally {
+            submitRef.current = false;
             setLoading(false)
         }
     }
@@ -187,7 +191,7 @@ const ProjectPage = _ => {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div className="grid gap-1">
                     <h1 className="text-3xl font-semibold tracking-tight">My Projects</h1>
-                    <p className="text-sm text-muted">Track your sites and repos, and see how their scores change over time.</p>
+                    <p className="text-sm text-muted">Use Re-scan to add a scan to an existing project. New project creates a separate project.</p>
                 </div>
                 <div className="text-sm font-semibold">
                     <button
@@ -287,6 +291,10 @@ const ProjectPage = _ => {
 
                                 <Targets domain={p.domain} repo={p.github_repo} />
 
+                                <Link href={`/project/${p.id}/history`} aria-label={`View history for ${p.name}`} className="inline-flex min-h-10 w-fit items-center rounded-lg border border-line px-3 text-sm font-semibold text-accent hover:border-accent hover:bg-accent-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+                                    View history<span className="sr-only"> for {p.name}</span>
+                                </Link>
+
                                 <div className="flex gap-2 mt-auto text-sm font-semibold">
                                     {p.latestScan ? (
                                         <Link href={`/scan/${p.latestScan.id}`} className="grid place-items-center flex-1 h-10 rounded-lg bg-accent text-page! no-underline hover:bg-accent-bright transition-colors duration-200">
@@ -301,8 +309,8 @@ const ProjectPage = _ => {
                                     )}
 
                                     {p.role === "owner" && p.latestScan && (
-                                        <button type="button" onClick={() => scanProject(p)} className="flex items-center gap-1.5 h-10 px-3 rounded-lg border border-line text-ink hover:border-accent hover:text-accent cursor-pointer transition-colors duration-200">
-                                            <LuRefreshCw size={15} aria-hidden="true" /> Re-scan<span className="sr-only"> {p.name}</span>
+                                        <button type="button" aria-label={`${phase === "scanning" && scan?.projectId === p.id ? "Scanning..." : "Re-scan"} ${p.name}`} disabled={phase === "scanning" && scan?.projectId === p.id} onClick={() => scanProject(p)} className="flex items-center gap-1.5 h-10 px-3 rounded-lg border border-line text-ink hover:border-accent hover:text-accent cursor-pointer transition-colors duration-200 disabled:cursor-default disabled:opacity-60">
+                                            <LuRefreshCw size={15} aria-hidden="true" /> {phase === "scanning" && scan?.projectId === p.id ? "Scanning..." : "Re-scan"}<span className="sr-only"> {p.name}</span>
                                         </button>
                                     )}
                                 </div>

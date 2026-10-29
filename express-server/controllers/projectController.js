@@ -167,7 +167,7 @@ const deleteProjectById = async (req, res) => {
 }
 
 const getScansByProjectId = async (req, res) => {
-    const { data, error } = await supabase.from("scans").select("id, created_at, domain_scans(result), repo_scans(result)")
+    const { data, error } = await supabase.from("scans").select("id, created_at, domain_scans(domain, result, created_at), repo_scans(github_repo, result, created_at)")
         .eq("project_id", req.params.id).order("created_at", { ascending: false });
 
     if (error) {
@@ -178,7 +178,14 @@ const getScansByProjectId = async (req, res) => {
     // Scores use today's rules, so past scores move when the formula changes
     res.json(data.map(scan => {
         const { score, grade } = buildFindings(scan);
-        return { id: scan.id, created_at: scan.created_at, score, grade };
+        return {
+            id: scan.id, created_at: scan.created_at, score, grade,
+            // Use saved scan targets, since a project's targets can be edited later.
+            domain: scan.domain_scans?.domain ?? null,
+            github_repo: scan.repo_scans?.github_repo ?? null,
+            domain_captured_at: scan.domain_scans?.created_at ?? null,
+            repo_captured_at: scan.repo_scans?.created_at ?? null,
+        };
     }));
 }
 
