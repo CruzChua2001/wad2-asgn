@@ -9,7 +9,6 @@ import ProfileMenu from "./scan/profile-menu";
 import { ScanProvider, useScan } from "./scan/scan-context";
 import styles from "@/styles/overview/overview.module.css";
 import ProductTour from "@/components/tour/product-tour";  
-import { useState } from "react";
 import AskCruzPanel from "@/components/ask-cruz/ask-cruz-panel";
 import { useEffect, useState } from "react";
 
@@ -97,8 +96,7 @@ export default function OverviewLayout({ children }) {
         </section>
 
         <ProductTour part={tour} onStart={setTour} onClose={() => setTour(null)} />
-        {/* Placeholder for the AI assistant. No behaviour yet; hand off to the AI team. */}
-        <button type="button" className={styles.askCruz} aria-label="Ask Cruz, AI assistant (coming soon)" title="AI assistant coming soon">
+
         <button
           type="button"
           className={`${styles.askCruz} ${hop ? "ask-cruz-glow" : ""}`}
@@ -111,6 +109,7 @@ export default function OverviewLayout({ children }) {
           <img src="/AIChat.png" alt="" className={styles.askCruzIcon} />
           <span>ASK CRUZ</span>
         </button>
+
         <AskCruzPanel open={askOpen} onClose={() => setAskOpen(false)} />
       </main>
     </ScanProvider>
