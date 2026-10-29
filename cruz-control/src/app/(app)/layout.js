@@ -86,7 +86,7 @@ export default function OverviewLayout({ children }) {
               <button
                 type="button"
                 onClick={() => setTour(showingResults ? "results" : "intro")}
-                className="rounded-full border border-line px-3 py-1.5 text-xs! font-semibold! text-accent hover:bg-accent-soft"
+                className="rounded-full cursor-pointer border border-line px-3 py-1.5 text-xs! font-semibold! text-accent hover:bg-accent-soft"
               >
                 Take the tour
               </button>
