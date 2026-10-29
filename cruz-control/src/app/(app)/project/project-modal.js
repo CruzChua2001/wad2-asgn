@@ -47,7 +47,7 @@ const ProjectModal = ({ editing, modalRef, form, updateField, onSubmit, error, l
                         <p className="text-sm text-muted">
                             {editing
                                 ? "Changes apply from your next scan."
-                                : "Add a domain, a GitHub repository, or both. We'll scan it straight away."}
+                                : "Creates a separate project and runs its first scan. To add a scan to an existing project, close this dialog and choose Re-scan on its card."}
                         </p>
                     </div>
                     <button type="button" aria-label="Close" onClick={() => modalRef.current.close()} className="p-2 rounded-lg text-muted hover:text-ink hover:bg-surface-soft">

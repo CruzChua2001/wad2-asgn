@@ -104,7 +104,7 @@ export default function ScanResultsLayout({ children }) {
           {!result.projectId && (
             savedScanId === id
             ? <Link href="/project" className={SECONDARY}><LuBookmarkCheck aria-hidden="true" /> Saved · View project</Link>
-            : <button type="button" className={SECONDARY} onClick={() => saveToProject(id)} disabled={saving}>
+            : <button type="button" className={SECONDARY} title="Creates a new project from this standalone scan" onClick={() => saveToProject(id)} disabled={saving}>
                 <LuBookmarkPlus aria-hidden="true" /> {saving ? "Saving..." : "Save to project"}
               </button>
           )}
@@ -116,6 +116,10 @@ export default function ScanResultsLayout({ children }) {
           <RippleButton className={PRIMARY} type="button" onClick={newScan}><LuPlus aria-hidden="true" /> New scan</RippleButton>
         </div>
       </motion.header>
+
+      {!result.projectId && savedScanId !== id && (
+        <p className="text-sm text-muted">Save to project creates a new project. For another scan of an existing project, open <Link href="/project" className="text-accent underline">Projects</Link> and choose Re-scan.</p>
+      )}
 
       <motion.div {...reveal(0.04)}>
         <ResultTabs hasRepository={Boolean(result.linkedRepository)} findingsCount={result.findings.length} />
