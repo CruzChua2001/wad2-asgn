@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
-import { LuBot, LuSend, LuX } from "react-icons/lu";
+import { LuSend, LuX } from "react-icons/lu";
 import api from "@/lib/api";
 import { useAuth } from "@/components/auth/auth-provider";
 
@@ -91,8 +91,8 @@ export default function AskCruzPanel({ open, onClose }) {
             className="fixed bottom-24 right-4 z-50 flex h-[min(36rem,calc(100vh-7rem))] w-[min(26rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-xl"
         >
             <header className="flex items-center gap-3 border-b border-line px-4 py-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent">
-                    <LuBot className="h-5 w-5" aria-hidden="true" />
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-accent-soft">
+                    <img src="/favicon.ico" alt="" className="h-6 w-6 object-contain" aria-hidden="true" />
                 </span>
                 <div className="min-w-0 flex-1">
                     <h2 className="font-semibold tracking-wide text-accent">CRUZ</h2>

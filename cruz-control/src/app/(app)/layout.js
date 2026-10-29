@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LuBot } from "react-icons/lu";
 import AnimatedThemeToggler from "@/components/animated-theme-toggler";
 import { useTheme } from "@/lib/theme-store";
+import { useAuth } from "@/components/auth/auth-provider";
 import ProfileMenu from "./scan/profile-menu";
 import { ScanProvider, useScan } from "./scan/scan-context";
 import styles from "@/styles/overview/overview.module.css";
@@ -13,12 +13,12 @@ import AskCruzPanel from "@/components/ask-cruz/ask-cruz-panel";
 import { useEffect, useState } from "react";
 
 const BrandMark = _ => {
-  return <span className="brand-mark" aria-hidden="true"><span /><span /><span /><span /></span>;
+  return <img src="/favicon.ico" alt="" className="brand-mark" aria-hidden="true" />;
 }
 
-const ScanLink = ({children, ...props}) => {
+const ScanLink = ({children, href = "/scan", ...props}) => {
   const { resetScan } = useScan();
-  return <Link href="/scan" onClick={resetScan} {...props}>{children}</Link>;
+  return <Link href={href} onClick={resetScan} {...props}>{children}</Link>;
 }
 
 const RadarField = _ => {
@@ -40,6 +40,7 @@ const RadarField = _ => {
 
 export default function OverviewLayout({ children }) {
   const [theme, updateTheme] = useTheme();
+  const { status } = useAuth();
   const [askOpen, setAskOpen] = useState(false);
   const [hop, setHop] = useState(false);
   const pathname = usePathname();
@@ -69,7 +70,7 @@ export default function OverviewLayout({ children }) {
         <RadarField />
 
         <header className={styles.header}>
-           <ScanLink className="brand" aria-label="Cruz Control home">
+           <ScanLink className="brand" href={status === "guest" ? "/" : "/scan"} aria-label="Cruz Control home">
             <BrandMark />
             <span>CRUZCONTROL</span>
           </ScanLink>

@@ -130,6 +130,7 @@ button { font: inherit; }
 .brand-mark { width: 24px; height: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 3px; transform: rotate(45deg); }
 .brand-mark span { border: 1px solid var(--accent); }
 .brand-mark span:nth-child(2), .brand-mark span:nth-child(3) { background: var(--accent); }
+img.brand-mark { display: block; gap: 0; transform: none; object-fit: contain; border-radius: 4px; }
 .main-nav { display: flex; align-items: center; gap: 30px; }
 .theme-toggle { display: inline-flex; align-items: center; gap: 7px; border: 0; padding: 8px 0; color: var(--muted); background: transparent; cursor: pointer; font-size: 12px; transition: color .2s; }
 .theme-toggle:hover { color: var(--accent); }
