@@ -97,7 +97,7 @@ export default function FixGuidePage() {
                                 type="button"
                                 onClick={selectAll}
                                 disabled={allDone}
-                                className="rounded-full border border-line px-3 py-1 font-medium text-accent transition-colors hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-40"
+                                className="rounded-full cursor-pointer border border-line px-3 py-1 font-medium text-accent transition-colors hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-40"
                             >
                                 Fixed all
                             </button>
@@ -105,7 +105,7 @@ export default function FixGuidePage() {
                                 type="button"
                                 onClick={deselectAll}
                                 disabled={doneCount === 0}
-                                className="rounded-full border border-line px-3 py-1 font-medium text-muted transition-colors hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-40"
+                                className="rounded-full cursor-pointer border border-line px-3 py-1 font-medium text-muted transition-colors hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-40"
                             >
                                 Deselect all
                             </button>
@@ -130,7 +130,7 @@ export default function FixGuidePage() {
                             <button
                                 type="button"
                                 onClick={collapseAll}
-                                className="text-xs font-medium text-accent hover:underline"
+                                className="text-xs cursor-pointer font-medium text-accent hover:underline"
                             >
                                 Collapse all
                             </button>

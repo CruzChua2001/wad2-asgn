@@ -33,6 +33,12 @@ const shouldSkip = step => {
     return false;
 };
 
+const scrollToTarget = el => {
+    const r = el.getBoundingClientRect();
+    if (r.top >= 0 && r.bottom <= window.innerHeight) return; // already fully in view
+    window.scrollTo({ top: window.scrollY + r.top - Math.max(16, (window.innerHeight - r.height) / 2) });
+};
+
 export default function ProductTour({ part, onStart, onClose }) {
     const { status, user } = useAuth();
     const pathname = usePathname();
@@ -43,6 +49,7 @@ export default function ProductTour({ part, onStart, onClose }) {
     const [view, setView] = useState(null);
     const cardRef = useRef(null);
     const nextRef = useRef(null);
+    const startScrollRef = useRef(0);
     const onStartRef = useRef(onStart);
 
     useEffect(() => {
@@ -84,12 +91,13 @@ export default function ProductTour({ part, onStart, onClose }) {
     const steps = filtered.part === part ? filtered.list : base;
     const current = steps[step] ?? steps[steps.length - 1] ?? {};
     const selector = current.selector;
-    useEffect(() => {
-        if (!open) return;
+        useEffect(() => {
+            if (open) startScrollRef.current = window.scrollY;
+        }, [open]);
 
         const target = selector ? document.querySelector(selector) : null;
-        target?.scrollIntoView({ block: "center" });
-
+        useEffect(() => {
+        if (target) scrollToTarget(target);
         const measure = () => {
             const el = selector ? document.querySelector(selector) : null;
             const r = el?.getBoundingClientRect();
@@ -121,6 +129,7 @@ export default function ProductTour({ part, onStart, onClose }) {
 
     const finish = () => {
         if (who) markSeen(part, who);
+        window.scrollTo(0, startScrollRef.current);
         setStep(0);
         setView(null);
         onClose();
@@ -222,7 +231,7 @@ export default function ProductTour({ part, onStart, onClose }) {
                     </div>
                     <div className="flex items-center gap-2">
                         {!isLast && (
-                            <button type="button" onClick={finish} className="px-2 py-1.5 text-xs! text-muted hover:text-ink">
+                            <button type="button" onClick={finish} className="px-2 py-1.5 cursor-pointer text-xs! text-muted hover:text-ink">
                                 Skip
                             </button>
                         )}
@@ -230,7 +239,7 @@ export default function ProductTour({ part, onStart, onClose }) {
                             <button
                                 type="button"
                                 onClick={goBack}
-                                className="rounded-full border border-line px-3 py-1.5 text-xs! font-semibold! tracking-wide text-accent hover:bg-accent-soft"
+                                className="rounded-full cursor-pointer border border-line px-3 py-1.5 text-xs! font-semibold! tracking-wide text-accent hover:bg-accent-soft"
                             >
                                 BACK
                             </button>
@@ -239,7 +248,7 @@ export default function ProductTour({ part, onStart, onClose }) {
                             ref={nextRef}
                             type="button"
                             onClick={goNext}
-                            className="rounded-full border border-accent bg-accent-soft px-3 py-1.5 text-xs! font-semibold! tracking-wide text-accent hover:bg-accent hover:text-page"
+                            className="rounded-full cursor-pointer border border-accent bg-accent-soft px-3 py-1.5 text-xs! font-semibold! tracking-wide text-accent hover:bg-accent hover:text-page"
                         >
                             {isLast ? (part === "intro" ? "GOT IT" : "DONE") : "NEXT"}
                         </button>
