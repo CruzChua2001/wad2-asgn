@@ -45,6 +45,8 @@ export default function OverviewLayout({ children }) {
   const [hop, setHop] = useState(false);
   const pathname = usePathname();
   const showingResults = pathname.startsWith("/scan/");
+  const onOverview = /^\/scan\/[^/]+$/.test(pathname);
+  const showTourButton = pathname === "/scan" || onOverview;
   const navProps = href => pathname.startsWith(href) ? { className: styles.navActive, "aria-current": "page" } : {};
   const [tour, setTour] = useState(null);
 
@@ -80,13 +82,15 @@ export default function OverviewLayout({ children }) {
             <Link href="/learn" {...navProps("/learn")}>Learn</Link>
           </nav>
           <div className={styles.headerActions} aria-label="Account and display controls">
-            <button
-              type="button"
-              onClick={() => setTour(showingResults ? "results" : "intro")}
-              className="rounded-full border border-line px-3 py-1.5 text-xs! font-semibold! text-accent hover:bg-accent-soft"
-            >
-              Take the tour
-            </button>
+            {showTourButton && (
+              <button
+                type="button"
+                onClick={() => setTour(showingResults ? "results" : "intro")}
+                className="rounded-full border border-line px-3 py-1.5 text-xs! font-semibold! text-accent hover:bg-accent-soft"
+              >
+                Take the tour
+              </button>
+            )}
             <AnimatedThemeToggler theme={theme} onThemeChange={updateTheme} />
             <ProfileMenu />
           </div>

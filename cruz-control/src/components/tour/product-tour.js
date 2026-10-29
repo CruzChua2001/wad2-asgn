@@ -34,6 +34,12 @@ const shouldSkip = step => {
     return false;
 };
 
+const scrollToTarget = el => {
+    const r = el.getBoundingClientRect();
+    if (r.top >= 0 && r.bottom <= window.innerHeight) return; // already fully in view
+    window.scrollTo({ top: window.scrollY + r.top - Math.max(16, (window.innerHeight - r.height) / 2) });
+};
+
 export default function ProductTour({ part, onStart, onClose }) {
     const { status, user } = useAuth();
     const pathname = usePathname();
@@ -44,6 +50,7 @@ export default function ProductTour({ part, onStart, onClose }) {
     const [view, setView] = useState(null);
     const cardRef = useRef(null);
     const nextRef = useRef(null);
+    const startScrollRef = useRef(0);
     const onStartRef = useRef(onStart);
 
     useEffect(() => {
@@ -85,12 +92,13 @@ export default function ProductTour({ part, onStart, onClose }) {
     const steps = filtered.part === part ? filtered.list : base;
     const current = steps[step] ?? steps[steps.length - 1] ?? {};
     const selector = current.selector;
-    useEffect(() => {
-        if (!open) return;
+        useEffect(() => {
+            if (open) startScrollRef.current = window.scrollY;
+        }, [open]);
 
         const target = selector ? document.querySelector(selector) : null;
-        target?.scrollIntoView({ block: "center" });
-
+        useEffect(() => {
+        if (target) scrollToTarget(target);
         const measure = () => {
             const el = selector ? document.querySelector(selector) : null;
             const r = el?.getBoundingClientRect();
@@ -122,6 +130,7 @@ export default function ProductTour({ part, onStart, onClose }) {
 
     const finish = () => {
         if (who) markSeen(part, who);
+        window.scrollTo(0, startScrollRef.current);
         setStep(0);
         setView(null);
         onClose();
@@ -198,7 +207,7 @@ export default function ProductTour({ part, onStart, onClose }) {
             >
                 <div className="flex items-center gap-3">
                     <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent">
-                        <LuBot className="h-5 w-5" aria-hidden="true" />
+                        <img src="/favicon.ico" alt="" className="h-6 w-6" />
                     </span>
                     <div className="min-w-0">
                         <h2 id="tour-title" className="font-semibold uppercase tracking-wide text-accent">
