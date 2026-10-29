@@ -422,7 +422,7 @@ export default function OverviewTab() {
       openFinding(finding.id);
     }
 
-    document.getElementById("findings-title")?.closest("section").scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+    document.getElementById("findings-title")?.closest("section").scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "nearest" });
   }
 
   // Findings open and close on their own, and the last one opened drives the map highlight
@@ -602,14 +602,7 @@ export default function OverviewTab() {
                 {nodeFindingCount > 0 && (
                   <p className="m-0 flex flex-wrap gap-x-2 text-xs text-muted">
                     {nodeFindingCount} {nodeFindingCount === 1 ? "finding" : "findings"} on this server
-                    {filterNodeId === selectedNode.id ? (
-                      <span>
-                        Showing only these ·{" "}
-                        <button type="button" onClick={() => setFilterNodeId(null)} className="cursor-pointer font-semibold! text-accent">
-                          Show all
-                        </button>
-                      </span>
-                    ) : (
+                    {filterNodeId !== selectedNode.id && (
                       <button type="button" onClick={() => showNodeFindings(selectedNode.id)} className="cursor-pointer font-semibold! text-accent">
                         Show only these
                       </button>
@@ -619,10 +612,7 @@ export default function OverviewTab() {
                 {nodeFinding ? (
                   <div className={styles.fix}>
                     <h3>What to do</h3>
-                    {/* A one-line fix is a span, which .fix p doesn't style, so size it here */}
-                    <div className="text-[12px] leading-relaxed text-muted">
-                      <FixText text={nodeFinding.fix} label={null} />
-                    </div>
+                    <FixText text={nodeFinding.fix} label={null} />
                   </div>
                 ) : (
                   <p className={styles.noIssue}>No issues were listed for this server.</p>
@@ -635,16 +625,10 @@ export default function OverviewTab() {
           <div className={styles.logDrawer}>
             <button type="button" className={styles.logBar} aria-expanded={logOpen} aria-controls="scan-log" onClick={() => setLogOpen((open) => !open)}>
               <span className={styles.logLabel}><i aria-hidden="true" /> Scan logs</span>
-              <span className={styles.logLast}>{lines.length > 0 ? lines.at(-1).text : "No logs for this scan"}</span>
+              <span className={styles.logLast}>{lines.at(-1)?.text}</span>
               <span className={styles.logChevron} aria-hidden="true">{logOpen ? "▲" : "▼"}</span>
             </button>
-            {/* Logs live in the scan context, so a reload or a scan opened later has none */}
-            {logOpen && lines.length === 0 && (
-              <p id="scan-log" className={`${styles.logBody} text-[#6f8279]`}>
-                Logs are only kept while a scan runs in this tab. Re-scan to see them.
-              </p>
-            )}
-            {logOpen && lines.length > 0 && (
+            {logOpen && (
               <ol id="scan-log" className={styles.logBody}>
                 {lines.map((line) => (
                   <li key={line.id} data-kind={line.kind}><time>{line.time}</time><span>{line.text}</span></li>
