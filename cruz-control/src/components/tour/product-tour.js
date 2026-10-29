@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import { LuBot } from "react-icons/lu";
 import { useAuth } from "@/components/auth/auth-provider";
 import { TOUR_PARTS } from "./tour-steps";
 
@@ -197,8 +196,9 @@ export default function ProductTour({ part, onStart, onClose }) {
                 style={cardStyle}
             >
                 <div className="flex items-center gap-3">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent">
-                        <LuBot className="h-5 w-5" aria-hidden="true" />
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-accent-soft">
+                        {/* eslint-disable-next-line @next/next/no-img-element -- tiny static icon, next/image adds nothing here */}
+                        <img src="/favicon.ico" alt="" className="h-6 w-6 object-contain" aria-hidden="true" />
                     </span>
                     <div className="min-w-0">
                         <h2 id="tour-title" className="font-semibold uppercase tracking-wide text-accent">
