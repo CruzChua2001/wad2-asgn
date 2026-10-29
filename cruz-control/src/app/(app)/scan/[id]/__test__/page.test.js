@@ -229,7 +229,7 @@ describe("Overview findings", () => {
 });
 
 describe("Overview Show only these", () => {
-    test("filters the findings to one server and Show all brings them back", () => {
+    test("filters the findings to one server and Server details' Show all brings them back", () => {
         showOverview(scanWith());
 
         fireEvent.click(serverButton("mail.example.com"));
@@ -237,11 +237,25 @@ describe("Overview Show only these", () => {
 
         expect(findingTitles()).toEqual(["Title smtp"]);
         expect(screen.getByText(/Showing findings for/).textContent).toContain("mail.example.com");
+        expect(within(serverDetails()).getByText(/Showing only these/)).toBeTruthy();
 
-        fireEvent.click(screen.getByRole("button", { name: "Show all" }));
+        // The findings card has a Show all too, so use the one in Server details
+        fireEvent.click(within(serverDetails()).getByRole("button", { name: "Show all" }));
 
         expect(findingTitles()).toEqual(["Title mongodb", "Title smtp", "Title dns"]);
         expect(screen.queryByText(/Showing findings for/)).toBeNull();
+        expect(within(serverDetails()).queryByText(/Showing only these/)).toBeNull();
+        expect(within(serverDetails()).getByRole("button", { name: "Show only these" })).toBeTruthy();
+    });
+
+    test("the findings card's Show all also brings them back", () => {
+        showOverview(scanWith());
+
+        fireEvent.click(within(serverDetails()).getByRole("button", { name: "Show only these" }));
+        fireEvent.click(within(findingsCard()).getByRole("button", { name: "Show all" }));
+
+        expect(findingTitles()).toEqual(["Title mongodb", "Title smtp", "Title dns"]);
+        expect(within(serverDetails()).queryByText(/Showing only these/)).toBeNull();
     });
 });
 
@@ -270,6 +284,13 @@ describe("Overview Server details", () => {
         expect(within(serverDetails()).getByText("Fix smtp.")).toBeTruthy();
     });
 
+    test("a one-line fix sits in the small muted wrapper", () => {
+        showOverview(scanWith());
+
+        expect(within(serverDetails()).getByText("Fix mongodb.").closest("div").className)
+            .toBe("text-[12px] leading-relaxed text-muted");
+    });
+
     test("a CDN server shows the CDN badge in the server list", () => {
         showOverview(scanWith());
 
@@ -279,16 +300,19 @@ describe("Overview Server details", () => {
 });
 
 describe("Overview scan logs", () => {
-    test("with no lines, opening the logs shows an empty list", () => {
+    test("with no lines, opening the logs says they're only kept while a scan runs", () => {
         showOverview(scanWith());
         const bar = screen.getByRole("button", { name: /Scan logs/ });
 
         expect(bar.getAttribute("aria-expanded")).toBe("false");
+        expect(bar.textContent).toContain("No logs for this scan");
 
         fireEvent.click(bar);
+        const log = document.getElementById("scan-log");
 
         expect(bar.getAttribute("aria-expanded")).toBe("true");
-        expect(document.getElementById("scan-log").children.length).toBe(0);
+        expect(log.textContent).toBe("Logs are only kept while a scan runs in this tab. Re-scan to see them.");
+        expect(within(log).queryAllByRole("listitem")).toEqual([]);
     });
 
     test("with lines, opening the logs lists them", () => {
