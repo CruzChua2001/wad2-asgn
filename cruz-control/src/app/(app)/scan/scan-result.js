@@ -169,6 +169,7 @@ const getServers = (domainScan, findings) => {
             as: geo.as,
             asname: geo.asname,
             service: service,
+            ports: ports,
             status: getServerStatus(geo.ip, findings, isCdn),
             summary: summary,
             isCdn: isCdn,
