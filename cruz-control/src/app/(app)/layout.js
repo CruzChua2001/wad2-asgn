@@ -82,7 +82,6 @@ export default function OverviewLayout({ children }) {
           <nav className={styles.primaryNav} aria-label="Primary navigation">
             <ScanLink {...navProps("/scan")}>Scan</ScanLink>
             <Link href="/project" {...navProps("/project")}>Projects</Link>
-            <Link href="/learn" {...navProps("/learn")}>Learn</Link>
           </nav>
           <div className={styles.headerActions} aria-label="Account and display controls">
             {showTourButton && (

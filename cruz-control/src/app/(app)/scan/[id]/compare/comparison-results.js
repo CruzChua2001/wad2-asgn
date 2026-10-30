@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { LuArrowDownRight, LuArrowUpRight, LuMinus } from "react-icons/lu";
+import ScanEntrance from "@/components/scan-entrance";
 
 const STATUS_LABELS = {
     new: "Newly detected",
@@ -12,12 +13,12 @@ const STATUS_LABELS = {
 function Evidence({ row }) {
     return (
         <details className="mt-2 text-sm">
-            <summary className="cursor-pointer">Compare evidence</summary>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <summary className="min-h-11 cursor-pointer py-3 focus-visible:outline-2 focus-visible:outline-accent">Compare evidence</summary>
+            <div className="grid min-w-0 gap-3 grid-cols-[repeat(auto-fit,minmax(min(100%,20rem),1fr))]">
                 {[["Older", row.oldFinding], ["Newer", row.newFinding]].map(([title, finding]) => (
-                    <div key={title}>
+                    <div key={title} className="min-w-0">
                         <p className="font-semibold">{title}</p>
-                        <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-all text-xs">
+                        <pre className="max-h-64 max-w-full overflow-auto whitespace-pre-wrap break-all text-xs">
                             {JSON.stringify({ hosts: finding.hosts || [], details: finding.details ?? null }, null, 2)}
                         </pre>
                     </div>
@@ -27,17 +28,17 @@ function Evidence({ row }) {
     );
 }
 
-function FindingGroups({ title, rows, olderId, newerId }) {
+function FindingGroups({ title, rows, olderId, newerId, animateEntrance, delay }) {
     return (
-        <section className="space-y-3" aria-label={title}>
-            <h3 className="flex items-center gap-3 text-lg font-semibold">{title} <span className="rounded-full bg-surface-strong px-2.5 py-0.5 text-sm tabular-nums text-muted">{rows.length}</span></h3>
+        <ScanEntrance as="section" enabled={animateEntrance} delay={delay} className="min-w-0 space-y-3" aria-label={title}>
+            <h3 className="flex flex-wrap items-center gap-3 text-lg font-semibold">{title} <span className="rounded-full bg-surface-strong px-2.5 py-0.5 text-sm tabular-nums text-muted">{rows.length}</span></h3>
             {rows.length === 0 && <p className="text-sm text-muted">No {title.toLowerCase()} in either scan.</p>}
             {Object.entries(STATUS_LABELS).map(([status, label]) => {
                 const group = rows.filter(row => row.status === status);
                 if (!group.length) return null;
                 return (
                     <section key={status} className="rounded-xl border border-line bg-surface p-4">
-                        <h4 className="flex items-center gap-2 text-sm font-semibold">{label} <span className="rounded-full bg-page px-2 py-0.5 tabular-nums text-muted">{group.length}</span></h4>
+                        <h4 className="flex flex-wrap items-center gap-2 text-sm font-semibold">{label} <span className="rounded-full bg-page px-2 py-0.5 tabular-nums text-muted">{group.length}</span></h4>
                         {status === "uncertain" && (
                             <p className="mt-1 text-sm text-muted">Newly assessed or cannot verify: the relevant check did not succeed in both scans, or this finding has no scored check.</p>
                         )}
@@ -58,30 +59,30 @@ function FindingGroups({ title, rows, olderId, newerId }) {
                     </section>
                 );
             })}
-        </section>
+        </ScanEntrance>
     );
 }
 
-export default function ComparisonResults({ comparison }) {
+export default function ComparisonResults({ comparison, animateEntrance = true }) {
     const { older, newer, rows, delta, reusedSources } = comparison;
     const tone = delta === null || delta === 0 ? "border-line text-ink" : delta > 0 ? "border-accent/30 text-accent" : "border-critical/30 text-critical";
     const Icon = delta === null || delta === 0 ? LuMinus : delta > 0 ? LuArrowUpRight : LuArrowDownRight;
     const title = delta === null ? "Score change unavailable" : delta === 0 ? "Score unchanged" : delta > 0 ? "Score improved" : "Score decreased";
     return (
-        <div className="space-y-6">
-            <section aria-label="Comparison summary" className={`rounded-2xl border bg-surface p-5 ${tone}`}>
+        <div className="min-w-0 space-y-6">
+            <ScanEntrance as="section" enabled={animateEntrance} delay={0.12} aria-label="Comparison summary" className={`rounded-2xl border bg-surface p-5 ${tone}`}>
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <h3 className="flex items-center gap-2 font-semibold"><Icon aria-hidden="true" className="size-5" />{title}</h3>
                     <p role="status" className="text-2xl font-semibold tabular-nums">{delta === null ? "Unavailable" : `${delta > 0 ? "+" : ""}${delta} points`}</p>
                 </div>
-                <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-line pt-4 text-sm text-ink sm:grid-cols-5">
-                    {Object.entries(STATUS_LABELS).map(([status, label]) => <div key={status}><dt className="text-muted">{label}</dt><dd className="mt-1 text-xl font-semibold tabular-nums">{rows.filter(row => row.status === status).length}</dd></div>)}
+                <dl className="mt-4 grid gap-3 border-t border-line pt-4 text-sm text-ink grid-cols-[repeat(auto-fit,minmax(min(100%,8rem),1fr))]">
+                    {Object.entries(STATUS_LABELS).map(([status, label]) => <div key={status} className="min-w-0"><dt className="text-muted">{label}</dt><dd className="mt-1 text-xl font-semibold tabular-nums">{rows.filter(row => row.status === status).length}</dd></div>)}
                 </dl>
                 <p className="mt-3 text-xs text-muted">Counts include issues and recommendations. An unchanged score can still have changed findings.</p>
-            </section>
+            </ScanEntrance>
             <p className="text-sm text-muted">No longer detected does not prove a fix. Changes with missing check coverage remain unverified.</p>
             <details className="rounded-xl border border-line bg-surface px-4 py-3 text-sm">
-                <summary className="cursor-pointer font-medium text-ink focus-visible:outline-2 focus-visible:outline-accent">How comparison works</summary>
+                <summary className="min-h-11 cursor-pointer py-2 font-medium text-ink focus-visible:outline-2 focus-visible:outline-accent">How comparison works</summary>
                 <p className="mt-3 text-muted">Choose two saved scans of the same website and repository to see what changed.</p>
                 <ul className="mt-3 list-disc space-y-2 pl-5 text-muted">
                     <li>Pick either scan in either column. Changes are measured from the earlier scan to the later scan.</li>
@@ -96,8 +97,8 @@ export default function ComparisonResults({ comparison }) {
                 <p className="text-warm">Shared capture dates for {reusedSources.map(s => s === "domain" ? "website" : "repository").join(" and ")}: these saved scans may reuse cached results. Run a fresh scan to check fixes.</p>
             )}
             {rows.length === 0 && <p>No findings in either scan. Missing checks still do not count as passes.</p>}
-            <FindingGroups title="Issues" rows={rows.filter(row => (row.finding.kind || "issue") === "issue")} olderId={older.id} newerId={newer.id} />
-            <FindingGroups title="Good-practice recommendations" rows={rows.filter(row => row.finding.kind === "recommendation")} olderId={older.id} newerId={newer.id} />
+            <FindingGroups title="Issues" rows={rows.filter(row => (row.finding.kind || "issue") === "issue")} olderId={older.id} newerId={newer.id} animateEntrance={animateEntrance} delay={0.18} />
+            <FindingGroups title="Good-practice recommendations" rows={rows.filter(row => row.finding.kind === "recommendation")} olderId={older.id} newerId={newer.id} animateEntrance={animateEntrance} delay={0.24} />
         </div>
     );
 }
