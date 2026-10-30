@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import api from "@/lib/api";
@@ -12,7 +12,7 @@ import { useScan } from "../../scan-context";
 import { compareScans, newestFirst, sameTargets, targetKey } from "@/lib/scan-comparison";
 import { scanNumbers } from "@/lib/scan-numbers";
 
-const buttonClass = "cursor-pointer rounded-lg border border-line px-3 py-2 text-accent hover:bg-accent-soft";
+const buttonClass = "min-h-11 cursor-pointer rounded-lg border border-line px-3 py-2 text-accent hover:bg-accent-soft";
 
 function ProjectComparison({ id, projectId, role }) {
     const router = useRouter();
@@ -21,6 +21,9 @@ function ProjectComparison({ id, projectId, role }) {
     const [historyAttempt, setHistoryAttempt] = useState(0);
     const [pairAttempt, setPairAttempt] = useState(0);
     const [pair, setPair] = useState(null);
+    // Results unmount while fetching another pair; only the first pair gets an
+    // entrance. Card keys stay tied to A/B so their controls and focus survive.
+    const entrancePending = useRef(true);
     // Legacy first/against query names now preserve the visual A/B positions.
     const first = query.get("first") || id;
     const anchor = history?.scans?.find(scan => scan.id === id);
@@ -67,7 +70,8 @@ function ProjectComparison({ id, projectId, role }) {
                     // order for equal timestamps without moving either visible card.
                     const tied = Date.parse(a.created_at) === Date.parse(b.created_at);
                     const bFirst = tied && history.scans.findIndex(scan => scan.id === b.id) < history.scans.findIndex(scan => scan.id === a.id);
-                    setPair({ key: requestKey, ...compareScans(bFirst ? b : a, bFirst ? a : b) });
+                    setPair({ key: requestKey, animateEntrance: entrancePending.current, ...compareScans(bFirst ? b : a, bFirst ? a : b) });
+                    entrancePending.current = false;
                 }
             } catch (e) {
                 if (active) setPair({ key: requestKey, error: e.response?.data?.error || "Could not load the selected scans. Please try again." });
@@ -92,18 +96,18 @@ function ProjectComparison({ id, projectId, role }) {
     if (options.length < 2) return <ComparisonEmpty projectId={projectId} role={role} total={history.scans.length} missingTargets={targetKey(anchor) === null} />;
     const currentPair = pair?.key === requestKey ? pair : null;
     return (
-        <div className="space-y-5">
+        <div className="min-w-0 space-y-5 [overflow-wrap:anywhere]">
             <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-xl border border-line bg-surface px-4 py-3 text-sm text-muted">
                 <span className="break-all"><span className="font-semibold text-ink">Website</span> {anchor.domain ?? "Not included"}</span>
                 <span className="break-all"><span className="font-semibold text-ink">Repository</span> {anchor.github_repo ?? "Not included"}</span>
-                <Link href={`/project/${projectId}/history`} className="ml-auto rounded-lg px-2 py-1 text-accent underline underline-offset-4 hover:bg-accent-soft focus-visible:outline-2 focus-visible:outline-accent">View scan history</Link>
+                <Link href={`/project/${projectId}/history`} className="inline-flex min-h-11 max-w-full items-center rounded-lg px-2 py-2 sm:ml-auto text-accent underline underline-offset-4 hover:bg-accent-soft focus-visible:outline-2 focus-visible:outline-accent">View scan history</Link>
             </div>
             <p className="text-sm text-muted">Choose two different scans. Changes are calculated from earlier to later.</p>
             {fromHistory && <p className="rounded-lg bg-accent-soft px-4 py-3 text-sm text-ink">Scan #{numbers.get(first)} is selected as Scan A. Choose another scan to compare.</p>}
             {sameSavedTime && (
                 <p className="text-sm text-muted">These scans have the same saved time, so their chronological order cannot be established. Scan numbers do not show which ran first.</p>
             )}
-            <div className="grid items-stretch gap-4 md:grid-cols-2">
+            <div className="grid items-stretch gap-4 grid-cols-[repeat(auto-fit,minmax(min(100%,24rem),1fr))]">
                 {[["first", first, second, "Scan A"], ["against", second, first, "Scan B"]].map(([name, value, otherId, label]) => {
                     const selected = options.find(scan => scan.id === value);
                     const other = options.find(scan => scan.id === otherId);
@@ -115,7 +119,7 @@ function ProjectComparison({ id, projectId, role }) {
             </div>
             {selectionError ? <p role="alert" className="text-critical">{selectionError}</p> : !currentPair ? <p role="status">Loading comparison...</p> : currentPair.error ? (
                 <div><p role="alert" className="text-critical">{currentPair.error}</p><button className={buttonClass} onClick={() => setPairAttempt(n => n + 1)}>Retry comparison</button></div>
-            ) : <ComparisonResults comparison={currentPair} />}
+            ) : <ComparisonResults comparison={currentPair} animateEntrance={currentPair.animateEntrance} />}
         </div>
     );
 }
@@ -126,7 +130,7 @@ function CompareTab() {
     const { result, saveToProject, savedScanId, saving, saveError } = useScan();
     if (!result) return <p role="status">Loading scan...</p>;
     return (
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6 pb-20 [overflow-wrap:anywhere]">
             <header><h2 className="text-2xl font-semibold">Compare scans</h2><p className="mt-2 text-muted">Compare two scans to see what&apos;s changed.</p></header>
             {!result.projectId ? <div className="space-y-3">
                 <p>This scan is not saved to a project. Save to project creates a new project so you can compare future scans.</p>
