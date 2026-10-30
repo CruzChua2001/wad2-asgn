@@ -125,6 +125,12 @@ test("guest can scan a domain and view results", async ({ page }) => {
   });
 
   // 1. User starts on Landing page
+  // The product tour opens for new visitors and its overlay blocks clicks, so mark it as seen
+  await page.addInitScript(() => {
+    localStorage.setItem("cruz-control-tour-seen-v1:intro:guest", "1");
+    localStorage.setItem("cruz-control-tour-seen-v1:results:guest", "1");
+  });
+
   await page.goto("/");
   await expect(page.getByRole("link", { name: /Explore as guest/ })).toBeVisible();
   // 2. Continue as Guest to Scan page (Phase 1: Pre-Scan)
@@ -153,7 +159,9 @@ test("guest can scan a domain and view results", async ({ page }) => {
   await expect(page).toHaveURL(new RegExp(`/scan/${scanId}$`));
   await expect(page.getByRole("heading", { name: "example.com", exact: true })).toBeVisible();
 
-  // 7. Able to see exposure score and points lost per category
+  // 7. Able to see exposure score and points lost per category (the carousel opens on the globe)
+  const cardPicker = page.getByRole("group", { name: "Choose a card" });
+  await cardPicker.getByRole("button", { name: "Score" }).click();
   await expect(page.getByRole("img", { name: "96 out of 100" })).toBeVisible();
   await expect(page.getByText("Points lost by category", { exact: true })).toBeVisible();
   const breakdown = page.getByRole("list", { name: "Score breakdown" });
@@ -162,7 +170,8 @@ test("guest can scan a domain and view results", async ({ page }) => {
   await expect(breakdown).toContainText("-2");
 
   // 8. Able to see dashboard view of results from scan (Servers, Open services, Issues)
-  const servers = page.getByRole("group", { name: "Servers" });
+  await cardPicker.getByRole("button", { name: "Servers" }).click();
+  const servers = page.getByRole("group", { name: "Servers", exact: true });
   await expect(servers.getByRole("button")).toHaveCount(2);
   await expect(servers).toContainText("example.com");
   await expect(servers).toContainText("edge.example.com");

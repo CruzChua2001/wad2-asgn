@@ -229,6 +229,12 @@ test("user signs in, creates a project, and sees an improved score after fixing 
     await route.fulfill({ json: result });
   });
 
+  // The product tour opens for new users and its overlay blocks clicks, so mark it as seen
+  await page.addInitScript((userId) => {
+    localStorage.setItem(`cruz-control-tour-seen-v1:intro:${userId}`, "1");
+    localStorage.setItem(`cruz-control-tour-seen-v1:results:${userId}`, "1");
+  }, testUser.id);
+
   // 1. User starts on Landing page
   await page.goto("/");
   // 2. User clicks on Login button and signs in using mock test account
@@ -256,16 +262,20 @@ test("user signs in, creates a project, and sees an improved score after fixing 
 
   // 6. User sees the first scan results, including the recommendations, and returns to the "Projects" page
   await expect(page).toHaveURL(new RegExp(`/scan/${scanId}$`));
+  const cardPicker = page.getByRole("group", { name: "Choose a card" });
+  await cardPicker.getByRole("button", { name: "Score" }).click();
   await expect(page.getByRole("heading", { name: "Exposure score" })).toBeVisible();
   await expect(page.getByRole("img", { name: "96 out of 100" })).toBeVisible();
-  await expect(page.getByText("HSTS header is missing")).toBeVisible();
-  await expect(page.locator("#finding-missing-hsts").getByText("Add a Strict-Transport-Security response header.")).toBeVisible();
   await expect(page.getByText("Issues found", { exact: true }).locator("..")).toContainText("1");
   const breakdown = page.getByRole("list", { name: "Score breakdown" });
   for (const [category, pointsLost] of [["HTTPS & headers", "-2"], ["DNS & email", "-2"]]) {
     const categoryRow = breakdown.getByRole("listitem").filter({ hasText: category });
     await expect(categoryRow).toContainText(pointsLost);
   }
+  // The carousel shows one card at a time, so turn to the findings
+  await cardPicker.getByRole("button", { name: "Findings" }).click();
+  await expect(page.getByText("HSTS header is missing")).toBeVisible();
+  await expect(page.locator("#finding-missing-hsts").getByText("Add a Strict-Transport-Security response header.")).toBeVisible();
   expect(projectCreateRequests).toEqual([{ name: projectName, domain: "example.com", githubRepo: "" }]);
   expect(scanRequests).toHaveLength(1);
   expect(scanRequests[0]).toEqual({ domain: "example.com", githubRepo: null, projectId, force: true });
@@ -278,6 +288,7 @@ test("user signs in, creates a project, and sees an improved score after fixing 
   await expect(page).toHaveURL(new RegExp(`/scan/${rescanId}$`));
 
   // 8. User sees an improved score and fewer issues on the updated results page
+  await cardPicker.getByRole("button", { name: "Score" }).click();
   await expect(page.getByRole("img", { name: "100 out of 100" })).toBeVisible();
   await expect(page.getByText("Issues found", { exact: true }).locator("..")).toContainText("0");
   expect(scanRequests).toHaveLength(2);

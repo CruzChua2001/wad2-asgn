@@ -176,6 +176,12 @@ test("guest can scan a GitHub repository and view results", async ({ page }) => 
   });
 
   // 1. User starts on Landing page
+  // The product tour opens for new visitors and its overlay blocks clicks, so mark it as seen
+  await page.addInitScript(() => {
+    localStorage.setItem("cruz-control-tour-seen-v1:intro:guest", "1");
+    localStorage.setItem("cruz-control-tour-seen-v1:results:guest", "1");
+  });
+
   await page.goto("/");
   await page.getByRole("link", { name: /Explore as guest/ }).click();
   // 2. Continue as Guest to Scan page (Phase 1: Pre-Scan)
@@ -203,7 +209,9 @@ test("guest can scan a GitHub repository and view results", async ({ page }) => 
   await expect(page).toHaveURL(new RegExp(`/scan/${scanId}$`));
   await expect(page.getByRole("heading", { name: repository, exact: true })).toBeVisible();
 
-  // 7. Able to see exposure score and points lost per category
+  // 7. Able to see exposure score and points lost per category (the carousel opens on the repository)
+  const cardPicker = page.getByRole("group", { name: "Choose a card" });
+  await cardPicker.getByRole("button", { name: "Score" }).click();
   await expect(page.getByRole("heading", { name: "Exposure score" })).toBeVisible();
   await expect(page.getByRole("img", { name: "80 out of 100" })).toBeVisible();
   const breakdown = page.getByRole("list", { name: "Score breakdown" });
@@ -218,6 +226,7 @@ test("guest can scan a GitHub repository and view results", async ({ page }) => 
   }
 
   // 9. Able to see repository overview
+  await cardPicker.getByRole("button", { name: "Repository" }).click();
   const repositoryCard = page.getByRole("region", { name: "Repository" });
   await expect(repositoryCard).toContainText("juice-shop");
   await expect(repositoryCard).toContainText("master");
