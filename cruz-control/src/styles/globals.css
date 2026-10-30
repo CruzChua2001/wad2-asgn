@@ -83,6 +83,10 @@
 .globe-zoom button:hover { color: var(--accent); background: color-mix(in srgb, var(--accent-soft) 18%, transparent); }
 .globe-zoom button:focus-visible { outline-offset: -2px; }
 .globe-zoom svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-width: 2.5; }
+/* 2D map routes: draw in, fade in the dashes, then keep them flowing outwards */
+@keyframes map-route-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes map-route-show { from { opacity: 0; } }
+@keyframes map-route-flow { from { stroke-dashoffset: 14; } to { stroke-dashoffset: 0; } }
 .number-ticker { display: inline-block; font-variant-numeric: tabular-nums; }
 .exposure-globe:active { cursor: grabbing; }
 

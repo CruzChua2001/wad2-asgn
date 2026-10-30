@@ -13,7 +13,10 @@ import TypingAnimation from "./typing-animation";
 import { useTheme } from "@/lib/theme-store";
 
 function BrandMark() {
-  return <img src="/favicon.ico" alt="" className="brand-mark" aria-hidden="true" />;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element -- tiny static icon, next/image adds nothing here
+    <img src="/favicon.ico" alt="" className="brand-mark" aria-hidden="true" />
+  );
 }
 
 export default function Home() {

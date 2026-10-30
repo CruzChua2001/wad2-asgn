@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import { LuBot } from "react-icons/lu";
 import { useAuth } from "@/components/auth/auth-provider";
 import { TOUR_PARTS } from "./tour-steps";
 
@@ -12,6 +11,7 @@ const CARD_HEIGHT = 260;
 const GAP = 16;
 const PAD = 6;
 const RESULTS_READY = 'section[aria-labelledby="score-title"]';
+const CARD_TURN = 500; // how long an Overview card takes to turn to the front
 
 const readSeen = (part, who) => {
     try {
@@ -92,13 +92,15 @@ export default function ProductTour({ part, onStart, onClose }) {
     const steps = filtered.part === part ? filtered.list : base;
     const current = steps[step] ?? steps[steps.length - 1] ?? {};
     const selector = current.selector;
+    const card = current.card;
         useEffect(() => {
             if (open) startScrollRef.current = window.scrollY;
         }, [open]);
 
         const target = selector ? document.querySelector(selector) : null;
         useEffect(() => {
-        if (target) scrollToTarget(target);
+        // Steps on an Overview card bring it to the front of the carousel first, then measure once it has turned
+        if (card) window.dispatchEvent(new CustomEvent("cruz:overview-card", { detail: card }));
         const measure = () => {
             const el = selector ? document.querySelector(selector) : null;
             const r = el?.getBoundingClientRect();
@@ -112,15 +114,18 @@ export default function ProductTour({ part, onStart, onClose }) {
             });
         };
 
-        const frame = requestAnimationFrame(measure);
+        const timer = setTimeout(() => {
+            if (target) scrollToTarget(target);
+            measure();
+        }, card ? CARD_TURN : 0);
         window.addEventListener("resize", measure);
         window.addEventListener("scroll", measure, true);
         return () => {
-            cancelAnimationFrame(frame);
+            clearTimeout(timer);
             window.removeEventListener("resize", measure);
             window.removeEventListener("scroll", measure, true);
         };
-    }, [open, part, step, selector]);
+    }, [open, part, step, selector, card]);
 
     useEffect(() => {
         if (open) nextRef.current?.focus();
@@ -206,8 +211,9 @@ export default function ProductTour({ part, onStart, onClose }) {
                 style={cardStyle}
             >
                 <div className="flex items-center gap-3">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent">
-                        <img src="/favicon.ico" alt="" className="h-6 w-6" />
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-accent-soft">
+                        {/* eslint-disable-next-line @next/next/no-img-element -- tiny static icon, next/image adds nothing here */}
+                        <img src="/favicon.ico" alt="" className="h-6 w-6 object-contain" aria-hidden="true" />
                     </span>
                     <div className="min-w-0">
                         <h2 id="tour-title" className="font-semibold uppercase tracking-wide text-accent">

@@ -14,7 +14,10 @@ import { useEffect, useState } from "react";
 import { LuCompass } from "react-icons/lu";
 
 const BrandMark = _ => {
-  return <img src="/favicon.ico" alt="" className="brand-mark" aria-hidden="true" />;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element -- tiny static icon, next/image adds nothing here
+    <img src="/favicon.ico" alt="" className="brand-mark" aria-hidden="true" />
+  );
 }
 
 const ScanLink = ({children, href = "/scan", ...props}) => {
@@ -80,7 +83,6 @@ export default function OverviewLayout({ children }) {
           <nav className={styles.primaryNav} aria-label="Primary navigation">
             <ScanLink {...navProps("/scan")}>Scan</ScanLink>
             <Link href="/project" {...navProps("/project")}>Projects</Link>
-            <Link href="/learn" {...navProps("/learn")}>Learn</Link>
           </nav>
           <div className={styles.headerActions} aria-label="Account and display controls">
             {showTourButton && (

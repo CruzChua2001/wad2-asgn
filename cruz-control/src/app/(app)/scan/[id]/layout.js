@@ -9,6 +9,7 @@ import { LuBookmarkCheck, LuBookmarkPlus, LuPlus, LuRefreshCw } from "react-icon
 import RippleButton from "@/components/ripple-button";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useScan } from "../scan-context";
+import SaveProjectInfo from "./save-project-info";
 import styles from "@/styles/overview/scan-results.module.css";
 
 const RESULT_TABS = [
@@ -20,7 +21,7 @@ const RESULT_TABS = [
 ];
 
 // Header buttons: New scan is the main action, the rest are outlined
-const ACTION = "inline-flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-md border px-4 text-xs! font-semibold! no-underline transition max-sm:flex-1";
+const ACTION = "inline-flex min-h-11 max-w-full cursor-pointer items-center justify-center gap-2 rounded-md border px-4 text-center text-xs! font-semibold! whitespace-normal no-underline transition max-md:flex-auto max-sm:px-3";
 const PRIMARY = `${ACTION} border-accent bg-accent text-page! hover:-translate-y-px hover:bg-accent-bright [&_.ripple-content]:inline-flex [&_.ripple-content]:items-center [&_.ripple-content]:gap-2`;
 const SECONDARY = `${ACTION} border-line bg-surface-strong text-ink! hover:border-accent hover:text-accent! disabled:cursor-default disabled:opacity-60`;
 
@@ -68,7 +69,7 @@ export default function ScanResultsLayout({ children }) {
 
   if (!result) return <p role="status" className="text-muted">Loading scan...</p>;
 
-  if (result.error) return <p role="alert" className="text-critical">{result.error}</p>;
+  if (result.error) return <p role="alert" className="min-w-0 text-critical [overflow-wrap:anywhere]">{result.error}</p>;
 
   function newScan() {
     router.push("/scan");
@@ -90,7 +91,7 @@ export default function ScanResultsLayout({ children }) {
   return (
     <div className={styles.results}>
       <motion.header className={styles.resultsHead} {...reveal(0)}>
-        <div>
+        <div className="min-w-0 md:flex-1 md:basis-64 [overflow-wrap:anywhere]">
           <h1>{result.title}</h1>
           <p className={styles.meta}>
             Scanned {result.scannedAgo} · Public sources
@@ -100,13 +101,16 @@ export default function ScanResultsLayout({ children }) {
           {saveError && <p role="alert" className="text-critical text-sm">{saveError}</p>}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
           {!result.projectId && (
             savedScanId === id
             ? <Link href="/project" className={SECONDARY}><LuBookmarkCheck aria-hidden="true" /> Saved · View project</Link>
-            : <button type="button" className={SECONDARY} onClick={() => saveToProject(id)} disabled={saving}>
+            : <div className="inline-flex min-w-0 max-w-full flex-wrap items-center gap-1">
+              <button type="button" className={SECONDARY} onClick={() => saveToProject(id)} disabled={saving}>
                 <LuBookmarkPlus aria-hidden="true" /> {saving ? "Saving..." : "Save to project"}
               </button>
+              <SaveProjectInfo />
+            </div>
           )}
 
           {(result.scannedAgo !== "just now" || canRetry) && (!result.projectId || result.role === "owner") && (
