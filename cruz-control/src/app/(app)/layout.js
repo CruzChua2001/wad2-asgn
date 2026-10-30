@@ -11,6 +11,7 @@ import styles from "@/styles/overview/overview.module.css";
 import ProductTour from "@/components/tour/product-tour";  
 import AskCruzPanel from "@/components/ask-cruz/ask-cruz-panel";
 import { useEffect, useState } from "react";
+import { LuCompass } from "react-icons/lu";
 
 const BrandMark = _ => {
   return <img src="/favicon.ico" alt="" className="brand-mark" aria-hidden="true" />;
@@ -85,10 +86,13 @@ export default function OverviewLayout({ children }) {
             {showTourButton && (
               <button
                 type="button"
+                aria-label="Take the tour"
+                title="Take the tour"
                 onClick={() => setTour(showingResults ? "results" : "intro")}
-                className="rounded-full cursor-pointer border border-line px-3 py-1.5 text-xs! font-semibold! text-accent hover:bg-accent-soft"
+                className="inline-flex items-center gap-1.5 rounded-full border border-line px-3 py-1.5 text-xs! font-semibold! text-accent hover:bg-accent-soft max-sm:px-2"
               >
-                Take the tour
+                <LuCompass className="h-4 w-4 sm:hidden" aria-hidden="true" />
+                <span className="max-sm:hidden">Take the tour</span>
               </button>
             )}
             <AnimatedThemeToggler theme={theme} onThemeChange={updateTheme} />
