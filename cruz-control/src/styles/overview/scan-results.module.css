@@ -74,6 +74,11 @@
 
 .scoreBody { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 18px; }
 .ring { position: relative; width: clamp(108px, 9vw, 136px); aspect-ratio: 1; container-type: inline-size; }
+/* The carousel shows the score card full width, so give the ring more room */
+@media (min-width: 768px) {
+  .scoreWide .scoreBody { gap: 36px; padding: 6px 8px 4px; }
+  .scoreWide .ring { width: clamp(150px, 13vw, 184px); }
+}
 .ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
 .ringTrack, .ringValue { fill: none; stroke-width: 7; }
 .ringTrack { stroke: color-mix(in srgb, var(--line) 80%, transparent); }
@@ -126,6 +131,7 @@
 }
 
 @media (max-width: 767px) {
+  .resultsHead { align-items: stretch; flex-direction: column; }
   .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-flow: row; }
   .stats > div:last-child:nth-child(odd) { grid-column: 1 / -1; }
   .nodeList { grid-template-columns: 1fr; }
@@ -135,7 +141,6 @@
 }
 
 @media (max-width: 575px) {
-  .resultsHead { align-items: stretch; flex-direction: column; }
   .scoreBody { grid-template-columns: 1fr; justify-items: center; }
   .ring { width: clamp(136px, 42vw, 170px); }
   .breakdown { width: 100%; }

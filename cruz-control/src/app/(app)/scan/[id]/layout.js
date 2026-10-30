@@ -20,7 +20,7 @@ const RESULT_TABS = [
 ];
 
 // Header buttons: New scan is the main action, the rest are outlined
-const ACTION = "inline-flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-md border px-4 text-xs! font-semibold! no-underline transition max-sm:flex-1";
+const ACTION = "inline-flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-md border px-4 text-xs! font-semibold! whitespace-nowrap no-underline transition max-md:flex-auto max-sm:px-3";
 const PRIMARY = `${ACTION} border-accent bg-accent text-page! hover:-translate-y-px hover:bg-accent-bright [&_.ripple-content]:inline-flex [&_.ripple-content]:items-center [&_.ripple-content]:gap-2`;
 const SECONDARY = `${ACTION} border-line bg-surface-strong text-ink! hover:border-accent hover:text-accent! disabled:cursor-default disabled:opacity-60`;
 
