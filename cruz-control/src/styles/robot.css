@@ -1,0 +1,349 @@
+/* Cruz robot peeking over the landing terminal (app/(landing)/peeking-robot.js) */
+:root {
+  --r-outline: #0d1626;
+  --r-shell: #f7f9fc;
+  --r-shade: #d9e2f0;
+  --r-visor: #13284a;
+  --r-eye: #4fe3ff;
+  --r-band: #e3221c;
+  --r-band-dark: #b5160f;
+  --r-ear: #2ba8f0;
+  --r-ball: #3ec5ff;
+  --r-patch: #1d2433;
+  --r-skull: #eef2f6;
+}
+
+[data-theme="dark"] {
+  --r-outline: #05090f;
+}
+
+.hero-visual .magic-terminal {
+  position: relative;
+  z-index: 1;
+}
+
+/* Sits on the terminal's top edge and peeks into the free space above it */
+.robot {
+  position: absolute;
+  width: 46%;
+  aspect-ratio: 300 / 260;
+  pointer-events: none;
+}
+
+.robot-top {
+  bottom: 100%;
+  right: 8%;
+  margin-bottom: -6%;
+}
+
+.robot-head {
+  position: relative;
+  z-index: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  transform-origin: 50% 100%;
+  animation: robot-peek 14s ease-in-out infinite;
+}
+
+/* Leans out from behind the left edge (xl and up, where there's room beside the text) */
+.robot-left {
+  top: 30%;
+  right: 100%;
+  width: 40%;
+  margin-right: -12%;
+}
+
+.robot-left .robot-head {
+  transform-origin: 100% 50%;
+  animation-name: robot-peek-side;
+}
+
+.robot-left .robot-eye {
+  animation-name: robot-look-side, robot-glow;
+}
+
+/* Shapes */
+.robot-band,
+.robot-ear,
+.robot-shell,
+.robot-visor,
+.robot-ball,
+.robot-patch ellipse {
+  stroke: var(--r-outline);
+  stroke-width: 5;
+  stroke-linejoin: round;
+}
+
+.robot-band {
+  fill: var(--r-band);
+}
+
+.robot-ear {
+  fill: var(--r-ear);
+}
+
+.robot-shell {
+  fill: var(--r-shell);
+}
+
+.robot-visor {
+  fill: var(--r-visor);
+}
+
+.robot-ball {
+  fill: var(--r-ball);
+}
+
+.robot-shine {
+  fill: #fff;
+  opacity: .8;
+}
+
+.robot-stick {
+  stroke: var(--r-shade);
+  stroke-width: 9;
+  stroke-linecap: round;
+}
+
+.robot-shade {
+  fill: none;
+  stroke: var(--r-shade);
+  stroke-width: 10;
+  stroke-linecap: round;
+}
+
+.robot-crease {
+  fill: none;
+  stroke: var(--r-band-dark);
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+
+.robot-patch ellipse {
+  fill: var(--r-patch);
+  stroke-width: 4;
+}
+
+.robot-strap {
+  stroke: var(--r-patch);
+  stroke-width: 9;
+  stroke-linecap: round;
+}
+
+.robot-skull {
+  fill: var(--r-skull);
+}
+
+.robot-bones {
+  stroke: var(--r-skull);
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+
+.robot-eye {
+  fill: var(--r-eye);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: robot-look 14s ease-in-out infinite, robot-glow 2s ease-in-out infinite;
+}
+
+.robot-antenna {
+  transform-origin: 228px 92px;
+  animation: robot-wobble 2.4s ease-in-out infinite;
+}
+
+/* Mitts sit in front of the terminal's top edge */
+.robot-mitts {
+  position: absolute;
+  z-index: 2;
+  top: 80%;
+  left: 20%;
+  width: 62%;
+  animation: robot-mitts 14s ease-in-out infinite;
+}
+
+.robot-mitts span {
+  position: absolute;
+  top: 0;
+  width: 18%;
+  aspect-ratio: 7 / 4;
+  border: 3px solid var(--r-outline);
+  border-radius: 12px 12px 8px 8px;
+  background: var(--r-shell);
+}
+
+.robot-mitts span:first-child {
+  left: 0;
+}
+
+.robot-mitts span:last-child {
+  right: 0;
+}
+
+/* One mitt holding the terminal's left edge */
+.robot-left .robot-mitts {
+  top: 92%;
+  left: 66%;
+  width: 8%;
+  animation-name: robot-mitt-side;
+}
+
+.robot-left .robot-mitts span {
+  width: 100%;
+  aspect-ratio: 4 / 7;
+  border-radius: 12px 8px 8px 12px;
+}
+
+@keyframes robot-peek {
+  0%, 4% {
+    transform: translateY(100%);
+  }
+  12%, 40% {
+    transform: translateY(0) rotate(0deg);
+  }
+  43% {
+    transform: translateY(-3%) rotate(-5deg);
+  }
+  46% {
+    transform: translateY(0) rotate(4deg);
+  }
+  49% {
+    transform: translateY(0) rotate(0deg);
+  }
+  55%, 100% {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes robot-mitts {
+  0%, 9% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  13%, 51% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  55%, 100% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+@keyframes robot-look {
+  0%, 14% {
+    transform: translateX(0) scaleY(1);
+  }
+  19%, 26% {
+    transform: translateX(-20px) scaleY(1);
+  }
+  31%, 37% {
+    transform: translateX(9px) scaleY(1);
+  }
+  38% {
+    transform: translateX(9px) scaleY(.1);
+  }
+  39% {
+    transform: translateX(9px) scaleY(1);
+  }
+  44%, 100% {
+    transform: translateX(0) scaleY(1);
+  }
+}
+
+@keyframes robot-peek-side {
+  0%, 59% {
+    transform: translateX(110%) rotate(-16deg);
+  }
+  66%, 86% {
+    transform: translateX(0) rotate(-16deg);
+  }
+  93%, 100% {
+    transform: translateX(110%) rotate(-16deg);
+  }
+}
+
+@keyframes robot-mitt-side {
+  0%, 63% {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+  67%, 86% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  90%, 100% {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+}
+
+@keyframes robot-look-side {
+  0%, 67% {
+    transform: translate(0, 0);
+  }
+  71%, 76% {
+    transform: translate(9px, 2px);
+  }
+  80%, 84% {
+    transform: translate(-14px, -2px);
+  }
+  88%, 100% {
+    transform: translate(0, 0);
+  }
+}
+
+@keyframes robot-wobble {
+  0%, 100% {
+    transform: rotate(-6deg);
+  }
+  50% {
+    transform: rotate(6deg);
+  }
+}
+
+@keyframes robot-glow {
+  0%, 100% {
+    opacity: .7;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Below xl: no room beside the text for the side robot.
+   visibility (not display: none) keeps its animation running, so it stays in step with the top robot */
+@media (max-width: 1199px) {
+  .robot-left {
+    visibility: hidden;
+  }
+}
+
+/* Stacked layout: a smaller robot, and just enough room so it doesn't cover the hero text */
+@media (max-width: 991px) {
+  .hero-visual {
+    margin-top: 10%;
+  }
+
+  .robot-top {
+    right: 3%;
+    width: 32%;
+    margin-bottom: -4%;
+  }
+}
+
+/* Reduced motion: the robot just sits there peeking */
+@media (prefers-reduced-motion: reduce) {
+  .robot-head,
+  .robot-eye,
+  .robot-antenna,
+  .robot-mitts {
+    animation: none;
+  }
+
+  .robot-left {
+    display: none;
+  }
+}

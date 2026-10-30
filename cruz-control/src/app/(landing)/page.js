@@ -7,6 +7,7 @@ import AnimatedThemeToggler from "@/components/animated-theme-toggler";
 import { useAuth } from "@/components/auth/auth-provider";
 import InteractiveSignalGrid from "./interactive-signal-grid";
 import RippleButton from "@/components/ripple-button";
+import PeekingRobot from "./peeking-robot";
 import ScanTerminal from "./scan-terminal";
 import TextAnimate from "./text-animate";
 import TypingAnimation from "./typing-animation";
@@ -60,7 +61,7 @@ export default function Home() {
         </nav>
       </header>
 
-      <section className="hero grid grid-cols-1 items-center gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,.95fr)] lg:gap-6 xl:gap-8">
+      <section className="hero grid grid-cols-1 items-center gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,.95fr)] lg:gap-6 xl:gap-28">
         <div className="hero-copy">
           <p className="hero-kicker"><span /> FOR STUDENTS &amp; FIRST-TIME DEVELOPERS</p>
           <h1>
@@ -82,6 +83,8 @@ export default function Home() {
         </div>
 
         <div className="hero-visual">
+          <PeekingRobot />
+          <PeekingRobot side="left" />
           <ScanTerminal theme={theme} />
         </div>
       </section>
