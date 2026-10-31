@@ -6,6 +6,7 @@ import { LuX, LuTrash2 } from "react-icons/lu";
 import api from "@/lib/api";
 import { useAuth } from "@/components/auth/auth-provider";
 import RoleSelect from "./role-select";
+import SmallLoader from "@/components/small-loader";
 
 const ROLES = [
     { value: "viewer", text: "Viewer", hint: "Can see the results" },
@@ -20,6 +21,8 @@ const MemberModal = ({project, modalRef}) => {
     const [role, setRole] = useState("viewer");
     const [errorMsg, setErrorMsg] = useState("");
     const [loading, setLoading] = useState(false);
+    const [loadedId, setLoadedId] = useState(null);
+    const [removingId, setRemovingId] = useState(null);
 
     const isCreator = project?.created_by === user?.id;
 
@@ -36,6 +39,8 @@ const MemberModal = ({project, modalRef}) => {
                 setInvites(response.data.invites);
             } catch (e) {
                 if (!ignore) setErrorMsg(e.response?.data?.error ?? "Could not load members.")
+            } finally {
+                if (!ignore) setLoadedId(project.id);
             }
         }
 
@@ -63,20 +68,28 @@ const MemberModal = ({project, modalRef}) => {
     }
 
     const removeMember = async member => {
+        setRemovingId(member.user_id);
+
         try {
             await api.delete(`/api/project/${project.id}/member/${member.user_id}`);
             setMembers(members.filter(m => m.user_id !== member.user_id));
         } catch (e) {
             setErrorMsg(e.response?.data?.error ?? "Could not remove the member.");
+        } finally {
+            setRemovingId(null);
         }
     }
 
     const cancelInvite = async invite => {
+        setRemovingId(invite.id);
+
         try {
             await api.delete(`/api/project/${project.id}/invite/${invite.id}`);
             setInvites(invites.filter(i => i.id !== invite.id));
         } catch (e) {
             setErrorMsg(e.response?.data?.error ?? "Could not cancel the invite.");
+        } finally {
+            setRemovingId(null);
         }
     }
 
@@ -109,34 +122,36 @@ const MemberModal = ({project, modalRef}) => {
                 {errorMsg && <p role="alert" className="text-sm text-critical">{errorMsg}</p>}
 
                 {/* Long lists scroll here, and the cap shrinks on short screens, so the invite form stays on screen */}
-                <ul className="grid gap-2 max-h-[min(12rem,30vh)] overflow-y-auto text-sm">
-                    {members.map(member => (
-                        <li key={member.user_id} className="flex justify-between gap-2">
-                            <span className="break-all">{member.email}</span>
-                            <span className="flex items-center gap-2">
-                                <span className="text-muted capitalize">{member.role}</span>
-                                {isCreator && member.user_id !== user?.id && (
-                                    <button aria-label={`Remove ${member.email}`} onClick={() => removeMember(member)} className="text-muted hover:text-critical cursor-pointer">
-                                        <LuTrash2 size={14} />
-                                    </button>
-                                )}
-                            </span>
-                        </li>
-                    ))}
-                    {invites.map(invite => (
-                        <li key={invite.email} className="flex justify-between gap-2 text-muted">
-                            <span className="break-all">{invite.email}</span>
-                            <span className="flex items-center gap-2">
-                                <span className="capitalize">Pending - {invite.role}</span>
-                                {isCreator && (
-                                    <button type="button" aria-label={`Cancel invite for ${invite.email}`} onClick={() => cancelInvite(invite)} className="text-muted hover:text-critical cursor-pointer">
-                                        <LuTrash2 size={14} />
-                                    </button>
-                                )}
-                            </span>
-                        </li>
-                    ))}
-                </ul>
+                {loadedId !== project?.id ? <SmallLoader text="Where could your friends be..." className="text-sm text-muted" /> : (
+                    <ul className="grid gap-2 max-h-[min(12rem,30vh)] overflow-y-auto text-sm">
+                        {members.map(member => (
+                            <li key={member.user_id} className="flex justify-between gap-2">
+                                <span className="break-all">{member.email}</span>
+                                <span className="flex items-center gap-2">
+                                    <span className="text-muted capitalize">{member.role}</span>
+                                    {isCreator && member.user_id !== user?.id && (
+                                        <button aria-label={`Remove ${member.email}`} onClick={() => removeMember(member)} disabled={removingId === member.user_id} className="text-muted hover:text-critical cursor-pointer disabled:cursor-default">
+                                            {removingId === member.user_id ? <SmallLoader size={14} /> : <LuTrash2 size={14} />}
+                                        </button>
+                                    )}
+                                </span>
+                            </li>
+                        ))}
+                        {invites.map(invite => (
+                            <li key={invite.email} className="flex justify-between gap-2 text-muted">
+                                <span className="break-all">{invite.email}</span>
+                                <span className="flex items-center gap-2">
+                                    <span className="capitalize">Pending - {invite.role}</span>
+                                    {isCreator && (
+                                        <button type="button" aria-label={`Cancel invite for ${invite.email}`} onClick={() => cancelInvite(invite)} disabled={removingId === invite.id} className="text-muted hover:text-critical cursor-pointer disabled:cursor-default">
+                                            {removingId === invite.id ? <SmallLoader size={14} /> : <LuTrash2 size={14} />}
+                                        </button>
+                                    )}
+                                </span>
+                            </li>
+                        ))}
+                    </ul>
+                )}
 
                 <form onSubmit={sendInvite} className="flex flex-wrap gap-2 pt-5 border-t border-line">
                     <input 
@@ -153,7 +168,7 @@ const MemberModal = ({project, modalRef}) => {
                         <RoleSelect roles={ROLES} value={role} onChange={setRole} />
 
                         <button type="submit" disabled={loading} className="auth-primaryButton w-fit!">
-                            {loading ? "Sending Invite..." : "Invite"}
+                             {loading ? <SmallLoader text="Sending invite..." size={16} /> : "Invite"}
                         </button>
                     </div>
                 </form>

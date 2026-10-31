@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { LuSend, LuX } from "react-icons/lu";
 import api from "@/lib/api";
 import { useAuth } from "@/components/auth/auth-provider";
+import SmallLoader from "@/components/small-loader";
 
 const GREETING = {
     role: "assistant",
@@ -135,7 +136,7 @@ export default function AskCruzPanel({ open, onClose }) {
                                 {m.role === "user" ? m.text : renderMessage(m.text)}
                             </div>
                         ))}
-                        {loading && <p className="text-muted">Cruz is thinking...</p>}
+                        {loading && <SmallLoader text="Cruz is thinking..." className="text-muted" />}
                         {error && (
                             <p role="alert" className="text-critical">
                                 {error}

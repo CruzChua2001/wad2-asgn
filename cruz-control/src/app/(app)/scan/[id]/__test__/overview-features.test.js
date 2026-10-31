@@ -112,6 +112,13 @@ const showOverview = (result, query = "") => {
     useSearchParams.mockReturnValue(new URLSearchParams(query));
     useScan.mockReturnValue({ result, lines: [] });
     render(<OverviewTab />);
+
+    // Carousel cards mount the first time they're shown, so open each one, then go back
+    if (screen.queryByRole("group", { name: "Choose a card" })) {
+        const first = activeCard();
+        tabs().forEach(item => fireEvent.click(item));
+        fireEvent.click(tab(first));
+    }
 }
 
 const findingsCard = _ => screen.getByRole("heading", { name: "Findings · worst first" }).closest("section");

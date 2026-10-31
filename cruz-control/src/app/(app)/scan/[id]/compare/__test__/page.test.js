@@ -33,7 +33,7 @@ beforeEach(() => {
 test("loads history then only selected details, shows ordered scores and cache warning for viewers", async () => {
     serve(histories, { new: { score: 25, grade: "F" } });
     render(<ComparePage />);
-    expect(screen.getByText("Loading scan history...")).toBeTruthy();
+    expect(screen.getByRole("status")).toBeTruthy();
     expect(await screen.findByText("+25 points")).toBeTruthy();
     expect(screen.getByRole("region", { name: "Scan B" }).textContent).toContain("Incomplete · No grade");
     expect(screen.getByText(/Shared capture dates for/)).toBeTruthy();

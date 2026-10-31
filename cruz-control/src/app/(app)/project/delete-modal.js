@@ -4,6 +4,7 @@ import { useState } from "react";
 import { LuTrash2 } from "react-icons/lu";
 
 import api from "@/lib/api";
+import SmallLoader from "@/components/small-loader";
 
 const DeleteModal = ({ project, modalRef, onDeleted }) => {
     const [error, setError] = useState("");
@@ -52,7 +53,7 @@ const DeleteModal = ({ project, modalRef, onDeleted }) => {
                         disabled={loading}
                         className="flex-1 h-10 px-4 rounded-lg bg-critical text-page hover:opacity-90 cursor-pointer transition-opacity disabled:opacity-50 disabled:cursor-default"
                     >
-                        {loading ? "Deleting..." : "Delete project"}
+                        {loading ? <SmallLoader text="Deleting..." size={16} /> : "Delete project"}
                     </button>
                 </div>
             </div>

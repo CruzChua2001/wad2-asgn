@@ -6,6 +6,7 @@ import { motion, useReducedMotion } from "motion/react";
 import { LuBookmarkPlus } from "react-icons/lu";
 import api from "@/lib/api";
 import { useScan } from "../../scan-context";
+import SmallLoader from "@/components/small-loader";
 
 const MAX_SCANS = 10;
 const WIDTH = 520;
@@ -123,7 +124,7 @@ export default function ScoreTrend({ projectId, scanId }) {
               disabled={saving}
               className="inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-accent px-3 py-2 text-page hover:bg-accent-bright disabled:cursor-default disabled:opacity-60"
             >
-              <LuBookmarkPlus aria-hidden="true" /> {saving ? "Saving..." : "Save to project"}
+               {saving ? <SmallLoader text="Saving..." size={14} /> : <><LuBookmarkPlus aria-hidden="true" /> Save to project</>}
             </button>
           </div>
         )}
@@ -134,7 +135,7 @@ export default function ScoreTrend({ projectId, scanId }) {
     return <Panel title="Score history"><p role="alert" className="m-0 text-sm text-critical">{error}</p></Panel>;
   }
   if (!scans) {
-    return <Panel title="Score history"><p className="m-0 text-sm text-muted">Loading score history...</p></Panel>;
+    return <Panel title="Score history"><SmallLoader text="Loading score history..." className="text-sm text-muted" /></Panel>;
   }
   if (scans.length < 2) {
     return <Panel title="Score history"><p className="m-0 text-sm text-muted">This is the project&apos;s first scan. Re-scan later to see your score over time.</p></Panel>;

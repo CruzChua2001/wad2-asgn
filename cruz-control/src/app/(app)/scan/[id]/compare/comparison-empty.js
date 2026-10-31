@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { useScan } from "../../scan-context";
+import SmallLoader from "@/components/small-loader";
 
 export default function ComparisonEmpty({ projectId, role, total, missingTargets }) {
     const { startScan } = useScan();
@@ -56,7 +57,7 @@ export default function ComparisonEmpty({ projectId, role, total, missingTargets
             <p className="text-ink">{message}</p>
             {(!single || missingTargets) && <p className="text-sm text-muted">Comparisons need the same website and repository. New scans use the project&apos;s current settings; choose matching scans from its history.{!owner && " Ask a project owner if another scan is needed."}</p>}
             <div className="flex flex-wrap items-center gap-3 text-sm font-semibold">
-                {owner && <button type="button" onClick={rescan} disabled={starting} className="min-h-11 max-w-full cursor-pointer rounded-lg border border-accent bg-accent px-4 text-page hover:bg-accent-bright focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-default disabled:opacity-60">{starting ? "Starting scan..." : "Re-scan project"}</button>}
+                {owner && <button type="button" onClick={rescan} disabled={starting} className="min-h-11 max-w-full cursor-pointer rounded-lg border border-accent bg-accent px-4 text-page hover:bg-accent-bright focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-default disabled:opacity-60">{starting ? <SmallLoader text="Starting scan..." size={16} /> : "Re-scan project"}</button>}
                 <Link href={`/project/${projectId}/history`} className="inline-flex min-h-11 max-w-full items-center rounded-lg px-2 py-2 text-accent underline hover:bg-accent-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">View history</Link>
                 <Link href="/project" className="inline-flex min-h-11 max-w-full items-center rounded-lg px-2 py-2 text-accent underline hover:bg-accent-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">Back to projects</Link>
             </div>

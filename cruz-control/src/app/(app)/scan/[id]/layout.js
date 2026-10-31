@@ -9,6 +9,8 @@ import { LuBookmarkCheck, LuBookmarkPlus, LuPlus, LuRefreshCw } from "react-icon
 import RippleButton from "@/components/ripple-button";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useScan } from "../scan-context";
+import LoadingOverlay from "@/components/loading-overlay";
+import SmallLoader from "@/components/small-loader";
 import SaveProjectInfo from "./save-project-info";
 import styles from "@/styles/overview/scan-results.module.css";
 
@@ -67,7 +69,9 @@ export default function ScanResultsLayout({ children }) {
     if (status !== "loading") loadResult(id);
   }, [id, status, loadResult]);
 
-  if (!result) return <p role="status" className="text-muted">Loading scan...</p>;
+  if (!result) return (
+    <LoadingOverlay show />
+  );
 
   if (result.error) return <p role="alert" className="min-w-0 text-critical [overflow-wrap:anywhere]">{result.error}</p>;
 
@@ -89,43 +93,51 @@ export default function ScanResultsLayout({ children }) {
     : { initial: { opacity: 0, y: 14 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.45, delay, ease: [0.22, 1, 0.36, 1] } });
 
   return (
-    <div className={styles.results}>
-      <motion.header className={styles.resultsHead} {...reveal(0)}>
-        <div className="min-w-0 md:flex-1 md:basis-64 [overflow-wrap:anywhere]">
-          <h1>{result.title}</h1>
-          <p className={styles.meta}>
-            Scanned {result.scannedAgo} · Public sources
-            {result.domain && result.linkedRepository && <> · Linked to {result.linkedRepository}</>}
-          </p>
+    <>
+      <LoadingOverlay show={false} />
+      <motion.div
+        className={styles.results}
+        initial={reduceMotion ? false : { opacity: 0, scale: 0.94 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <motion.header className={styles.resultsHead} {...reveal(0)}>
+          <div className="min-w-0 md:flex-1 md:basis-64 wrap-anywhere">
+            <h1>{result.title}</h1>
+            <p className={styles.meta}>
+              Scanned {result.scannedAgo} · Public sources
+              {result.domain && result.linkedRepository && <> · Linked to {result.linkedRepository}</>}
+            </p>
 
-          {saveError && <p role="alert" className="text-critical text-sm">{saveError}</p>}
-        </div>
+            {saveError && <p role="alert" className="text-critical text-sm">{saveError}</p>}
+          </div>
 
-        <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
-          {!result.projectId && (
-            savedScanId === id
-            ? <Link href="/project" className={SECONDARY}><LuBookmarkCheck aria-hidden="true" /> Saved · View project</Link>
-            : <div className="inline-flex min-w-0 max-w-full flex-wrap items-center gap-1">
-              <button type="button" className={SECONDARY} onClick={() => saveToProject(id)} disabled={saving}>
-                <LuBookmarkPlus aria-hidden="true" /> {saving ? "Saving..." : "Save to project"}
-              </button>
-              <SaveProjectInfo />
-            </div>
-          )}
+          <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
+            {!result.projectId && (
+              savedScanId === id
+              ? <Link href="/project" className={SECONDARY}><LuBookmarkCheck aria-hidden="true" /> Saved · View project</Link>
+              : <div className="inline-flex min-w-0 max-w-full flex-wrap items-center gap-1">
+                <button type="button" className={SECONDARY} onClick={() => saveToProject(id)} disabled={saving}>
+                  {saving ? <SmallLoader text="Saving..." size={14} /> : <><LuBookmarkPlus aria-hidden="true" /> Save to project</>}
+                </button>
+                <SaveProjectInfo />
+              </div>
+            )}
 
-          {(result.scannedAgo !== "just now" || canRetry) && (!result.projectId || result.role === "owner") && (
-            <button type="button" className={SECONDARY} onClick={rescan}><LuRefreshCw aria-hidden="true" /> Re-scan</button>
-          )}
+            {(result.scannedAgo !== "just now" || canRetry) && (!result.projectId || result.role === "owner") && (
+              <button type="button" className={SECONDARY} onClick={rescan}><LuRefreshCw aria-hidden="true" /> Re-scan</button>
+            )}
 
-          <RippleButton className={PRIMARY} type="button" onClick={newScan}><LuPlus aria-hidden="true" /> New scan</RippleButton>
-        </div>
-      </motion.header>
+            <RippleButton className={PRIMARY} type="button" onClick={newScan}><LuPlus aria-hidden="true" /> New scan</RippleButton>
+          </div>
+        </motion.header>
 
-      <motion.div {...reveal(0.04)}>
-        <ResultTabs hasRepository={Boolean(result.linkedRepository)} findingsCount={result.findings.length} />
+        <motion.div {...reveal(0.04)}>
+          <ResultTabs hasRepository={Boolean(result.linkedRepository)} findingsCount={result.findings.length} />
+        </motion.div>
+
+        {children}
       </motion.div>
-
-      {children}
-    </div>
+    </>
   );
 }

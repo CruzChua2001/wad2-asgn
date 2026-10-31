@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { LuCheck, LuCodeXml, LuFolder, LuGlobe, LuPlus, LuX } from "react-icons/lu";
+import SmallLoader from "@/components/small-loader";
 
 // Input with an icon inside, styled like the scan form
 const Field = ({ icon: Icon, label, ...props }) => (
@@ -82,7 +83,7 @@ const ProjectModal = ({ editing, modalRef, form, updateField, onSubmit, error, l
                 <div className="flex gap-3 pt-5 border-t border-line">
                     <button type="button" className="auth-outlineButton flex-1" onClick={() => modalRef.current.close()}>Cancel</button>
                     <button type="submit" className="auth-primaryButton flex-1" disabled={loading}>
-                        {loading ? "Saving..." : editing ? "Save Changes" : "Create & scan"}
+                        {loading ? <SmallLoader text="Saving..." size={16} /> : editing ? "Save Changes" : "Create & scan"}
                     </button>
                 </div>
             </form>

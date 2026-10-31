@@ -1,0 +1,866 @@
+/* Cruz robot. The drawing is components/robot/robot-head.js; the landing page peeks are app/(landing)/peeking-robot.js */
+:root {
+  --r-outline: #0d1626;
+  --r-shell: #f7f9fc;
+  --r-shade: #d9e2f0;
+  --r-visor: #13284a;
+  --r-eye: #4fe3ff;
+  --r-band: #e3221c;
+  --r-band-dark: #b5160f;
+  --r-ear: #2ba8f0;
+  --r-ball: #3ec5ff;
+  --r-patch: #1d2433;
+  --r-skull: #eef2f6;
+  --r-alert: #ffd23f;
+}
+
+[data-theme="dark"] {
+  --r-outline: #05090f;
+}
+
+.hero-visual .magic-terminal {
+  position: relative;
+  z-index: 1;
+}
+
+/* Sits on the terminal's top edge and peeks into the free space above it */
+.robot {
+  position: absolute;
+  width: 46%;
+  aspect-ratio: 300 / 260;
+  pointer-events: none;
+}
+
+.robot-top {
+  bottom: 100%;
+  right: 8%;
+  margin-bottom: -6%;
+}
+
+.robot-head {
+  position: relative;
+  z-index: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  transform-origin: 50% 100%;
+  animation: robot-peek 14s ease-in-out infinite;
+}
+
+/* Leans out from behind the left edge (xl and up, where there's room beside the text) */
+.robot-left {
+  top: 30%;
+  right: 100%;
+  width: 40%;
+  margin-right: -12%;
+}
+
+.robot-left .robot-head {
+  transform-origin: 100% 50%;
+  animation-name: robot-peek-side;
+}
+
+.robot-left .robot-eye {
+  animation-name: robot-look-side, robot-glow;
+}
+
+/* Shapes */
+.robot-band,
+.robot-ear,
+.robot-shell,
+.robot-visor,
+.robot-ball,
+.robot-patch ellipse {
+  stroke: var(--r-outline);
+  stroke-width: 5;
+  stroke-linejoin: round;
+}
+
+.robot-band {
+  fill: var(--r-band);
+}
+
+.robot-ear {
+  fill: var(--r-ear);
+}
+
+.robot-shell {
+  fill: var(--r-shell);
+}
+
+.robot-visor {
+  fill: var(--r-visor);
+}
+
+.robot-ball {
+  fill: var(--r-ball);
+}
+
+.robot-shine {
+  fill: #fff;
+  opacity: .8;
+}
+
+.robot-stick {
+  stroke: var(--r-shade);
+  stroke-width: 9;
+  stroke-linecap: round;
+}
+
+.robot-shade {
+  fill: none;
+  stroke: var(--r-shade);
+  stroke-width: 10;
+  stroke-linecap: round;
+}
+
+.robot-crease {
+  fill: none;
+  stroke: var(--r-band-dark);
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+
+.robot-patch ellipse {
+  fill: var(--r-patch);
+  stroke-width: 4;
+}
+
+.robot-strap {
+  stroke: var(--r-patch);
+  stroke-width: 9;
+  stroke-linecap: round;
+}
+
+.robot-skull {
+  fill: var(--r-skull);
+}
+
+.robot-bones {
+  stroke: var(--r-skull);
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+
+/* Hidden until the robot spots the cursor */
+.robot-alert {
+  fill: var(--r-alert);
+  stroke: var(--r-outline);
+  stroke-width: 4;
+  stroke-linejoin: round;
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+
+.robot-eye {
+  fill: var(--r-eye);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: robot-look 14s ease-in-out infinite, robot-glow 2s ease-in-out infinite;
+}
+
+.robot-antenna {
+  transform-origin: 228px 92px;
+  animation: robot-wobble 2.4s ease-in-out infinite;
+}
+
+/* Mitts sit in front of the terminal's top edge */
+.robot-mitts {
+  position: absolute;
+  z-index: 2;
+  top: 80%;
+  left: 20%;
+  width: 62%;
+  animation: robot-mitts 14s ease-in-out infinite;
+}
+
+.robot-mitts span {
+  position: absolute;
+  top: 0;
+  width: 18%;
+  aspect-ratio: 7 / 4;
+  border: 3px solid var(--r-outline);
+  border-radius: 12px 12px 8px 8px;
+  background: var(--r-shell);
+}
+
+.robot-mitts span:first-child {
+  left: 0;
+}
+
+.robot-mitts span:last-child {
+  right: 0;
+}
+
+/* One mitt holding the terminal's left edge */
+.robot-left .robot-mitts {
+  top: 92%;
+  left: 66%;
+  width: 8%;
+  animation-name: robot-mitt-side;
+}
+
+.robot-left .robot-mitts span {
+  width: 100%;
+  aspect-ratio: 4 / 7;
+  border-radius: 12px 8px 8px 12px;
+}
+
+/* Cursor states, set by peeking-robot.js */
+.robot-spotted .robot-alert {
+  animation: robot-alert 1.4s ease-out forwards;
+}
+
+/* Following the cursor: stays up, and the eye moves with it (peeking-robot.js sets its transform) */
+.robot-following .robot-head {
+  animation: robot-pop-up .35s ease-out;
+  transform: translateY(0);
+}
+
+.robot-left.robot-following .robot-head {
+  animation-name: robot-pop-side;
+  transform: translateX(0) rotate(-16deg);
+}
+
+.robot-following .robot-mitts {
+  animation: none;
+  opacity: 1;
+  transform: none;
+}
+
+.robot-following .robot-eye {
+  animation: robot-glow 2s ease-in-out infinite;
+  transition: transform .15s ease-out;
+}
+
+/* The robot that isn't following hides until the cursor stops */
+.robot-waiting .robot-head {
+  animation: none;
+  transform: translateY(100%);
+}
+
+.robot-left.robot-waiting .robot-head {
+  transform: translateX(110%) rotate(-16deg);
+}
+
+.robot-waiting .robot-mitts {
+  animation: none;
+  opacity: 0;
+}
+
+.robot-waiting .robot-eye {
+  animation: none;
+}
+
+/* Cursor stopped: both loops start again together, from the point where the robot that followed is up,
+   so it doesn't drop out of sight straight away and the two robots still take turns */
+.robot-resumed-top .robot-head,
+.robot-resumed-top .robot-mitts,
+.robot-resumed-top .robot-eye {
+  animation-delay: -1.7s;
+}
+
+.robot-resumed-left .robot-head,
+.robot-resumed-left .robot-mitts,
+.robot-resumed-left .robot-eye {
+  animation-delay: -9.3s;
+}
+
+@keyframes robot-alert {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(.2);
+  }
+  15% {
+    opacity: 1;
+    transform: translateY(0) scale(1.25);
+  }
+  25%, 80% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes robot-pop-up {
+  0% {
+    transform: translateY(12%);
+  }
+  60% {
+    transform: translateY(-4%);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes robot-pop-side {
+  0% {
+    transform: translateX(12%) rotate(-16deg);
+  }
+  60% {
+    transform: translateX(-4%) rotate(-16deg);
+  }
+  100% {
+    transform: translateX(0) rotate(-16deg);
+  }
+}
+
+@keyframes robot-peek {
+  0%, 4% {
+    transform: translateY(100%);
+  }
+  12%, 40% {
+    transform: translateY(0) rotate(0deg);
+  }
+  43% {
+    transform: translateY(-3%) rotate(-5deg);
+  }
+  46% {
+    transform: translateY(0) rotate(4deg);
+  }
+  49% {
+    transform: translateY(0) rotate(0deg);
+  }
+  55%, 100% {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes robot-mitts {
+  0%, 9% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  13%, 51% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  55%, 100% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+@keyframes robot-look {
+  0%, 14% {
+    transform: translateX(0) scaleY(1);
+  }
+  19%, 26% {
+    transform: translateX(-20px) scaleY(1);
+  }
+  31%, 37% {
+    transform: translateX(9px) scaleY(1);
+  }
+  38% {
+    transform: translateX(9px) scaleY(.1);
+  }
+  39% {
+    transform: translateX(9px) scaleY(1);
+  }
+  44%, 100% {
+    transform: translateX(0) scaleY(1);
+  }
+}
+
+@keyframes robot-peek-side {
+  0%, 59% {
+    transform: translateX(110%) rotate(-16deg);
+  }
+  66%, 86% {
+    transform: translateX(0) rotate(-16deg);
+  }
+  93%, 100% {
+    transform: translateX(110%) rotate(-16deg);
+  }
+}
+
+@keyframes robot-mitt-side {
+  0%, 63% {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+  67%, 86% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  90%, 100% {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+}
+
+@keyframes robot-look-side {
+  0%, 67% {
+    transform: translate(0, 0);
+  }
+  71%, 76% {
+    transform: translate(9px, 2px);
+  }
+  80%, 84% {
+    transform: translate(-14px, -2px);
+  }
+  88%, 100% {
+    transform: translate(0, 0);
+  }
+}
+
+@keyframes robot-wobble {
+  0%, 100% {
+    transform: rotate(-6deg);
+  }
+  50% {
+    transform: rotate(6deg);
+  }
+}
+
+@keyframes robot-glow {
+  0%, 100% {
+    opacity: .7;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Below xl: no room beside the text for the side robot.
+   visibility (not display: none) keeps its animation running, so it stays in step with the top robot */
+@media (max-width: 1199px) {
+  .robot-left {
+    visibility: hidden;
+  }
+}
+
+/* Stacked layout: a smaller robot, and just enough room so it doesn't cover the hero text */
+@media (max-width: 991px) {
+  .hero-visual {
+    margin-top: 10%;
+  }
+
+  .robot-top {
+    right: 3%;
+    width: 32%;
+    margin-bottom: -4%;
+  }
+}
+
+/* Reduced motion: the robot just sits there peeking */
+@media (prefers-reduced-motion: reduce) {
+  .robot-head,
+  .robot-eye,
+  .robot-antenna,
+  .robot-mitts {
+    animation: none;
+  }
+
+  .robot-left {
+    display: none;
+  }
+
+  .robot-alert {
+    display: none;
+  }
+}
+
+/* Scanning robot (app/(app)/scan/scanning-robot.js): peeks over the live terminal with a magnifying glass */
+.scan-robot-stage {
+  position: relative;
+  margin-top: 72px;
+}
+
+.scan-robot-stage .magic-terminal {
+  position: relative;
+  z-index: 1;
+}
+
+.scan-robot {
+  position: absolute;
+  bottom: 100%;
+  right: 6%;
+  width: 120px;
+  aspect-ratio: 300 / 260;
+  margin-bottom: -16px;
+  pointer-events: none;
+}
+
+.scan-robot .robot-head {
+  animation: scan-rise .6s ease-out both;
+}
+
+.scan-robot .robot-eye {
+  animation: scan-look 2.4s ease-in-out infinite, robot-glow 2s ease-in-out infinite;
+}
+
+.scan-robot-scanning .robot-head {
+  animation: scan-rise .6s ease-out both, scan-bob 1.2s ease-in-out .6s infinite;
+}
+
+.scan-robot-lens {
+  fill: rgb(79 227 255 / .25);
+  stroke: var(--r-outline);
+  stroke-width: 6;
+}
+
+.scan-robot-handle {
+  stroke: var(--r-patch);
+  stroke-width: 12;
+  stroke-linecap: round;
+}
+
+.scan-robot-glint {
+  fill: #fff;
+  opacity: .8;
+}
+
+.scan-robot-glass {
+  transform-box: view-box;
+  transform-origin: 100px 236px;
+  animation: scan-sweep 2.4s ease-in-out infinite;
+}
+
+.scan-robot-check {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.scan-robot-check circle {
+  fill: var(--accent);
+  stroke: var(--r-outline);
+  stroke-width: 4;
+}
+
+.scan-robot-check path {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Done: puts the glass away, squints happily and shows a tick */
+.scan-robot-results .robot-head {
+  animation: scan-hop .5s ease-out;
+}
+
+.scan-robot-results .robot-eye {
+  animation: robot-glow 2s ease-in-out infinite;
+  transform: translate(-6px, 2px) scaleY(.55);
+}
+
+.scan-robot-results .scan-robot-glass {
+  animation: scan-put-away .5s ease-in forwards;
+}
+
+.scan-robot-results .scan-robot-check {
+  animation: scan-pop .5s ease-out .2s forwards;
+}
+
+/* Failed: drops the glass and slumps */
+.scan-robot-failed .robot-head {
+  animation: scan-slump .6s ease-out forwards;
+}
+
+.scan-robot-failed .robot-eye {
+  animation: robot-glow 2s ease-in-out infinite;
+  transform: translate(-8px, 8px) scaleY(.6);
+}
+
+.scan-robot-failed .scan-robot-glass {
+  animation: scan-drop .6s ease-in forwards;
+}
+
+@keyframes scan-rise {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes scan-bob {
+  0%, 100% {
+    transform: translateY(0) rotate(-2deg);
+  }
+  50% {
+    transform: translateY(-3%) rotate(2deg);
+  }
+}
+
+@keyframes scan-sweep {
+  0%, 100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate(30px, -6px) rotate(-14deg);
+  }
+}
+
+@keyframes scan-look {
+  0%, 100% {
+    transform: translate(-18px, 4px);
+  }
+  50% {
+    transform: translate(-4px, 2px);
+  }
+}
+
+@keyframes scan-hop {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-8%);
+  }
+}
+
+@keyframes scan-put-away {
+  to {
+    opacity: 0;
+    transform: translate(0, 80px);
+  }
+}
+
+@keyframes scan-pop {
+  0% {
+    opacity: 0;
+    transform: scale(.2);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes scan-slump {
+  from {
+    transform: translateY(0) rotate(0deg);
+  }
+  to {
+    transform: translateY(8%) rotate(-6deg);
+  }
+}
+
+@keyframes scan-drop {
+  to {
+    opacity: 0;
+    transform: translate(-10px, 90px) rotate(50deg);
+  }
+}
+
+@media (max-width: 767px) {
+  .scan-robot-stage {
+    margin-top: 60px;
+  }
+
+  .scan-robot {
+    right: 4%;
+    width: 96px;
+    margin-bottom: -12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scan-robot .robot-head,
+  .scan-robot .robot-eye,
+  .scan-robot-glass {
+    animation: none;
+  }
+
+  .scan-robot-results .scan-robot-glass,
+  .scan-robot-failed .scan-robot-glass {
+    opacity: 0;
+  }
+
+  .scan-robot-results .scan-robot-check {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+/* Edge robot (components/robot/edge-robot.js): peeks in from an edge of the app pages now and then.
+   The outer box sits on the edge, turned so the robot's chin points off screen; the body slides in and out */
+.edge-robot {
+  --w: 120px;
+  --h: 104px;
+  position: fixed;
+  z-index: 40;
+  width: var(--w);
+  height: var(--h);
+  pointer-events: none;
+}
+
+.edge-robot-bottom {
+  left: var(--offset);
+  bottom: 0;
+  transform: translateX(-50%);
+}
+
+.edge-robot-top {
+  left: var(--offset);
+  top: 0;
+  transform: translateX(-50%) rotate(180deg);
+}
+
+.edge-robot-left {
+  top: var(--offset);
+  left: calc((var(--h) - var(--w)) / 2);
+  transform: translateY(-50%) rotate(90deg);
+}
+
+.edge-robot-right {
+  top: var(--offset);
+  right: calc((var(--h) - var(--w)) / 2);
+  transform: translateY(-50%) rotate(-90deg);
+}
+
+.edge-robot-body {
+  width: 100%;
+  height: 100%;
+  animation: edge-peek 5s ease-in-out forwards;
+}
+
+.edge-robot .robot-head {
+  animation: none;
+}
+
+.edge-robot .robot-eye {
+  animation: edge-look 5s ease-in-out forwards, robot-glow 2s ease-in-out infinite;
+}
+
+/* Curious: tilts its head with a question mark */
+.edge-robot-curious .robot-head {
+  animation: edge-tilt 5s ease-in-out forwards;
+}
+
+.edge-robot-question {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: edge-question 5s ease-out forwards;
+}
+
+.edge-robot-question path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.edge-robot-question-outline {
+  stroke: var(--r-outline);
+  stroke-width: 18;
+}
+
+.edge-robot-question-fill {
+  stroke: var(--r-alert);
+  stroke-width: 10;
+}
+
+.edge-robot-question circle {
+  fill: var(--r-alert);
+  stroke: var(--r-outline);
+  stroke-width: 4;
+}
+
+@keyframes edge-peek {
+  0% {
+    transform: translateY(100%);
+  }
+  15%, 50% {
+    transform: translateY(18%) rotate(0deg);
+  }
+  54% {
+    transform: translateY(16%) rotate(-4deg);
+  }
+  58% {
+    transform: translateY(18%) rotate(3deg);
+  }
+  62%, 80% {
+    transform: translateY(18%) rotate(0deg);
+  }
+  95%, 100% {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes edge-look {
+  0%, 20% {
+    transform: translateX(0) scaleY(1);
+  }
+  30%, 40% {
+    transform: translateX(-20px) scaleY(1);
+  }
+  50%, 62% {
+    transform: translateX(10px) scaleY(1);
+  }
+  64% {
+    transform: translateX(10px) scaleY(.1);
+  }
+  66% {
+    transform: translateX(10px) scaleY(1);
+  }
+  76%, 100% {
+    transform: translateX(0) scaleY(1);
+  }
+}
+
+@keyframes edge-tilt {
+  0%, 18% {
+    transform: rotate(0deg);
+  }
+  26%, 78% {
+    transform: rotate(-12deg);
+  }
+  88%, 100% {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes edge-question {
+  0%, 18% {
+    opacity: 0;
+    transform: translateY(10px) scale(.2);
+  }
+  24% {
+    opacity: 1;
+    transform: translateY(0) scale(1.2);
+  }
+  30%, 80% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  88%, 100% {
+    opacity: 0;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 767px) {
+  .edge-robot {
+    --w: 88px;
+    --h: 76px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .edge-robot {
+    --w: 170px;
+    --h: 147px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .edge-robot {
+    display: none;
+  }
+}

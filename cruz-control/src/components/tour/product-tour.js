@@ -97,7 +97,6 @@ export default function ProductTour({ part, onStart, onClose }) {
             if (open) startScrollRef.current = window.scrollY;
         }, [open]);
 
-        const target = selector ? document.querySelector(selector) : null;
         useEffect(() => {
         // Steps on an Overview card bring it to the front of the carousel first, then measure once it has turned
         if (card) window.dispatchEvent(new CustomEvent("cruz:overview-card", { detail: card }));
@@ -115,6 +114,7 @@ export default function ProductTour({ part, onStart, onClose }) {
         };
 
         const timer = setTimeout(() => {
+            const target = selector ? document.querySelector(selector) : null;
             if (target) scrollToTarget(target);
             measure();
         }, card ? CARD_TURN : 0);

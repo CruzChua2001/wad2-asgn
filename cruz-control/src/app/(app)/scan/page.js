@@ -4,6 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useMemo, useState } from "react";
 import { LuArrowRight, LuCheck, LuCodeXml, LuGlobe, LuLink, LuRadar, LuShieldCheck, LuSparkle } from "react-icons/lu";
 import LiveScanTerminal from "./live-scan-terminal";
+import ScanningRobot from "./scanning-robot";
 import RippleButton from "@/components/ripple-button";
 import { useTheme } from "@/lib/theme-store";
 import { useScan } from "./scan-context";
@@ -160,7 +161,7 @@ export default function OverviewPage() {
                   aria-describedby="target-help"
                   aria-invalid={Boolean(target && !targetStatus.valid)}
                 />
-                <RippleButton className={styles.scanButton} type="submit" disabled={!canSubmit}>
+                <RippleButton className={styles.scanButton} type="submit" disabled={!canSubmit} data-curious>
                   Start scan <Icon name="arrow" size={17} />
                 </RippleButton>
               </div>
@@ -235,12 +236,15 @@ export default function OverviewPage() {
               <h1>{phase === "scanning" ? "Scanning" : phase === "failed" ? "Couldn't scan" : "Scanned"} <em>{scan.domain ?? scan.githubRepo}</em></h1>
             </div>
 
-            <LiveScanTerminal
-              lines={lines}
-              theme={theme}
-              domain={scan.domain ?? scan.githubRepo}
-              status={phase === "scanning" ? "RUNNING" : phase === "failed" ? "STOPPED" : "DONE"}
-            />
+            <div className="scan-robot-stage">
+              <ScanningRobot status={phase} />
+              <LiveScanTerminal
+                lines={lines}
+                theme={theme}
+                domain={scan.domain ?? scan.githubRepo}
+                status={phase === "scanning" ? "RUNNING" : phase === "failed" ? "STOPPED" : "DONE"}
+              />
+            </div>
             <div className={styles.scanProgress}>
               <div className={styles.progressMeta}><span>{phase === "failed" ? "Scan stopped" : "Checks in progress"}</span><strong>{progress}%</strong></div>
               <div className={styles.progressTrack} role="progressbar" aria-label="Scan progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>

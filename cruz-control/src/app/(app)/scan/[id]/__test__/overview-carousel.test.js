@@ -20,6 +20,7 @@ const tabLabel = tab => tab.firstChild.textContent;
 const currentTab = _ => tabs().find(tab => tab.getAttribute("aria-current") === "true");
 const region = _ => screen.getByRole("region", { name: "Overview cards" });
 const slideOf = text => screen.getByText(text).closest("[data-slide]");
+const slideNamed = label => document.querySelector(`[data-slide][aria-label$=": ${label}"]`);
 const isInert = text => slideOf(text).hasAttribute("inert");
 const isHidden = text => slideOf(text).classList.contains("invisible");
 const shownCards = _ => [...document.querySelectorAll("[data-slide]")].filter(slide => !slide.classList.contains("invisible"));
@@ -112,7 +113,7 @@ describe("OverviewCarousel tabs", () => {
 
         expect(tabs()).toHaveLength(3);
         expect(screen.getAllByRole("button").map(button => button.getAttribute("aria-label") || tabLabel(button))).toEqual([
-            "Previous card", "Servers", "Score", "Findings", "Next card", "Score button",
+            "Previous card", "Servers", "Score", "Findings", "Next card",
         ]);
     });
 
@@ -174,9 +175,9 @@ describe("OverviewCarousel slides", () => {
     test("only the front card can be used", () => {
         showCarousel("score");
 
-        expect(isInert("Map card")).toBe(true);
+        expect(slideNamed("Servers").hasAttribute("inert")).toBe(true);
         expect(isInert("Score card")).toBe(false);
-        expect(isInert("Findings card")).toBe(true);
+        expect(slideNamed("Findings").hasAttribute("inert")).toBe(true);
     });
 
     test("the front card is in the page flow and the others are hidden on top of it", () => {
@@ -184,8 +185,8 @@ describe("OverviewCarousel slides", () => {
 
         expect(slideOf("Score card").className).toContain("relative");
         expect(slideOf("Score card").className).not.toContain("invisible");
-        expect(slideOf("Map card").className).toContain("absolute");
-        expect(slideOf("Map card").className).toContain("invisible");
+        expect(slideNamed("Servers").className).toContain("absolute");
+        expect(slideNamed("Servers").className).toContain("invisible");
     });
 
     test("keeps every card mounted when the front one changes", () => {
@@ -322,7 +323,7 @@ describe("OverviewCarousel on phones", () => {
 
         expect(window.matchMedia).toHaveBeenCalledWith("(max-width: 767px)");
         expect(tabs()).toHaveLength(3);
-        expect(isInert("Score card")).toBe(true);
+        expect(slideNamed("Score").hasAttribute("inert")).toBe(true);
 
         fireEvent.click(screen.getByRole("button", { name: "Next card" }));
 
