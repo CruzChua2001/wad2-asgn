@@ -47,6 +47,13 @@ export default function OverviewCarousel({ slides, active, onChange, reduceMotio
     setTurn({ index: activeIndex, from: turn.index, step: activeIndex > turn.index ? 1 : -1, done: reduceMotion });
   }
 
+  // A card mounts the first time it comes to the front, so the globe doesn't load behind the score
+  const activeKey = slides[activeIndex].key;
+  const [seen, setSeen] = useState([activeKey]);
+  if (!seen.includes(activeKey)) {
+    setSeen(seen.concat(activeKey));
+  }
+
   // After a long card the page may be scrolled past the tabs, so bring them back
   function showTop() {
     const region = regionRef.current;
@@ -164,7 +171,7 @@ export default function OverviewCarousel({ slides, active, onChange, reduceMotio
         {controls && <div className="flex flex-none justify-end">{controls}</div>}
       </div>
 
-      {/* Every card stays mounted so the globe never reloads. Only the front one is in the flow.
+      {/* A card stays mounted once shown, so the globe never reloads. Only the front one is in the flow.
           The clip margin leaves room for the card's shadow */}
       <div className="relative overflow-clip perspective-[1800px] perspective-origin-top [overflow-clip-margin:48px]">
         {slides.map((slide, index) => {
@@ -198,7 +205,7 @@ export default function OverviewCarousel({ slides, active, onChange, reduceMotio
                 ? "relative rounded-xl bg-surface-strong shadow-lg shadow-ink/5"
                 : `pointer-events-none absolute inset-x-0 top-0 rounded-xl bg-surface-strong ${leaving ? "" : "invisible"}`}
             >
-              {slide.node}
+              {seen.includes(slide.key) && slide.node}
             </motion.div>
           );
         })}

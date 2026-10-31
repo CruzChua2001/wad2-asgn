@@ -10,7 +10,7 @@ import RippleButton from "@/components/ripple-button";
 import PeekingRobot from "./peeking-robot";
 import ScanTerminal from "./scan-terminal";
 import TextAnimate from "./text-animate";
-import TypingAnimation from "./typing-animation";
+import TypingAnimation from "@/components/typing-animation";
 import { useTheme } from "@/lib/theme-store";
 
 function BrandMark() {

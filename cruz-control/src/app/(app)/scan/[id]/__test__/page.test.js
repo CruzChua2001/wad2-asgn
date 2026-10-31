@@ -100,6 +100,8 @@ const serverDetails = _ => screen.getByRole("region", { name: "Server details" }
 
 beforeEach(() => {
     vi.clearAllMocks();
+    // Grid layout shows every card, so these tests don't depend on the carousel
+    localStorage.setItem("cruz-control-overview-view-v1", "grid");
 });
 
 describe("Overview findings", () => {
