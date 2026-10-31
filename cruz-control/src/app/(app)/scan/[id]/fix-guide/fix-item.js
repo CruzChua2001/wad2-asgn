@@ -4,6 +4,7 @@ import { useState } from "react";
 import { LuChevronDown, LuCheck, LuExternalLink, LuSparkles } from "react-icons/lu";
 import api from "@/lib/api";
 import { useAuth } from "@/components/auth/auth-provider";
+import SmallLoader from "@/components/small-loader";
 
 const SEVERITY_STYLE = {
     critical: { label: "Critical", chip: "bg-red-500/10 text-red-600 dark:text-red-400", bar: "bg-red-500" },
@@ -101,8 +102,9 @@ export default function FixItem({ scanId, finding, done, open, onToggleDone, onT
                                 disabled={loading}
                                 className="inline-flex items-center cursor-pointer gap-2 rounded-full border border-line px-3 py-1.5 font-medium text-accent transition-colors hover:bg-accent-soft disabled:cursor-wait disabled:opacity-60"
                             >
-                                <LuSparkles className="h-4 w-4" aria-hidden="true" />
-                                {loading ? "Writing your guide..." : "Get step-by-step guide"}
+                                {loading
+                                    ? <SmallLoader text="Writing your guide..." size={16} />
+                                    : <><LuSparkles className="h-4 w-4" aria-hidden="true" /> Get step-by-step guide</>}
                             </button>
                         )}
                         {error && (

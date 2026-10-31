@@ -10,6 +10,7 @@ import RippleButton from "@/components/ripple-button";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useScan } from "../scan-context";
 import LoadingOverlay from "@/components/loading-overlay";
+import SmallLoader from "@/components/small-loader";
 import SaveProjectInfo from "./save-project-info";
 import styles from "@/styles/overview/scan-results.module.css";
 
@@ -117,7 +118,7 @@ export default function ScanResultsLayout({ children }) {
               ? <Link href="/project" className={SECONDARY}><LuBookmarkCheck aria-hidden="true" /> Saved · View project</Link>
               : <div className="inline-flex min-w-0 max-w-full flex-wrap items-center gap-1">
                 <button type="button" className={SECONDARY} onClick={() => saveToProject(id)} disabled={saving}>
-                  <LuBookmarkPlus aria-hidden="true" /> {saving ? "Saving..." : "Save to project"}
+                  {saving ? <SmallLoader text="Saving..." size={14} /> : <><LuBookmarkPlus aria-hidden="true" /> Save to project</>}
                 </button>
                 <SaveProjectInfo />
               </div>

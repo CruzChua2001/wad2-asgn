@@ -11,6 +11,7 @@ import { useAuth } from "@/components/auth/auth-provider";
 import LoginRequired from "@/components/auth/login-required";
 import GradeBadge from "@/components/grade-badge";
 import LoadingOverlay from "@/components/loading-overlay";
+import SmallLoader from "@/components/small-loader";
 import ProjectModal from "./project-modal";
 import MemberModal from "./member-modal";
 import DeleteModal from "./delete-modal";
@@ -61,6 +62,7 @@ const ProjectPage = _ => {
     const [deletingProject, setDeletingProject] = useState(null);
     const [invites, setInvites] = useState([]);
     const [busyInviteId, setBusyInviteId] = useState(null);
+    const [busyAction, setBusyAction] = useState(null);
     const [loaded, setLoaded] = useState(false);
 
     useEffect(() => {
@@ -160,6 +162,7 @@ const ProjectPage = _ => {
     // busyInviteId stops a double click sending the same request twice
     const acceptInvite = async invite => {
         setBusyInviteId(invite.id);
+        setBusyAction("accept");
         setError("");
         try {
             await api.post(`/api/invite/${invite.id}/accept`);
@@ -176,6 +179,7 @@ const ProjectPage = _ => {
 
     const declineInvite = async invite => {
         setBusyInviteId(invite.id);
+        setBusyAction("decline");
         setError("");
         try {
             await api.delete(`/api/invite/${invite.id}`);
@@ -243,8 +247,18 @@ const ProjectPage = _ => {
                                                 <Targets domain={invite.projects?.domain} repo={invite.projects?.github_repo} />
 
                                                 <div className="flex items-center justify-end gap-2 text-sm font-semibold">
-                                                    <button type="button" onClick={() => declineInvite(invite)} disabled={busyInviteId === invite.id} className="h-9 px-3 rounded-lg text-muted hover:text-critical cursor-pointer transition-colors duration-200 disabled:cursor-default disabled:opacity-60">Decline<span className="sr-only"> the invite to {invite.projects?.name}</span></button>
-                                                    <button type="button" onClick={() => acceptInvite(invite)} disabled={busyInviteId === invite.id} className="h-9 px-4 rounded-lg bg-accent text-page hover:bg-accent-bright cursor-pointer transition-colors duration-200 disabled:cursor-default disabled:opacity-60">Accept<span className="sr-only"> the invite to {invite.projects?.name}</span></button>
+                                                    <button type="button" onClick={() => declineInvite(invite)} disabled={busyInviteId === invite.id} className="h-9 px-3 rounded-lg text-muted hover:text-critical cursor-pointer transition-colors duration-200 disabled:cursor-default disabled:opacity-60">
+                                                        {busyInviteId === invite.id && busyAction === "decline" 
+                                                            ? <SmallLoader text="Declining..." size={14} /> 
+                                                            : "Decline" }
+                                                        <span className="sr-only"> the invite to {invite.projects?.name}</span>
+                                                    </button>
+                                                    <button type="button" onClick={() => acceptInvite(invite)} disabled={busyInviteId === invite.id} className="h-9 px-4 rounded-lg bg-accent text-page hover:bg-accent-bright cursor-pointer transition-colors duration-200 disabled:cursor-default disabled:opacity-60">
+                                                        {busyInviteId === invite.id && busyAction === "accept" 
+                                                            ? <SmallLoader text="Accepting..." size={14} /> 
+                                                            : "Accept" }
+                                                        <span className="sr-only"> the invite to {invite.projects?.name}</span>
+                                                    </button>
                                                 </div>
                                             </motion.li>
                                         ))}
@@ -318,7 +332,9 @@ const ProjectPage = _ => {
 
                                         {p.role === "owner" && p.latestScan && (
                                             <button type="button" aria-label={`${phase === "scanning" && scan?.projectId === p.id ? "Scanning..." : "Re-scan"} ${p.name}`} disabled={phase === "scanning" && scan?.projectId === p.id} onClick={() => scanProject(p)} className="flex items-center gap-1.5 min-h-11 px-3 rounded-lg border border-line text-ink hover:border-accent hover:text-accent cursor-pointer transition-colors duration-200 disabled:cursor-default disabled:opacity-60">
-                                                <LuRefreshCw size={15} aria-hidden="true" /> {phase === "scanning" && scan?.projectId === p.id ? "Scanning..." : "Re-scan"}<span className="sr-only"> {p.name}</span>
+                                                {phase === "scanning" && scan?.projectId === p.id 
+                                                    ? <SmallLoader text="Scanning..." size={15} /> 
+                                                    : <><LuRefreshCw size={15} aria-hidden="true" /> Re-scan</>} <span className="sr-only"> {p.name}</span>
                                             </button>
                                         )}
                                     </div>

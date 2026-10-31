@@ -6,6 +6,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import api from "@/lib/api";
 import { useAuth } from "@/components/auth/auth-provider";
 import LoadingOverlay from "@/components/loading-overlay";
+import SmallLoader from "@/components/small-loader";
 import { motion, useReducedMotion } from "motion/react";
 import ComparisonResults from "./comparison-results";
 import ComparisonEmpty from "./comparison-empty";
@@ -102,7 +103,7 @@ function ProjectComparison({ id, projectId, role }) {
          <>
             <LoadingOverlay show={false} />
             <motion.div
-                className="min-w-0 space-y-5 [overflow-wrap:anywhere]"
+                className="min-w-0 space-y-5 wrap-anywhere"
                 initial={reduceMotion ? false : { opacity: 0, scale: 0.94 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
@@ -127,7 +128,7 @@ function ProjectComparison({ id, projectId, role }) {
                         return <ScanCard key={name} label={label} value={value} scan={details || selected} choices={options} otherId={otherId} timing={timing} numbers={numbers} fromHistory={name === "first" && fromHistory} onChange={value => select(name, value)} />;
                     })}
                 </div>
-                {selectionError ? <p role="alert" className="text-critical">{selectionError}</p> : !currentPair ? <p role="status">Loading comparison...</p> : currentPair.error ? (
+                {selectionError ? <p role="alert" className="text-critical">{selectionError}</p> : !currentPair ? <SmallLoader text="Loading comparison..." className="text-sm text-muted" /> : currentPair.error ? (
                     <div><p role="alert" className="text-critical">{currentPair.error}</p><button className={buttonClass} onClick={() => setPairAttempt(n => n + 1)}>Retry comparison</button></div>
                 ) : <ComparisonResults comparison={currentPair} animateEntrance={currentPair.animateEntrance} />}
             </motion.div>
@@ -141,12 +142,12 @@ function CompareTab() {
     const { result, saveToProject, savedScanId, saving, saveError } = useScan();
     if (!result) return <p role="status">Loading scan...</p>;
     return (
-        <div className="min-w-0 space-y-6 pb-20 [overflow-wrap:anywhere]">
+        <div className="min-w-0 space-y-6 pb-20 wrap-anywhere">
             <header><h2 className="text-2xl font-semibold">Compare scans</h2><p className="mt-2 text-muted">Compare two scans to see what&apos;s changed.</p></header>
             {!result.projectId ? <div className="space-y-3">
                 <p>This scan is not saved to a project. Save to project creates a new project so you can compare future scans.</p>
                 <p className="text-sm text-muted">To scan an existing project again, open <Link href="/project" className="text-accent underline">Projects</Link> and choose Re-scan on its card.</p>
-                {savedScanId === id ? <Link href="/project" className="text-accent">View it in Projects</Link> : <button className={buttonClass} disabled={saving} onClick={() => saveToProject(id)}>{saving ? "Saving..." : "Save to project"}</button>}
+                {savedScanId === id ? <Link href="/project" className="text-accent">View it in Projects</Link> : <button className={buttonClass} disabled={saving} onClick={() => saveToProject(id)}>{saving ? <SmallLoader text="Saving..." size={14} /> : "Save to project"}</button>}
                 {saveError && <p role="alert" className="text-critical">{saveError}</p>}
             </div> : status !== "authenticated" ? <p>Log in as a project member to compare these scans.</p> : <>
                 <ProjectComparison key={`${id}:${result.projectId}:${user?.id}`} id={id} projectId={result.projectId} role={result.role} />
