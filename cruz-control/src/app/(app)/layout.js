@@ -10,6 +10,7 @@ import { ScanProvider, useScan } from "./scan/scan-context";
 import styles from "@/styles/overview/overview.module.css";
 import ProductTour from "@/components/tour/product-tour";  
 import AskCruzPanel from "@/components/ask-cruz/ask-cruz-panel";
+import RandomPeek from "@/components/robot/random-peek";
 import { useEffect, useState } from "react";
 import { LuCompass } from "react-icons/lu";
 
@@ -122,6 +123,7 @@ export default function OverviewLayout({ children }) {
         </button>
 
         <AskCruzPanel open={askOpen} onClose={() => setAskOpen(false)} />
+        <RandomPeek />
       </main>
     </ScanProvider>
   );

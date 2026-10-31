@@ -319,7 +319,7 @@ const ProjectPage = _ => {
 
                                     <div className="flex min-w-0 flex-wrap gap-2 mt-auto text-sm font-semibold">
                                         {p.latestScan ? (
-                                            <Link href={`/scan/${p.latestScan.id}`} className="grid place-items-center flex-1 basis-36 min-w-0 min-h-11 rounded-lg bg-accent text-page! no-underline hover:bg-accent-bright transition-colors duration-200">
+                                            <Link href={`/scan/${p.latestScan.id}`} data-curious className="grid place-items-center flex-1 basis-36 min-w-0 min-h-11 rounded-lg bg-accent text-page! no-underline hover:bg-accent-bright transition-colors duration-200">
                                                 <span>View results<span className="sr-only"> for {p.name}</span></span>
                                             </Link>
                                         ) : p.role === "owner" ? (
@@ -331,7 +331,7 @@ const ProjectPage = _ => {
                                         )}
 
                                         {p.role === "owner" && p.latestScan && (
-                                            <button type="button" aria-label={`${phase === "scanning" && scan?.projectId === p.id ? "Scanning..." : "Re-scan"} ${p.name}`} disabled={phase === "scanning" && scan?.projectId === p.id} onClick={() => scanProject(p)} className="flex items-center gap-1.5 min-h-11 px-3 rounded-lg border border-line text-ink hover:border-accent hover:text-accent cursor-pointer transition-colors duration-200 disabled:cursor-default disabled:opacity-60">
+                                            <button type="button" data-curious aria-label={`${phase === "scanning" && scan?.projectId === p.id ? "Scanning..." : "Re-scan"} ${p.name}`} disabled={phase === "scanning" && scan?.projectId === p.id} onClick={() => scanProject(p)} className="flex items-center gap-1.5 min-h-11 px-3 rounded-lg border border-line text-ink hover:border-accent hover:text-accent cursor-pointer transition-colors duration-200 disabled:cursor-default disabled:opacity-60">
                                                 {phase === "scanning" && scan?.projectId === p.id 
                                                     ? <SmallLoader text="Scanning..." size={15} /> 
                                                     : <><LuRefreshCw size={15} aria-hidden="true" /> Re-scan</>} <span className="sr-only"> {p.name}</span>
