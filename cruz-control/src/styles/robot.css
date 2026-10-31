@@ -23,11 +23,11 @@
   z-index: 1;
 }
 
-/* Sits on the terminal's top edge and peeks into the free space above it */
+/* Sits on the terminal's top edge and peeks into the free space above it.
+   The SVG sets the height: aspect-ratio here made Safari's box too tall when zoomed in */
 .robot {
   position: absolute;
   width: 46%;
-  aspect-ratio: 300 / 260;
   pointer-events: none;
 }
 
@@ -483,7 +483,6 @@
   bottom: 100%;
   right: 6%;
   width: 120px;
-  aspect-ratio: 300 / 260;
   margin-bottom: -16px;
   pointer-events: none;
 }
