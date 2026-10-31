@@ -7,7 +7,7 @@ import AnimatedThemeToggler from "@/components/animated-theme-toggler";
 import { useAuth } from "@/components/auth/auth-provider";
 import InteractiveSignalGrid from "./interactive-signal-grid";
 import RippleButton from "@/components/ripple-button";
-import PeekingRobot from "./peeking-robot";
+import PeekingRobots from "./peeking-robot";
 import ScanTerminal from "./scan-terminal";
 import TextAnimate from "./text-animate";
 import TypingAnimation from "@/components/typing-animation";
@@ -83,8 +83,7 @@ export default function Home() {
         </div>
 
         <div className="hero-visual">
-          <PeekingRobot />
-          <PeekingRobot side="left" />
+          <PeekingRobots />
           <ScanTerminal theme={theme} />
         </div>
       </section>

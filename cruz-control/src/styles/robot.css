@@ -11,6 +11,7 @@
   --r-ball: #3ec5ff;
   --r-patch: #1d2433;
   --r-skull: #eef2f6;
+  --r-alert: #ffd23f;
 }
 
 [data-theme="dark"] {
@@ -142,6 +143,17 @@
   stroke-linecap: round;
 }
 
+/* Hidden until the robot spots the cursor */
+.robot-alert {
+  fill: var(--r-alert);
+  stroke: var(--r-outline);
+  stroke-width: 4;
+  stroke-linejoin: round;
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+
 .robot-eye {
   fill: var(--r-eye);
   transform-box: fill-box;
@@ -194,6 +206,109 @@
   width: 100%;
   aspect-ratio: 4 / 7;
   border-radius: 12px 8px 8px 12px;
+}
+
+/* Cursor states, set by peeking-robot.js */
+.robot-spotted .robot-alert {
+  animation: robot-alert 1.4s ease-out forwards;
+}
+
+/* Following the cursor: stays up, and the eye moves with it (peeking-robot.js sets its transform) */
+.robot-following .robot-head {
+  animation: robot-pop-up .35s ease-out;
+  transform: translateY(0);
+}
+
+.robot-left.robot-following .robot-head {
+  animation-name: robot-pop-side;
+  transform: translateX(0) rotate(-16deg);
+}
+
+.robot-following .robot-mitts {
+  animation: none;
+  opacity: 1;
+  transform: none;
+}
+
+.robot-following .robot-eye {
+  animation: robot-glow 2s ease-in-out infinite;
+  transition: transform .15s ease-out;
+}
+
+/* The robot that isn't following hides until the cursor stops */
+.robot-waiting .robot-head {
+  animation: none;
+  transform: translateY(100%);
+}
+
+.robot-left.robot-waiting .robot-head {
+  transform: translateX(110%) rotate(-16deg);
+}
+
+.robot-waiting .robot-mitts {
+  animation: none;
+  opacity: 0;
+}
+
+.robot-waiting .robot-eye {
+  animation: none;
+}
+
+/* Cursor stopped: both loops start again together, from the point where the robot that followed is up,
+   so it doesn't drop out of sight straight away and the two robots still take turns */
+.robot-resumed-top .robot-head,
+.robot-resumed-top .robot-mitts,
+.robot-resumed-top .robot-eye {
+  animation-delay: -1.7s;
+}
+
+.robot-resumed-left .robot-head,
+.robot-resumed-left .robot-mitts,
+.robot-resumed-left .robot-eye {
+  animation-delay: -9.3s;
+}
+
+@keyframes robot-alert {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(.2);
+  }
+  15% {
+    opacity: 1;
+    transform: translateY(0) scale(1.25);
+  }
+  25%, 80% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes robot-pop-up {
+  0% {
+    transform: translateY(12%);
+  }
+  60% {
+    transform: translateY(-4%);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes robot-pop-side {
+  0% {
+    transform: translateX(12%) rotate(-16deg);
+  }
+  60% {
+    transform: translateX(-4%) rotate(-16deg);
+  }
+  100% {
+    transform: translateX(0) rotate(-16deg);
+  }
 }
 
 @keyframes robot-peek {
@@ -344,6 +459,10 @@
   }
 
   .robot-left {
+    display: none;
+  }
+
+  .robot-alert {
     display: none;
   }
 }
