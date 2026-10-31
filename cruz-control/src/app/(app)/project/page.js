@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "motion/react";
-import { LuCodeXml, LuGlobe, LuPencil, LuPlus, LuRefreshCw, LuTrash2, LuUserPlus } from "react-icons/lu";
+import { LuCodeXml, LuGlobe, LuPencil, LuPlus, LuRefreshCw, LuSearch, LuTrash2, LuUserPlus } from "react-icons/lu";
 
 import api from "@/lib/api";
 import { useAuth } from "@/components/auth/auth-provider";
@@ -64,6 +64,7 @@ const ProjectPage = _ => {
     const [busyInviteId, setBusyInviteId] = useState(null);
     const [busyAction, setBusyAction] = useState(null);
     const [loaded, setLoaded] = useState(false);
+    const [search, setSearch] = useState("");
 
     useEffect(() => {
         if (status !== "authenticated") return;
@@ -89,6 +90,13 @@ const ProjectPage = _ => {
     if (status === "guest") {
         return <LoginRequired title="Projects need an account" message="Log in to save your scan result to a project" />
     }
+
+     // Matches the name, domain or repo, ignoring capitals. An empty search matches everything
+    const searchText = search.trim().toLowerCase();
+    const shownProjects = projects.filter(p => {
+        const text = `${p.name} ${p.domain || ""} ${p.github_repo || ""}`.toLowerCase();
+        return text.includes(searchText);
+    });
 
     // Cards rise in one after another, and slide into place when one is added or removed
     const cardMotion = index => (reduceMotion ? {} : {
@@ -195,7 +203,7 @@ const ProjectPage = _ => {
         <>
             <LoadingOverlay show={!loaded} />
             <motion.div
-                className="grid min-w-0 gap-8 pb-20 [overflow-wrap:anywhere]"
+                className="grid min-w-0 gap-8 pb-20 wrap-anywhere"
                 initial={{ opacity: 0, scale: 0.94 }}
                 animate={loaded ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.94 }}
                 transition={reduceMotion ? { duration: 0 } : { duration: 1, ease: EASE }}
@@ -240,7 +248,7 @@ const ProjectPage = _ => {
                                         {invites.map((invite, index) => (
                                             <motion.li key={invite.id} {...cardMotion(index)} className="grid gap-4 p-5 border border-dashed border-accent rounded-2xl bg-surface shadow-sm hover:shadow-md transition-[translate,box-shadow] duration-200 motion-safe:hover:-translate-y-1">
                                                 <div className="min-w-0">
-                                                    <h3 className="font-semibold break-words">{invite.projects?.name}</h3>
+                                                    <h3 className="font-semibold wrap-break-word">{invite.projects?.name}</h3>
                                                     <span className="text-xs text-accent capitalize">Invited as {invite.role}</span>
                                                 </div>
 
@@ -269,14 +277,40 @@ const ProjectPage = _ => {
                     </AnimatePresence>
 
                     <h2 className="sr-only">Your projects</h2>
+                    <label className="relative flex items-center w-full sm:max-w-sm">
+                        <span className="sr-only">Search projects</span>
+                        <LuSearch size={16} aria-hidden="true" className="absolute left-3 text-muted pointer-events-none" />
+                        <input
+                            type="search"
+                            value={search}
+                            onChange={event => setSearch(event.target.value)}
+                            placeholder="Search by name, domain or repository"
+                            className="w-full h-10 pl-9 pr-3 rounded-lg border border-line bg-surface text-sm text-ink placeholder:text-muted focus:border-accent focus:outline-none"
+                        />
+                    </label>
                     <ul className="relative grid gap-4 grid-cols-[repeat(auto-fill,minmax(min(100%,280px),1fr))]">
+                        {/* Shown after loading so it comes in first, before the project cards */}
+                        {loaded && (
+                            <motion.li {...cardMotion(0)} className="font-semibold">
+                                <button
+                                    type="button"
+                                    onClick={() => openModal(null)}
+                                    className="grid place-items-center content-center gap-2 w-full h-full min-h-48 p-5 cursor-pointer border border-dashed border-accent-soft rounded-2xl text-muted hover:text-accent hover:border-accent hover:bg-accent-soft/10 transition-[color,border-color,background-color,translate] duration-300 ease-[ease] motion-safe:hover:-translate-y-1"
+                                >
+                                    <span className="grid place-items-center size-10 rounded-full border border-dashed border-current">
+                                        <LuPlus size={18} aria-hidden="true" />
+                                    </span>
+                                    New Project
+                                </button>
+                            </motion.li>
+                        )}
                         <AnimatePresence mode="popLayout">
-                            {projects.map((p, index) => (
-                                <motion.li key={p.id} {...cardMotion(index)} className="flex flex-col gap-4 p-5 border border-line rounded-2xl bg-surface shadow-sm hover:border-accent-soft hover:shadow-md transition-[translate,border-color,box-shadow] duration-200 motion-safe:hover:-translate-y-1">
+                            {shownProjects.map((p, index) => (
+                                <motion.li key={p.id} {...cardMotion(index+1)} className="flex flex-col gap-4 p-5 border border-line rounded-2xl bg-surface shadow-sm hover:border-accent-soft hover:shadow-md transition-[translate,border-color,box-shadow] duration-200 motion-safe:hover:-translate-y-1">
                                     <div className="flex items-start gap-3">
                                         <GradeBadge grade={p.latestScan?.grade ?? null} size="md" />
                                         <div className="grid gap-0.5 min-w-0 flex-1">
-                                            <h3 className="font-semibold break-words">{p.name}</h3>
+                                            <h3 className="font-semibold wrap-break-word">{p.name}</h3>
                                             <span className="text-xs text-muted">
                                                 <span className="capitalize">{p.role}</span>
                                                 {p.latestScan && ` · Scanned ${shortDate(p.latestScan.created_at)}`}
@@ -341,21 +375,6 @@ const ProjectPage = _ => {
                                 </motion.li>
                             ))}
                         </AnimatePresence>
-                        {/* Shown after loading so it arrives after the last card */}
-                        {loaded && (
-                            <motion.li {...cardMotion(projects.length)} className="font-semibold">
-                                <button
-                                    type="button"
-                                    onClick={() => openModal(null)}
-                                    className="grid place-items-center content-center gap-2 w-full h-full min-h-48 p-5 cursor-pointer border border-dashed border-accent-soft rounded-2xl text-muted hover:text-accent hover:border-accent hover:bg-accent-soft/10 transition-[color,border-color,background-color,translate] duration-300 ease-[ease] motion-safe:hover:-translate-y-1"
-                                >
-                                    <span className="grid place-items-center size-10 rounded-full border border-dashed border-current">
-                                        <LuPlus size={18} aria-hidden="true" />
-                                    </span>
-                                    New Project
-                                </button>
-                            </motion.li>
-                        )}
                     </ul>
                 </LayoutGroup>
             </motion.div>
