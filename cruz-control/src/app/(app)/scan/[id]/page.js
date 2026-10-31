@@ -1391,7 +1391,7 @@ export default function OverviewTab() {
           <div className={styles.grid}>
             {mapCard}
             {repoCard}
-            <div className={styles.sideColumn}>
+            <div className={`${styles.sideColumn} self-start`}>
               {scoreCard}
               {findingsCard}
             </div>
