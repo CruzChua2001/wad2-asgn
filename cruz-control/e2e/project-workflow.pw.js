@@ -171,7 +171,7 @@ test("user signs in, creates a project, and sees an improved score after fixing 
         name: body.name,
         domain: body.domain,
         github_repo: body.githubRepo || null,
-        role: "owner",
+        role: "admin",
         created_by: testUser.id,
         latestScan: null,
         scores: [],
@@ -286,6 +286,7 @@ test("user signs in, creates a project, and sees an improved score after fixing 
   await expect(page.getByRole("heading", { name: projectName, exact: true })).toBeVisible();
 
   // 7. User follows the recommendations mentioned in the scan results, then rescans the domain registered in the project
+  await page.keyboard.press("ArrowRight");
   await page.getByRole("button", { name: `Re-scan ${projectName}` }).click();
   await expect(page).toHaveURL(new RegExp(`/scan/${rescanId}$`));
 
