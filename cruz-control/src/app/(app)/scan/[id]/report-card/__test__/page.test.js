@@ -144,7 +144,7 @@ describe("Report Card grade and score", () => {
     });
 
     test("shows the score trend for this scan", () => {
-        showReport(websiteScan({ projectId: "p1", role: "owner" }));
+        showReport(websiteScan({ projectId: "p1", role: "admin" }));
 
         expect(screen.getByText("Score trend for p1, scan-1")).toBeTruthy();
     });
@@ -167,17 +167,17 @@ describe("Report Card when a critical check couldn't run", () => {
         expect(screen.getByText("No grade yet")).toBeTruthy();
     });
 
-    test("a project owner is told to re-scan", () => {
-        showReport(websiteScan({ ...incomplete, projectId: "p1", role: "owner" }));
+    test("a project admin is told to re-scan", () => {
+        showReport(websiteScan({ ...incomplete, projectId: "p1", role: "admin" }));
 
         expect(screen.getByText("Incomplete, re-scan")).toBeTruthy();
     });
 
-    test("a viewer is told an owner can re-scan", () => {
+    test("a viewer is told an admin can re-scan", () => {
         showReport(websiteScan({ ...incomplete, projectId: "p1", role: "viewer" }));
 
         expect(screen.getByText("Incomplete")).toBeTruthy();
-        expect(screen.getByText(/A project owner can re-scan to try again./)).toBeTruthy();
+        expect(screen.getByText(/A project admin can re-scan to try again./)).toBeTruthy();
     });
 
     test("hides the points chips, since there's no grade yet", () => {

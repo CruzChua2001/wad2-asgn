@@ -19,7 +19,7 @@ vi.mock("../project-modal", () => ({ default: function MockProjectModal({ modalR
 } }));
 vi.mock("motion/react", async original => ({ ...await original(), useReducedMotion: () => true }));
 
-const project = id => ({ id, name: "General", domain: "example.com", github_repo: null, role: "owner", latestScan: { id: `scan-${id}`, score: 80, grade: "B", created_at: "2026-10-30" }, scores: [] });
+const project = id => ({ id, name: "General", domain: "example.com", github_repo: null, role: "admin", latestScan: { id: `scan-${id}`, score: 80, grade: "B", created_at: "2026-10-30" }, scores: [] });
 beforeEach(() => {
     vi.resetAllMocks();
     useScan.mockReturnValue({ startScan: vi.fn(), phase: "idle" });

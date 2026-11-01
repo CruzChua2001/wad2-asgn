@@ -95,13 +95,13 @@ const createProject = async (req, res) => {
     let newData = {
         project_id: data.id, 
         user_id: req.user.id, 
-        role: "owner"
+        role: "admin"
     }
     const { error: memberError } = await supabase.from("project_members").insert(newData);
 
     if(memberError) {
         await supabase.from("projects").delete().eq("id", data.id);
-        console.error("Add owner failed:", memberError);
+        console.error("Add admin failed:", memberError);
         return res.status(500).json({ error: "Could not create project. Please try again." });
     }
 
@@ -118,7 +118,7 @@ const createProject = async (req, res) => {
         }
     }
 
-    res.status(201).json({ ...data, role: "owner" });
+    res.status(201).json({ ...data, role: "admin" });
 };
 
 const updateProjectById = async (req, res) => {
@@ -148,7 +148,7 @@ const updateProjectById = async (req, res) => {
         console.error("Update project failed:", error);
         return res.status(500).json({ error: "Could not update project. Please try again." });
     }
-    res.json({ ...data, role: "owner" });
+    res.json({ ...data, role: "admin" });
 }
 
 const deleteProjectById = async (req, res) => {
@@ -159,10 +159,15 @@ const deleteProjectById = async (req, res) => {
         return res.status(500).json({ error: "Could not delete project. Please try again." });
     }
 
-    if(data.length === 0) {
-        return res.status(403).json({ error: "Only the project creator can delete it." });
-    }
+    if (data.length === 0) {
+        const { error: leaveError } = await supabase.from("project_members").delete().eq("project_id", req.params.id).eq("user_id", req.user.id);
 
+        if (leaveError) {
+            console.error("Leave project failed:", leaveError);
+            return res.status(500).json({ error: "Could not leave project. Please try again." });
+        }
+    }
+    
     res.status(204).end();
 }
 

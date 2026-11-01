@@ -253,17 +253,17 @@ test.each(["", "first=new&against=old", "first=new&against=old&fromHistory=third
     expect(screen.queryByText("Selected from history")).toBeNull();
 });
 
-test("one saved scan gives viewers accurate guidance and no owner action", async () => {
+test("one saved scan gives viewers accurate guidance and no admin action", async () => {
     serve([histories[0]]);
     render(<ComparePage />);
-    expect(await screen.findByText("You have one scan for this project. Ask a project owner to run another scan so you can compare the results.")).toBeTruthy();
+    expect(await screen.findByText("You have one scan for this project. Ask a project admin to run another scan so you can compare the results.")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Re-scan project" })).toBeNull();
     expect(screen.getByRole("link", { name: "View history" }).getAttribute("href")).toBe("/project/p1/history");
 });
 
-test("owners with one scan can re-scan current project settings once, preserving projectId and force", async () => {
+test("admins with one scan can re-scan current project settings once, preserving projectId and force", async () => {
     const startScan = vi.fn().mockResolvedValue();
-    useScan.mockReturnValue({ result: { projectId: "p1", role: "owner" }, startScan });
+    useScan.mockReturnValue({ result: { projectId: "p1", role: "admin" }, startScan });
     serve([histories[0]]);
     const normal = api.get.getMockImplementation();
     let finish;
@@ -275,7 +275,7 @@ test("owners with one scan can re-scan current project settings once, preserving
     act(() => { fireEvent.click(button); fireEvent.click(button); });
     expect(screen.getByRole("button", { name: "Starting scan..." }).disabled).toBe(true);
     expect(api.get.mock.calls.filter(([url]) => url === "/api/project")).toHaveLength(1);
-    await act(async () => finish({ data: [{ id: "p1", role: "owner", domain: "current.example", github_repo: "a/b" }] }));
+    await act(async () => finish({ data: [{ id: "p1", role: "admin", domain: "current.example", github_repo: "a/b" }] }));
     expect(startScan).toHaveBeenCalledTimes(1);
     expect(startScan).toHaveBeenCalledWith({ domain: "current.example", githubRepo: "a/b", projectId: "p1", force: true });
     expect(nav.push).toHaveBeenCalledWith("/scan");
@@ -299,7 +299,7 @@ test("missing target information has its own state instead of claiming only one 
 
 test.each(["network", "permission"])("failed project re-scan startup supports retry: %s", async failure => {
     const startScan = vi.fn().mockResolvedValue();
-    useScan.mockReturnValue({ result: { projectId: "p1", role: "owner" }, startScan });
+    useScan.mockReturnValue({ result: { projectId: "p1", role: "admin" }, startScan });
     serve([histories[0]]);
     const normal = api.get.getMockImplementation();
     let attempt = 0;
@@ -307,7 +307,7 @@ test.each(["network", "permission"])("failed project re-scan startup supports re
         if (url !== "/api/project") return normal(url);
         attempt += 1;
         if (attempt === 1) return failure === "network" ? Promise.reject(new Error("offline")) : Promise.resolve({ data: [{ id: "p1", role: "viewer" }] });
-        return Promise.resolve({ data: [{ id: "p1", role: "owner", domain: "example.com", github_repo: null }] });
+        return Promise.resolve({ data: [{ id: "p1", role: "admin", domain: "example.com", github_repo: null }] });
     });
     render(<ComparePage />);
     fireEvent.click(await screen.findByRole("button", { name: "Re-scan project" }));

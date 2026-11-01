@@ -10,7 +10,7 @@ import SmallLoader from "@/components/small-loader";
 
 const ROLES = [
     { value: "viewer", text: "Viewer", hint: "Can see the results" },
-    { value: "owner", text: "Owner", hint: "Can edit, re-scan and invite" },
+    { value: "admin", text: "Admin", hint: "Can edit, re-scan and invite" },
 ]
 
 const MemberModal = ({project, modalRef}) => {
@@ -24,7 +24,7 @@ const MemberModal = ({project, modalRef}) => {
     const [loadedId, setLoadedId] = useState(null);
     const [removingId, setRemovingId] = useState(null);
 
-    const isCreator = project?.created_by === user?.id;
+    const isAdmin = project?.role === "admin";
 
     useEffect(() => {
         if (!project) return;
@@ -128,8 +128,8 @@ const MemberModal = ({project, modalRef}) => {
                             <li key={member.user_id} className="flex justify-between gap-2">
                                 <span className="break-all">{member.email}</span>
                                 <span className="flex items-center gap-2">
-                                    <span className="text-muted capitalize">{member.role}</span>
-                                    {isCreator && member.user_id !== user?.id && (
+                                    <span className="text-muted capitalize">{member.user_id === project?.created_by ? "Owner" : member.role}</span>
+                                    {isAdmin && member.user_id !== project?.created_by && member.user_id !== user?.id && (
                                         <button aria-label={`Remove ${member.email}`} onClick={() => removeMember(member)} disabled={removingId === member.user_id} className="text-muted hover:text-critical cursor-pointer disabled:cursor-default">
                                             {removingId === member.user_id ? <SmallLoader size={14} /> : <LuTrash2 size={14} />}
                                         </button>
@@ -142,7 +142,7 @@ const MemberModal = ({project, modalRef}) => {
                                 <span className="break-all">{invite.email}</span>
                                 <span className="flex items-center gap-2">
                                     <span className="capitalize">Pending - {invite.role}</span>
-                                    {isCreator && (
+                                    {isAdmin && (
                                         <button type="button" aria-label={`Cancel invite for ${invite.email}`} onClick={() => cancelInvite(invite)} disabled={removingId === invite.id} className="text-muted hover:text-critical cursor-pointer disabled:cursor-default">
                                             {removingId === invite.id ? <SmallLoader size={14} /> : <LuTrash2 size={14} />}
                                         </button>
@@ -152,26 +152,28 @@ const MemberModal = ({project, modalRef}) => {
                         ))}
                     </ul>
                 )}
+                
+                {project?.role === "admin" && (
+                    <form onSubmit={sendInvite} className="flex flex-wrap gap-2 pt-5 border-t border-line">
+                        <input 
+                            type="email" 
+                            required 
+                            value={email} 
+                            onChange={e => setEmail(e.target.value)} 
+                            placeholder="john.doe.2025@computing.smu.edu.sg" 
+                            aria-label="Email to invite"
+                            className="flex-1 min-w-48 h-10 px-3 border border-line rounded-xl bg-page text-sm outline-none focus:border-accent"    
+                        />
 
-                <form onSubmit={sendInvite} className="flex flex-wrap gap-2 pt-5 border-t border-line">
-                    <input 
-                        type="email" 
-                        required 
-                        value={email} 
-                        onChange={e => setEmail(e.target.value)} 
-                        placeholder="john.doe.2025@computing.smu.edu.sg" 
-                        aria-label="Email to invite"
-                        className="flex-1 min-w-48 h-10 px-3 border border-line rounded-xl bg-page text-sm outline-none focus:border-accent"    
-                    />
+                        <div className="flex gap-2 ml-auto">
+                            <RoleSelect roles={ROLES} value={role} onChange={setRole} />
 
-                    <div className="flex gap-2 ml-auto">
-                        <RoleSelect roles={ROLES} value={role} onChange={setRole} />
-
-                        <button type="submit" disabled={loading} className="auth-primaryButton w-fit!">
-                             {loading ? <SmallLoader text="Sending invite..." size={16} /> : "Invite"}
-                        </button>
-                    </div>
-                </form>
+                            <button type="submit" disabled={loading} className="auth-primaryButton w-fit!">
+                                {loading ? <SmallLoader text="Sending invite..." size={16} /> : "Invite"}
+                            </button>
+                        </div>
+                    </form>
+                )}
             </div>
         </dialog>
     )

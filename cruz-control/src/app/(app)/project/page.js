@@ -241,7 +241,7 @@ const ProjectPage = _ => {
 
                 <ProjectModal editing={Boolean(editingId)} modalRef={popupModalRef} form={form} updateField={updateField} onSubmit={createProject} error={formError} loading={loading} />
                 <MemberModal project={memberProject} modalRef={memberRef} />
-                <DeleteModal project={deletingProject} modalRef={deleteRef} onDeleted={removeProject} />
+                <DeleteModal project={deletingProject} isOwner={deletingProject?.created_by === user?.id} modalRef={deleteRef} onDeleted={removeProject} />
 
                 {error && <p role="alert" className="text-critical">{error}</p>}
 
@@ -320,20 +320,18 @@ const ProjectPage = _ => {
                                 <div className="grid gap-0.5 min-w-0 flex-1">
                                     <h3 className="font-semibold wrap-break-word">{p.name}</h3>
                                     <span className="text-xs text-muted">
-                                        <span className="capitalize">{p.role}</span>
+                                        <span className="capitalize">{p.created_by === user?.id ? "Owner" : p.role}</span>
                                         {p.latestScan && ` · Scanned ${shortDate(p.latestScan.created_at)}`}
                                     </span>
                                 </div>
                                 <div className="flex gap-0.5 -mr-1.5 -mt-1">
-                                    {p.role === "owner" && (
+                                    <IconButton label={`Manage members of ${p.name}`} onClick={() => openMemberModal(p)}><LuUserPlus size={17} /></IconButton>
+                                    {p.role === "admin" && (
                                         <>
-                                            <IconButton label={`Manage members of ${p.name}`} onClick={() => openMemberModal(p)}><LuUserPlus size={17} /></IconButton>
                                             <IconButton label={`Edit ${p.name}`} onClick={() => openModal(p)}><LuPencil size={16} /></IconButton>
                                         </>
                                     )}
-                                    {p.created_by === user?.id && (
-                                        <IconButton label={`Delete ${p.name}`} danger onClick={() => openDeleteModal(p)}><LuTrash2 size={16} /></IconButton>
-                                    )}
+                                    <IconButton label={`${p.created_by === user?.id ? "Delete" : "Leave"} ${p.name}`} danger onClick={() => openDeleteModal(p)}><LuTrash2 size={16} /></IconButton>
                                 </div>
                             </div>
 
@@ -364,7 +362,7 @@ const ProjectPage = _ => {
                                     <Link href={`/scan/${p.latestScan.id}`} data-curious className="grid place-items-center flex-1 basis-36 min-w-0 min-h-11 rounded-lg bg-accent text-page! no-underline hover:bg-accent-bright transition-colors duration-200">
                                         <span>View results<span className="sr-only"> for {p.name}</span></span>
                                     </Link>
-                                ) : p.role === "owner" ? (
+                                ) : p.role === "admin" ? (
                                     <button type="button" onClick={() => scanProject(p)} className="flex-1 h-10 rounded-lg bg-accent text-page hover:bg-accent-bright cursor-pointer transition-colors duration-200">
                                         Run first scan
                                     </button>
@@ -372,7 +370,7 @@ const ProjectPage = _ => {
                                     <span className="grid place-items-center flex-1 h-10 rounded-lg border border-dashed border-line text-muted">No scans yet</span>
                                 )}
 
-                                {p.role === "owner" && p.latestScan && (
+                                {p.role === "admin" && p.latestScan && (
                                     <button type="button" data-curious aria-label={`${phase === "scanning" && scan?.projectId === p.id ? "Scanning..." : "Re-scan"} ${p.name}`} disabled={phase === "scanning" && scan?.projectId === p.id} onClick={() => scanProject(p)} className="flex items-center gap-1.5 min-h-11 px-3 rounded-lg border border-line text-ink hover:border-accent hover:text-accent cursor-pointer transition-colors duration-200 disabled:cursor-default disabled:opacity-60">
                                         {phase === "scanning" && scan?.projectId === p.id 
                                             ? <SmallLoader text="Scanning..." size={15} /> 
