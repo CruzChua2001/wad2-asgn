@@ -8,11 +8,11 @@ Website Link: [cruz-control-wad2-app.vercel.app](https://cruz-control-wad2-app.v
 
 Team: 11
 
-| Team            | Members                  |
-| --------------- | ------------------------ |
-| Foundation Team | Cruz<br />Jeffers        |
-| Security Team   | Jun Sheng<br />Ting Kang |
-| AI Team         | Joyce<br />Liora         |
+| Team                                        | Members                                                         |
+| ------------------------------------------- | --------------------------------------------------------------- |
+| Foundation Team                   | Cruz<br />Jeffers                               |
+| Security Team                               | Jun Sheng<br />Ting Kang                                        |
+| AI Team                                     | Joyce<br />Liora                                                |
 
 <h2><wbr>
 
@@ -96,12 +96,6 @@ cd cruz-control && npm run build  # includes a pre-build that runs the test
 
 ## Branches and deploys
 
-Work on a branch (`feat/<name>` or `fix/<name>`) and open a pull request into `staging`. Pushing
-to `staging` deploys the staging site through `.github/workflows/deploy-staging.yml`. `staging`
-goes into `main` by pull request, the first time at the 20 Oct handover, and pushing to `main`
-deploys production through `deploy-production.yml`. Deploys only ever happen in CI, never from a
-laptop.
-
 1. Main
    Pushing to main triggers a github action through `.github/workflows/deploy-production.yml` that deploys to production site in vercel. Open a pull request from`staging` to `main`.
 2. Staging
@@ -131,16 +125,6 @@ Repository checks:
 - **README** — missing, or no setup or security information
 - **CI workflows** — GitHub Actions workflows that run text anyone can write, don't set
   `permissions:`, or use other people's actions by tag instead of by commit
-
-Domain scans also find the site's subdomains (from public certificate logs) and show where its
-servers are and who hosts them on a globe or map. These aren't scored.
-
-Every check is passive: free public APIs and ordinary requests only. Cruz Control never attacks
-anything, logs in anywhere, or changes anything in the repos and sites it looks at.
-
-The score works like this: your score is out of 100, and higher is safer. Each check scores 0 to
-10, and riskier checks count for more. A critical problem keeps your score at 50 or below until
-it's fixed.
 
 ## External Libraries
 
