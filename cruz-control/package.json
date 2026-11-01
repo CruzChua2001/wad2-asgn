@@ -24,6 +24,7 @@
     "react-dom": "19.2.8",
     "react-globe.gl": "2.38.0",
     "react-icons": "5.7.0",
+    "swiper": "^14.4.0",
     "three": "0.186.1"
   },
   "devDependencies": {
