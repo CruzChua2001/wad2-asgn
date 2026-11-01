@@ -1,28 +1,20 @@
 # Cruz Control
 
-Cruz Control is an IS216 (WAD2) group project that helps students and beginner developers see how
-exposed their own work is. You give it a website domain and/or a public GitHub repository, and it
-runs a set of passive, read-only checks and then explains what it found in plain language: an
-exposure score out of 100 with a grade, a list of findings sorted worst-first with practical fix
-steps, and an infrastructure map showing where the site's servers are in the world.
+Cruz Control is a project for IS216 Web Application Development II module of Singapore Management University. You provide a website link and/or a public github repo link, and it will do a passive, read-only scans and explain the findings in plain language. It would display publicly available information such as CVE findings sorted worst-first, server locations, scoring and more. AI functionality such as step by step guide and a chatbot to provide even more guidance to your issue. Check out cruz-control today!
 
-## Project status
+Website Link: [cruz-control-wad2-app.vercel.app](https://cruz-control-wad2-app.vercel.app/)
 
-Features 1–6 are built and on the `staging` branch:
+## Group
 
-- Scanning a website and/or a public GitHub repository, with live progress
-- Accounts and projects: save a scan to a project, re-scan it, and invite members as owners or
-  viewers
-- An exposure score out of 100 with a grade and a breakdown by category
-- Prioritised findings, worst first, with plain-language explanations and short fix steps
-- An infrastructure map of the site's servers, as a 3D globe or a 2D map
-- A Report Card tab with the grade, points lost per category, the top three fixes and, for
-  project scans, the score over time
+Team: 11
 
-Features 7–9 are next, built by the AI team from 20 Oct: a fix guide and checklist, scan history
-and compare, and the "Ask Cruz" chatbot. Until then, the Fix Guide, Checklist and Compare tabs on
-the results page are placeholders that say "coming soon", the Ask Cruz button does nothing yet,
-and the Learn link leads to a page that doesn't exist yet.
+| Team            | Members                  |
+| --------------- | ------------------------ |
+| Foundation Team | Cruz<br />Jeffers        |
+| Security Team   | Jun Sheng<br />Ting Kang |
+| AI Team         | Joyce<br />Liora         |
+
+<h2><wbr>
 
 ## Repo layout
 
@@ -30,83 +22,22 @@ and the Learn link leads to a page that doesn't exist yet.
 wad2-asgn/
 ├── cruz-control/          # Next.js frontend (port 3000)
 ├── express-server/        # Express API (port 3001)
-├── supabase/              # Database migrations
-└── .github/workflows/     # Deploy workflows
+├── supabase/              # Database migrations with supabase
+└── .github/workflows/     # CICD Workflow with github actions
 ```
-
-The frontend and the backend each have their own `package.json`, so npm commands are always run
-inside one of those two folders.
-
-## Where things are
-
-- **Results pages**: `cruz-control/src/app/(app)/scan/[id]/`, one folder per tab. The Overview
-  is `page.js`, and the others are `report-card/`, `fix-guide/`, `checklist/` and `compare/`.
-- **Projects page**: `cruz-control/src/app/(app)/project/`
-- **API**: `express-server/`. A request goes through `routes/` (the endpoints), then
-  `middleware/` (who the user is, their role in the project, and the scan rate limit), then
-  `controllers/` (the work itself, including reading and writing the database). The browser never
-  reads the database directly.
-- **Findings**: `express-server/lib/findings.js` turns saved scan results into findings with
-  plain-language explanations and fixes.
-- **Score**: `express-server/lib/score.js` scores each check and works out the grade and the
-  breakdown.
-- **Checks**: `express-server/checks/domain/` (website) and `express-server/checks/github/`
-  (repository), one file per check.
-
-Findings and the score aren't stored. The API works them out from the saved results each time a
-scan is opened, so a change to the rules applies to old scans too.
-
-The AI features (fix guide, checklist, compare and Ask Cruz) are built on the findings and the
-score, so don't rename or drop their fields. A finding has `id`, `category`, `checkId`, `kind`,
-`severity`, `source`, `title`, `explain`, `fix`, `details`, and sometimes `hosts` and
-`learnMore`. A scan's score comes with `score`, `grade`, `uncappedScore`, `cap`, `incomplete`,
-`breakdown` and `checks`. Finding IDs such as `port-3306` or `dns-dmarc` stay the same from one
-scan to the next, so later scans can be matched to earlier ones: don't change them. If a feature
-needs more, add a new field next to the old ones.
-
-A fuller local guide for contributors and their coding assistants (`AGENTS.md`) is shared within
-the team rather than committed.
 
 ## Setup
 
-Neither `package.json` sets an `engines` field, so use Node 20.9 or newer (that's what Next.js
-16 needs). Then install the dependencies in both folders:
+Use Node 20.9 or newer (that's what Next.js 16 needs). Then install the dependencies in both folders:
 
 ```bash
 cd cruz-control && npm install
 cd ../express-server && npm install
 ```
 
-## Environment variables
+### - - Database Setup
 
-Both apps read their own `.env` file. Each folder has a `.env.example` with the same keys and no
-values, so copy that and fill it in. `.env` files are gitignored and stay on your machine.
-
-`cruz-control/.env`:
-
-| Variable | What it's for |
-|---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | The Supabase project the browser signs in against |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | The public Supabase key for browser auth |
-| `NEXT_PUBLIC_API_URL` | Where the Express API is, `http://localhost:3001` locally |
-
-`express-server/.env`:
-
-| Variable | What it's for |
-|---|---|
-| `SUPABASE_URL` | The same Supabase project, used from the server |
-| `SUPABASE_SECRET_KEY` | The service_role key, the only thing that reads or writes the tables |
-| `FRONTEND_URL` | The frontend's address, used for CORS and invite email links |
-| `GITHUB_TOKEN` | Optional. A read-only token that raises the GitHub API rate limit |
-
-`SUPABASE_SECRET_KEY` is the service_role key and can do anything to the database. It belongs
-only in `express-server/.env`. Never put it in the frontend, and never put it in a
-`NEXT_PUBLIC_*` variable, because anything named `NEXT_PUBLIC_*` is sent to the browser.
-
-## Database
-
-The schema lives in `supabase/migrations/` (three files so far: projects, the service_role grant,
-and the scan tables). Applying them needs the [Supabase CLI](https://supabase.com/docs/guides/local-development):
+The schema lives in `supabase/migrations/`. Applying them needs the [Supabase CLI](https://supabase.com/docs/guides/local-development), run these from the repo root:
 
 ```bash
 supabase login
@@ -114,9 +45,28 @@ supabase link --project-ref <your-project-ref>
 supabase db push
 ```
 
-Run those from the repo root. To change the schema, create a new migration with
-`supabase migration new <name>` and push again — don't edit a migration that has already been
-pushed.
+### -- Environment variables
+
+Both the frontend and backend read their own `.env.example` file, copy it to a  `.env` under their own folder and add the values.
+
+`cruz-control/.env`:
+
+| Variable                                 | What it's for                                       |
+| ---------------------------------------- | --------------------------------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`             | The Supabase project the browser signs in against   |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | The public Supabase key for browser auth            |
+| `NEXT_PUBLIC_API_URL`                  | Express backend URL:  `http://localhost:3001`  |
+
+`express-server/.env`:
+
+| Variable                | What it's for                                                                             |
+| ----------------------- | ----------------------------------------------------------------------------------------- |
+| `SUPABASE_URL`        | The same Supabase project, used from the server                                           |
+| `SUPABASE_SECRET_KEY` | The service_role key, the only thing that reads or writes the tables                      |
+| `FRONTEND_URL`        | The frontend's address, used for CORS                                                     |
+| `GITHUB_TOKEN`        | A read-only token that raises the GitHub API rate limit from 60 request per hour to 5000. |
+| `GEMINI_API_KEY`      | Google Gemini API key for the Ask Cruz chat and the AI fix guides.                        |
+| `GEMINI_MODEL`        | Which Gemini model those AI features use, e.g. `gemini-2.5-flash`                       |
 
 ## Running it locally
 
@@ -127,19 +77,22 @@ cd express-server && npm run dev   # nodemon on port 3001
 cd cruz-control && npm run dev     # Next.js on port 3000
 ```
 
-Then open `http://localhost:3000`. The frontend calls the API, so the API needs to be running
-too.
+Then open `http://localhost:3000` on your browser.
 
 ## Tests and lint
 
-```bash
-cd express-server && npm test      # Node's built-in test runner
-cd cruz-control && npm run lint    # ESLint; CI fails on lint errors
-cd cruz-control && npm run build   # check the production build still works
+Test
+
+```Shell
+cd cruz-control && npm run test			# runs the unit testing (vitest)
+cd cruz-control && npm run test:e2e		# runs the e2e testing (playwright)
 ```
 
-CI runs the frontend lint but not the backend tests, so run `npm test` yourself before pushing
-backend changes.
+Test and Build production:
+
+```bash
+cd cruz-control && npm run build  # includes a pre-build that runs the test
+```
 
 ## Branches and deploys
 
@@ -149,25 +102,38 @@ goes into `main` by pull request, the first time at the 20 Oct handover, and pus
 deploys production through `deploy-production.yml`. Deploys only ever happen in CI, never from a
 laptop.
 
+1. Main
+   Pushing to main triggers a github action through `.github/workflows/deploy-production.yml` that deploys to production site in vercel. Open a pull request from`staging` to `main`.
+2. Staging
+   Pushing to staging triggers a github action through `.github/workflows/deploy-staging.yml` that deploys to staging site in vercel.
+3. Feature / Fix
+   Work on a branch to add new features or fix an issue (`feat/<name>` or `fix/<name>` respectively) and open a pull request into `staging`.
+
 ## What the scan checks
 
 Website checks:
 
 - **Server software** — known bugs (CVEs) in the software the servers report
 - **Open ports** — risky services open to the internet: databases, Telnet, FTP, Remote Desktop, SSH
-- **Email & DNS** — SPF, DMARC and CAA records
+- **Email & DNS** — missing SPF, DMARC and CAA records, and a weak DMARC policy (`p=none`)
 - **Certificate** — an expired, nearly expired, weak or self-signed HTTPS certificate
-- **Website security settings** — a missing HTTP→HTTPS redirect and missing security headers
+- **Website security settings** — a missing HTTP→HTTPS redirect, a missing or too short HSTS
+  header, and missing CSP, X-Frame-Options and X-Content-Type-Options headers
 
 Repository checks:
 
 - **Secret files** — `.env` files, private keys and similar files committed to the repo
+  (public certificates like `fullchain.pem` and large `.key` files such as Keynote slides are skipped)
 - **Packages** — npm dependencies with known vulnerabilities
-- **Repo basics** — SECURITY.md, Dependabot (or Renovate) and a lockfile
-- **Ignore rules** — a `.gitignore` that's missing, or doesn't cover `.env`, `node_modules` or key files
+- **Repo basics** — SECURITY.md, Dependabot (or Renovate), a lockfile, and whether the repo is archived
+- **Ignore rules** — a `.gitignore` that's missing, or doesn't cover `.env` or key files (and
+  `node_modules` when the repo has a `package.json`)
 - **README** — missing, or no setup or security information
 - **CI workflows** — GitHub Actions workflows that run text anyone can write, don't set
   `permissions:`, or use other people's actions by tag instead of by commit
+
+Domain scans also find the site's subdomains (from public certificate logs) and show where its
+servers are and who hosts them on a globe or map. These aren't scored.
 
 Every check is passive: free public APIs and ordinary requests only. Cruz Control never attacks
 anything, logs in anywhere, or changes anything in the repos and sites it looks at.
@@ -176,26 +142,25 @@ The score works like this: your score is out of 100, and higher is safer. Each c
 10, and riskier checks count for more. A critical problem keeps your score at 50 or below until
 it's fixed.
 
-## Known limits
+## External Libraries
 
-- DNSSEC isn't checked.
-- Secret files are matched by their names, not by reading what's inside files.
-- Only the npm packages in the repository's root `package.json` are checked, so packages in
-  subfolders and in other languages are missed.
-- Packages are only flagged when they have a known vulnerability, not just for being out of date.
-  Every vulnerable package is rated high, and its fix says to update to the latest version,
-  because the exact fixed version isn't looked up yet.
-- CVEs come from the version a server reports, not from testing it, so they're informed guesses
-  rather than confirmed bugs.
-- Servers that belong to a CDN (shared networks like Cloudflare) are left out of the port and
-  CVE checks, since they aren't the site owner's to fix.
-- Older scans show checks that were added after them as "Not checked". A new scan runs them all.
-- The 2D map doesn't shade Singapore, Hong Kong and Bahrain, though their server dots still show.
+Frontend libraries and outside components used for the look, animation and UI (Tailwind not included).
 
-## Reporting a security problem
+| Library / source                                                                               | How it was used                                                                                                                             | Where                                                                                                                                                              |
+| ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [Motion](https://motion.dev) (`motion`)                                                       | Page and card entrance animations, tab and modal transitions, the robots, typing and text animations, all respecting `useReducedMotion()` | `(landing)/`, `scan/`, `scan/[id]/` (Overview, Report Card, Compare), `project/`, `project/[projectId]/history/`, `components/`, `components/robot/` |
+| [Swiper](https://swiperjs.com) (`swiper`)                                                     | Coverflow carousels for invites and projects (`EffectCoverflow`, `FreeMode`, `Mousewheel`, `Keyboard`)                              | `project/page.js`                                                                                                                                                |
+| [ldrs](https://uiball.com/ldrs/)                                                                | Loaders: `Quantum` for the page loading overlay, `Hourglass` for buttons and sections                                                   | `components/loading-overlay.js`, `components/small-loader.js`                                                                                                  |
+| [React Icons](https://react-icons.github.io/react-icons/) (`react-icons`)                     | Lucide icons (`lu`) across the app; GitHub (`fa6`) and Google (`fc`) logos on the login buttons                                       | `(app)/layout.js`, `scan/`, `scan/[id]/` and its tabs, `project/`, `components/`, `components/auth/`, `components/ask-cruz/`                         |
+| [react-globe.gl](https://github.com/vasturiano/react-globe.gl) + [three.js](https://threejs.org) | 3D exposure globe with server points and arcs; `MeshPhongMaterial` from three for the globe's surface                                     | `scan/[id]/exposure-globe.js`                                                                                                                                    |
+| [d3-geo](https://d3js.org/d3-geo)                                                               | 2D server map: `geoNaturalEarth1` projection, `geoPath` for countries, `geoGraticule10` for the grid lines                            | `scan/[id]/server-map.js`                                                                                                                                        |
+| [Magic UI](https://magicui.design) Number Ticker                                                | Adapted for the counting-up numbers on the score and stats                                                                                  | `scan/[id]/number-ticker.js`                                                                                                                                     |
 
-If you find a security problem in Cruz Control, please tell the team (IS216 G4 Group 11) privately
-instead of opening a public issue, so it can be fixed first. Don't include secrets, tokens or scan
-output with real keys in your report.
+## Where AI was used
 
-Please also only scan domains and repositories you own or have permission to scan.
+| Where              | How                                                                                            | AI Used     | Name |
+| ------------------ | ---------------------------------------------------------------------------------------------- | ----------- | ---- |
+| Peeking Robot      | Used AI to generate the robot svg and css to give personality to the website with Claude Code. | Claude Code | Cruz |
+| Project pages      | Skeleton code (to generate all the functions and basic page layout)                            | Claude Code | Cruz |
+| Github Actions     | Auto deployment yml files was build                                                            | Claude Code | Cruz |
+| Supabase Migration | SQL to create, alter and update tables.                                                        | Claude Code | Cruz |
