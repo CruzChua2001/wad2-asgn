@@ -124,7 +124,7 @@ export default function ScanResultsLayout({ children }) {
               </div>
             )}
 
-            {(result.scannedAgo !== "just now" || canRetry) && (!result.projectId || result.role === "owner") && (
+            {(result.scannedAgo !== "just now" || canRetry) && (!result.projectId || result.role === "admin") && (
               <button type="button" className={SECONDARY} onClick={rescan}><LuRefreshCw aria-hidden="true" /> Re-scan</button>
             )}
 

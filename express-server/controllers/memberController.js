@@ -26,7 +26,7 @@ const getMembersByProjectId = async (req, res) => {
 
 const inviteMember = async (req, res) => {
     const email = typeof req.body.email === "string" ? req.body.email.trim().toLowerCase() : "";
-    const role = req.body.role === "owner" ? "owner" : "viewer";
+    const role = req.body.role === "admin" ? "admin" : "viewer";
 
     if (!email) {
         return res.status(400).json({ error: "Enter an email address." });
@@ -75,14 +75,19 @@ const inviteMember = async (req, res) => {
 }
 
 const getInviteByCurrUser = async (req, res) => {
-    const { data, error } = await supabase.from("project_invites").select("id, role, expires_at, projects(name, domain, github_repo)").eq("email", req.user.email.toLowerCase()).gt("expires_at", new Date().toISOString());
+    const { data, error } = await supabase.from("project_invites").select("id, role, expires_at, projects(name, domain, github_repo, created_by)").eq("email", req.user.email.toLowerCase()).gt("expires_at", new Date().toISOString());
 
     if (error) {
         console.error("Failed to load invites:", error);
         return res.status(500).json({ error: "Could not load invites. Please try again." });
     }
 
-    res.json(data);
+    const withCreator = await Promise.all(data.map(async invite => {
+        const { data: creator } = await supabase.auth.admin.getUserById(invite.projects?.created_by);
+        return { ...invite, creatorName: creator.user?.user_metadata?.full_name || creator.user?.email };
+    }));
+
+    res.json(withCreator);
 }
 
 const acceptInvite = async (req, res) => {
@@ -125,8 +130,10 @@ const declineInvite = async (req, res) => {
 }
 
 const removeMemberById = async (req, res) => {
-    if (req.params.userId === req.user.id) {
-        return res.status(400).json({ error: "You can't remove yourself from your own project." });
+    const { data: project } = await supabase.from("projects").select("created_by").eq("id", req.params.id).maybeSingle();
+
+    if (req.params.userId === project?.created_by) {
+        return res.status(400).json({ error: "The project owner can't be removed." });
     }
 
     const { error } = await supabase.from("project_members").delete().eq("project_id", req.params.id).eq("user_id", req.params.userId);

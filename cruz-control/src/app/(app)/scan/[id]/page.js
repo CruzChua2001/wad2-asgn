@@ -525,8 +525,8 @@ export default function OverviewTab() {
   const missedChecks = (result.checks ?? []).filter((check) => check.status === "unavailable").length;
 
   // Viewers of a project scan can't re-scan, so the notes tell them who can
-  const canRescan = !result.projectId || result.role === "owner";
-  const retryText = canRescan ? "Re-scan to try again." : "A project owner can re-scan to try again.";
+  const canRescan = !result.projectId || result.role === "admin";
+  const retryText = canRescan ? "Re-scan to try again." : "A project admin can re-scan to try again.";
 
   // A finding can be planned when fixing it could raise the score. Old scans have no checks,
   // and incomplete scans have no grade, so neither gets the plan

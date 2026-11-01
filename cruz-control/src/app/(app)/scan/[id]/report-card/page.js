@@ -156,7 +156,7 @@ export default function ReportCardTab() {
   const anyRan = rows.some((row) => row.status === "ok");
 
   // Viewers of a project scan can't re-scan, so the notes tell them who can
-  const canRescan = !result.projectId || result.role === "owner";
+  const canRescan = !result.projectId || result.role === "admin";
 
   let summary = result.incomplete ? (canRescan ? "Incomplete, re-scan" : "Incomplete") : getRating(result.score);
   if (showSideScores) {
@@ -211,7 +211,7 @@ export default function ReportCardTab() {
             )}
             {result.incomplete && (
               <p className="m-0 mt-4 text-xs text-warm">
-                A critical check couldn&apos;t run, so there&apos;s no grade yet. {canRescan ? "Re-scan to try again." : "A project owner can re-scan to try again."}
+                A critical check couldn&apos;t run, so there&apos;s no grade yet. {canRescan ? "Re-scan to try again." : "A project admin can re-scan to try again."}
               </p>
             )}
           </div>

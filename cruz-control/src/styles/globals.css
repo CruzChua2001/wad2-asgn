@@ -1065,9 +1065,7 @@ img.brand-mark {
 }
 
 .auth-panel[data-state="inactive"] {
-  opacity: 0;
-  filter: blur(8px);
-  pointer-events: none;
+  display: none;
 }
 
 .auth-input {

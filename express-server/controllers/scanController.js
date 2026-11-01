@@ -265,8 +265,8 @@ const createScan = async (req, res) => {
 
         const { data:member } = await supabase.from("project_members").select("role").eq("project_id", projectId).eq("user_id", req.user.id).maybeSingle();
 
-        if (!member || member.role !== "owner") {
-            return res.status(403).json({ error: "Only project owners can scan this project." });
+        if (!member || member.role !== "admin") {
+            return res.status(403).json({ error: "Only project admins can scan this project." });
         }
     }
 

@@ -57,7 +57,7 @@ export default function HistoryPage() {
                 </header>
                 {!current ? null : current.error ? (
                     <div><p role="alert" className="text-critical">{current.error}</p><button type="button" onClick={() => setAttempt(n => n + 1)} className="mt-2 min-h-11 cursor-pointer text-accent underline">Try again</button></div>
-                ) : current.scans.length === 0 ? <p>No scans yet. Project owners can run the first scan from Projects.</p> : (
+                ) : current.scans.length === 0 ? <p>No scans yet. Project admins can run the first scan from Projects.</p> : (
                     <ul className="space-y-4">
                         {current.scans.map((scan, index, scans) => {
                             const second = scans.find(other => other.id !== scan.id && sameTargets(scan, other));
