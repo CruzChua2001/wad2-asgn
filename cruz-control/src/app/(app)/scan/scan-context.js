@@ -26,9 +26,17 @@ export function ScanProvider({ children }) {
   const [saveError, setSaveError] = useState("");
   const abortRef = useRef(null);
   const loadingId = useRef(null);
+  const savingRef = useRef(false);
+  const projectScanRef = useRef(null);
   const { status, openAuth } = useAuth();
 
   const startScan = useCallback(async ({domain, githubRepo, projectId, force}) => {
+    // A repeat click on the same project must not launch a second server scan.
+    if (projectId && projectScanRef.current?.projectId === projectId && !projectScanRef.current.controller.signal.aborted) return;
+    const controller = new AbortController();
+    abortRef.current?.abort();
+    abortRef.current = controller;
+    projectScanRef.current = projectId ? { projectId, controller } : null;
     const addLine = (kind, text) => {
       setLines((current) => [...current, { id:current.length, kind, text, time: formatLogTime(new Date()) }]);
     }
@@ -36,7 +44,7 @@ export function ScanProvider({ children }) {
     // Resets the terminal and switch page to the terminal view
     setLines([]);
     setProgress(0);
-    setScan({ domain, githubRepo });
+    setScan({ domain, githubRepo, projectId });
     setPhase("scanning");
     addLine("command", `$ cruz scan ${[domain, githubRepo].filter(Boolean).join(" ")}`);
 
@@ -44,13 +52,13 @@ export function ScanProvider({ children }) {
     let completed = 0;
 
     // Cancel switch for the request, stopping any scan that is still running first
-    abortRef.current?.abort();
-    abortRef.current = new AbortController();
+    // Keep this request's controller across the asynchronous session lookup.
 
     try {
       const supabase = createClient();
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
+      if (controller.signal.aborted) return;
 
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/scan`, {
         method: "POST",
@@ -59,7 +67,7 @@ export function ScanProvider({ children }) {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ domain, githubRepo, projectId, force }),
-        signal: abortRef.current.signal,
+        signal: controller.signal,
       });
 
       // Check for pre-stream failures (bad input, auth, permissions)
@@ -90,7 +98,7 @@ export function ScanProvider({ children }) {
           finished = true;
           addLine("summary", "Done. Opening your results now...");
           setProgress(100);
-          setScan({ domain, githubRepo, id: event.id });
+          setScan({ domain, githubRepo, projectId, id: event.id });
           setPhase("results");
           router.push(`/scan/${event.id}`);
         } else if (event.type === "error") {
@@ -134,9 +142,11 @@ export function ScanProvider({ children }) {
         setPhase("failed");
       }
     } catch (error) {
-      if (error.name === "AbortError") return; // user cancelled, terminal was reset
+      if (controller.signal.aborted || error.name === "AbortError") return; // user cancelled or started another scan
       addLine("bad", "Scan failed. Please try again.");
       setPhase("failed");
+    } finally {
+      if (projectScanRef.current?.controller === controller) projectScanRef.current = null;
     }
   }, [router])
 
@@ -158,8 +168,9 @@ export function ScanProvider({ children }) {
   // "Save to project" in the results header and on the Report Card: makes a project from the scan and copies the scan in
   const saveToProject = useCallback(async (scanId) => {
     if (status !== "authenticated") return openAuth("login");
-    if (saving) return;
+    if (savingRef.current || savedScanId === scanId || result?.projectId) return;
 
+    savingRef.current = true;
     setSaving(true);
     setSaveError("");
 
@@ -170,9 +181,10 @@ export function ScanProvider({ children }) {
     } catch (e) {
       setSaveError(e.response?.data?.error ?? "Could not save to project.");
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
-  }, [status, openAuth, saving, result]);
+  }, [status, openAuth, savedScanId, result]);
 
   // Used by "Cancel scan" and "+ New scan": back to the empty pre-scan form.
   const resetScan = useCallback(() => {

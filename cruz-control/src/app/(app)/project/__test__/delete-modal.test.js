@@ -12,7 +12,7 @@ const PROJECT = { id: "p1", name: "SMU website" };
 const renderModal = (project = PROJECT) => {
     const modalRef = createRef();
     const onDeleted = vi.fn();
-    render(<DeleteModal project={project} modalRef={modalRef} onDeleted={onDeleted} />);
+    render(<DeleteModal project={project} isOwner modalRef={modalRef} onDeleted={onDeleted} />);
 
     const dialog = modalRef.current;
     dialog.setAttribute("open", "");

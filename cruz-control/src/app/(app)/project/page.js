@@ -3,13 +3,20 @@
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "motion/react";
-import { LuCodeXml, LuGlobe, LuPencil, LuPlus, LuRefreshCw, LuTrash2, LuUserPlus } from "react-icons/lu";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { LuCodeXml, LuGlobe, LuPencil, LuPlus, LuRefreshCw, LuSearch, LuTrash2, LuUserPlus } from "react-icons/lu";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { EffectCoverflow, Keyboard, Mousewheel, FreeMode } from "swiper/modules";
+import "swiper/css";
+import "swiper/css/effect-coverflow";
+import "swiper/css/navigation";
 
 import api from "@/lib/api";
 import { useAuth } from "@/components/auth/auth-provider";
 import LoginRequired from "@/components/auth/login-required";
 import GradeBadge from "@/components/grade-badge";
+import LoadingOverlay from "@/components/loading-overlay";
+import SmallLoader from "@/components/small-loader";
 import ProjectModal from "./project-modal";
 import MemberModal from "./member-modal";
 import DeleteModal from "./delete-modal";
@@ -35,20 +42,40 @@ const IconButton = ({ label, danger, ...props }) => (
 const Targets = ({ domain, repo }) => (
     <dl className="grid grid-cols-[104px_minmax(0,1fr)] gap-y-1.5 text-sm">
         <dt className="flex items-center gap-1.5 text-muted"><LuGlobe size={14} aria-hidden="true" /> Domain</dt>
-        <dd className="font-mono break-all">{domain ?? <i className="text-muted">none</i>}</dd>
+        <dd className="font-mono truncate" title={domain}>{domain ?? <i className="text-muted">none</i>}</dd>
         <dt className="flex items-center gap-1.5 text-muted"><LuCodeXml size={14} aria-hidden="true" /> Repository</dt>
-        <dd className="font-mono break-all">{repo ?? <i className="text-muted">none</i>}</dd>
+        <dd className="font-mono truncate" title={repo}>{repo ?? <i className="text-muted">none</i>}</dd>
     </dl>
+);
+
+const CardCarousel = ({ children }) => (
+    <Swiper
+        modules={[EffectCoverflow, Keyboard, Mousewheel, FreeMode]}
+        effect="coverflow"
+        coverflowEffect={{ rotate: 15, depth: 80, slideShadows: false }}
+        spaceBetween={24}
+        slidesPerView="auto"
+        centeredSlides
+        grabCursor
+        keyboard={{ enabled: true }}
+        mousewheel={{ forceToAxis: true }}
+        freeMode={{ enabled: true, sticky: true }}
+        wrapperTag="ul"
+        className="w-full py-4!"
+    >
+        {children}
+    </Swiper>
 );
 
 const ProjectPage = _ => {
     const { status, user } = useAuth();
     const router = useRouter();
-    const { startScan } = useScan();
+    const { startScan, phase, scan } = useScan();
     const reduceMotion = useReducedMotion();
     const popupModalRef = useRef(null);
     const memberRef = useRef(null);
     const deleteRef = useRef(null);
+    const submitRef = useRef(false);
     const [projects, setProjects] = useState([]);
     const [error, setError] = useState("");
     const [formError, setFormError] = useState("");
@@ -59,7 +86,9 @@ const ProjectPage = _ => {
     const [deletingProject, setDeletingProject] = useState(null);
     const [invites, setInvites] = useState([]);
     const [busyInviteId, setBusyInviteId] = useState(null);
+    const [busyAction, setBusyAction] = useState(null);
     const [loaded, setLoaded] = useState(false);
+    const [search, setSearch] = useState("");
 
     useEffect(() => {
         if (status !== "authenticated") return;
@@ -86,13 +115,11 @@ const ProjectPage = _ => {
         return <LoginRequired title="Projects need an account" message="Log in to save your scan result to a project" />
     }
 
-    // Cards rise in one after another, and slide into place when one is added or removed
-    const cardMotion = index => (reduceMotion ? {} : {
-        layout: "position",
-        initial: { opacity: 0, y: 12 },
-        animate: { opacity: 1, y: 0 },
-        exit: { opacity: 0, scale: 0.95, transition: { duration: 0.25 } },
-        transition: { duration: 0.4, delay: index * 0.06, ease: EASE, layout: { duration: 0.3, ease: EASE } },
+     // Matches the name, domain or repo, ignoring capitals. An empty search matches everything
+    const searchText = search.trim().toLowerCase();
+    const shownProjects = projects.filter(p => {
+        const text = `${p.name} ${p.domain || ""} ${p.github_repo || ""}`.toLowerCase();
+        return text.includes(searchText);
     });
 
     const updateField = event => {
@@ -124,6 +151,8 @@ const ProjectPage = _ => {
 
     const createProject = async event => {
         event.preventDefault();
+        if (submitRef.current) return;
+        submitRef.current = true;
         setLoading(true);
         setFormError("");
         try {
@@ -136,7 +165,7 @@ const ProjectPage = _ => {
             }
 
             const response = await api.post("/api/project", form);
-            setProjects([response.data, ...projects]);
+            setProjects(current => [response.data, ...current]);
             setForm({ name: "", domain: "", githubRepo: "" });
             popupModalRef.current.close();
 
@@ -144,6 +173,7 @@ const ProjectPage = _ => {
         } catch (e) {
             setFormError(e.response?.data?.error ?? "Could not create or update project.");
         } finally {
+            submitRef.current = false;
             setLoading(false)
         }
     }
@@ -155,6 +185,7 @@ const ProjectPage = _ => {
     // busyInviteId stops a double click sending the same request twice
     const acceptInvite = async invite => {
         setBusyInviteId(invite.id);
+        setBusyAction("accept");
         setError("");
         try {
             await api.post(`/api/invite/${invite.id}/accept`);
@@ -171,6 +202,7 @@ const ProjectPage = _ => {
 
     const declineInvite = async invite => {
         setBusyInviteId(invite.id);
+        setBusyAction("decline");
         setError("");
         try {
             await api.delete(`/api/invite/${invite.id}`);
@@ -183,35 +215,41 @@ const ProjectPage = _ => {
     }
 
     return (
-        <div className="grid gap-8">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                <div className="grid gap-1">
-                    <h1 className="text-3xl font-semibold tracking-tight">My Projects</h1>
-                    <p className="text-sm text-muted">Track your sites and repos, and see how their scores change over time.</p>
+        <>
+            <LoadingOverlay show={!loaded} />
+            <motion.div
+                className="grid min-w-0 gap-8 pb-20 wrap-anywhere"
+                initial={{ opacity: 0, scale: 0.94 }}
+                animate={loaded ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.94 }}
+                transition={reduceMotion ? { duration: 0 } : { duration: 1, ease: EASE }}
+            >
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                    <div className="grid min-w-0 gap-1">
+                        <h1 className="text-3xl font-semibold tracking-tight">My Projects</h1>
+                        <p className="text-sm text-muted">Use Re-scan to add a scan to an existing project. New project creates a separate project.</p>
+                    </div>
+                    <div className="text-sm font-semibold">
+                        <button
+                            type="button"
+                            onClick={() => openModal(null)}
+                            className="flex items-center justify-center gap-2 w-full sm:w-auto h-10 px-4 rounded-lg bg-accent text-page hover:bg-accent-bright cursor-pointer transition-colors duration-200"
+                        >
+                            <LuPlus size={16} aria-hidden="true" /> New project
+                        </button>
+                    </div>
                 </div>
-                <div className="text-sm font-semibold">
-                    <button
-                        type="button"
-                        onClick={() => openModal(null)}
-                        className="flex items-center justify-center gap-2 w-full sm:w-auto h-10 px-4 rounded-lg bg-accent text-page hover:bg-accent-bright cursor-pointer transition-colors duration-200"
-                    >
-                        <LuPlus size={16} aria-hidden="true" /> New project
-                    </button>
-                </div>
-            </div>
 
-            <ProjectModal editing={Boolean(editingId)} modalRef={popupModalRef} form={form} updateField={updateField} onSubmit={createProject} error={formError} loading={loading} />
-            <MemberModal project={memberProject} modalRef={memberRef} />
-            <DeleteModal project={deletingProject} modalRef={deleteRef} onDeleted={removeProject} />
+                <ProjectModal editing={Boolean(editingId)} modalRef={popupModalRef} form={form} updateField={updateField} onSubmit={createProject} error={formError} loading={loading} />
+                <MemberModal project={memberProject} modalRef={memberRef} />
+                <DeleteModal project={deletingProject} isOwner={deletingProject?.created_by === user?.id} modalRef={deleteRef} onDeleted={removeProject} />
 
-            {error && <p role="alert" className="text-critical">{error}</p>}
+                {error && <p role="alert" className="text-critical">{error}</p>}
 
-            {/* LayoutGroup lets the project cards slide up once an invite card has left */}
-            <LayoutGroup>
+
                 <AnimatePresence>
                     {invites.length > 0 && (
-                        <motion.section key="invites" exit={{ opacity: 0, transition: { duration: 0.25 } }} aria-labelledby="invites-title" className="grid gap-4 pb-8 border-b border-line">
-                            <div className="grid gap-1">
+                        <motion.section key="invites" exit={{ opacity: 0, transition: { duration: 0.25 } }} aria-labelledby="invites-title" className="grid! gap-4 pb-8 border-b border-line">
+                            <div className="grid min-w-0 gap-1">
                                 <div className="flex items-center gap-2">
                                     <h2 id="invites-title" className="text-lg font-semibold">Invitations</h2>
                                     <span className="rounded-full bg-accent-soft/30 px-2.5 py-0.5 text-xs font-semibold text-accent">{invites.length}</span>
@@ -219,99 +257,52 @@ const ProjectPage = _ => {
                                 <p className="text-sm text-muted">Accept an invite to see that project here.</p>
                             </div>
 
-                            <ul className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(min(100%,280px),1fr))]">
-                                <AnimatePresence>
-                                    {invites.map((invite, index) => (
-                                        <motion.li key={invite.id} {...cardMotion(index)} className="grid gap-4 p-5 border border-dashed border-accent rounded-2xl bg-surface shadow-sm hover:shadow-md transition-[translate,box-shadow] duration-200 motion-safe:hover:-translate-y-1">
-                                            <div className="min-w-0">
-                                                <h3 className="font-semibold break-words">{invite.projects?.name}</h3>
-                                                <span className="text-xs text-accent capitalize">Invited as {invite.role}</span>
-                                            </div>
+                            <CardCarousel>
+                                {invites.map(invite => (
+                                    <SwiperSlide key={invite.id} tag="li" className="w-105! h-auto! grid! gap-4 p-5 border border-dashed border-accent rounded-2xl bg-surface shadow-sm hover:shadow-md transition-[translate,box-shadow] duration-200 motion-safe:hover:-translate-y-1">
+                                        <div className="min-w-0">
+                                            <h3 className="font-semibold wrap-break-word">{invite.projects?.name}</h3>
+                                            <span className="text-xs text-accent capitalize">Invited as {invite.role}</span>
+                                            <span className="block text-xs text-muted">Created by {invite.creatorName}</span>
+                                        </div>
 
-                                            <Targets domain={invite.projects?.domain} repo={invite.projects?.github_repo} />
+                                        <Targets domain={invite.projects?.domain} repo={invite.projects?.github_repo} />
 
-                                            <div className="flex items-center justify-end gap-2 text-sm font-semibold">
-                                                <button type="button" onClick={() => declineInvite(invite)} disabled={busyInviteId === invite.id} className="h-9 px-3 rounded-lg text-muted hover:text-critical cursor-pointer transition-colors duration-200 disabled:cursor-default disabled:opacity-60">Decline<span className="sr-only"> the invite to {invite.projects?.name}</span></button>
-                                                <button type="button" onClick={() => acceptInvite(invite)} disabled={busyInviteId === invite.id} className="h-9 px-4 rounded-lg bg-accent text-page hover:bg-accent-bright cursor-pointer transition-colors duration-200 disabled:cursor-default disabled:opacity-60">Accept<span className="sr-only"> the invite to {invite.projects?.name}</span></button>
-                                            </div>
-                                        </motion.li>
-                                    ))}
-                                </AnimatePresence>
-                            </ul>
+                                        <div className="flex items-center justify-end gap-2 text-sm font-semibold">
+                                            <button type="button" onClick={() => declineInvite(invite)} disabled={busyInviteId === invite.id} className="h-9 px-3 rounded-lg text-muted hover:text-critical cursor-pointer transition-colors duration-200 disabled:cursor-default disabled:opacity-60">
+                                                {busyInviteId === invite.id && busyAction === "decline" 
+                                                    ? <SmallLoader text="Declining..." size={14} /> 
+                                                    : "Decline" }
+                                                <span className="sr-only"> the invite to {invite.projects?.name}</span>
+                                            </button>
+                                            <button type="button" onClick={() => acceptInvite(invite)} disabled={busyInviteId === invite.id} className="h-9 px-4 rounded-lg bg-accent text-page hover:bg-accent-bright cursor-pointer transition-colors duration-200 disabled:cursor-default disabled:opacity-60">
+                                                {busyInviteId === invite.id && busyAction === "accept" 
+                                                    ? <SmallLoader text="Accepting..." size={14} /> 
+                                                    : "Accept" }
+                                                <span className="sr-only"> the invite to {invite.projects?.name}</span>
+                                            </button>
+                                        </div>
+                                    </SwiperSlide>
+                                ))}
+                            </CardCarousel>
                         </motion.section>
                     )}
                 </AnimatePresence>
 
                 <h2 className="sr-only">Your projects</h2>
-                <ul className="relative grid gap-4 grid-cols-[repeat(auto-fill,minmax(min(100%,280px),1fr))]">
-                    <AnimatePresence mode="popLayout">
-                        {projects.map((p, index) => (
-                            <motion.li key={p.id} {...cardMotion(index)} className="flex flex-col gap-4 p-5 border border-line rounded-2xl bg-surface shadow-sm hover:border-accent-soft hover:shadow-md transition-[translate,border-color,box-shadow] duration-200 motion-safe:hover:-translate-y-1">
-                                <div className="flex items-start gap-3">
-                                    <GradeBadge grade={p.latestScan?.grade ?? null} size="md" />
-                                    <div className="grid gap-0.5 min-w-0 flex-1">
-                                        <h3 className="font-semibold break-words">{p.name}</h3>
-                                        <span className="text-xs text-muted">
-                                            <span className="capitalize">{p.role}</span>
-                                            {p.latestScan && ` · Scanned ${shortDate(p.latestScan.created_at)}`}
-                                        </span>
-                                    </div>
-                                    <div className="flex gap-0.5 -mr-1.5 -mt-1">
-                                        {p.role === "owner" && (
-                                            <>
-                                                <IconButton label={`Manage members of ${p.name}`} onClick={() => openMemberModal(p)}><LuUserPlus size={17} /></IconButton>
-                                                <IconButton label={`Edit ${p.name}`} onClick={() => openModal(p)}><LuPencil size={16} /></IconButton>
-                                            </>
-                                        )}
-                                        {p.created_by === user?.id && (
-                                            <IconButton label={`Delete ${p.name}`} danger onClick={() => openDeleteModal(p)}><LuTrash2 size={16} /></IconButton>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center justify-between gap-3 min-h-14 px-4 py-3 rounded-xl bg-surface-soft">
-                                    {p.latestScan ? (
-                                        <p className="flex flex-wrap items-baseline gap-x-1.5 min-w-0">
-                                            <span className="text-3xl font-semibold leading-none tabular-nums">{p.latestScan.score}</span>
-                                            <span className="text-sm text-muted">/100</span>
-                                            {/* No grade means a critical check couldn't run, like "Incomplete, re-scan" on the Overview */}
-                                            <span className={`ml-1 text-sm font-semibold ${p.latestScan.grade ? scoreTone(p.latestScan.score) : "text-warm"}`}>
-                                                {p.latestScan.grade ? getRating(p.latestScan.score) : "Incomplete"}
-                                            </span>
-                                        </p>
-                                    ) : (
-                                        <p className="text-sm text-muted">Not scanned yet</p>
-                                    )}
-                                    <ScoreSparkline scores={p.scores} />
-                                </div>
-
-                                <Targets domain={p.domain} repo={p.github_repo} />
-
-                                <div className="flex gap-2 mt-auto text-sm font-semibold">
-                                    {p.latestScan ? (
-                                        <Link href={`/scan/${p.latestScan.id}`} className="grid place-items-center flex-1 h-10 rounded-lg bg-accent text-page! no-underline hover:bg-accent-bright transition-colors duration-200">
-                                            <span>View results<span className="sr-only"> for {p.name}</span></span>
-                                        </Link>
-                                    ) : p.role === "owner" ? (
-                                        <button type="button" onClick={() => scanProject(p)} className="flex-1 h-10 rounded-lg bg-accent text-page hover:bg-accent-bright cursor-pointer transition-colors duration-200">
-                                            Run first scan
-                                        </button>
-                                    ) : (
-                                        <span className="grid place-items-center flex-1 h-10 rounded-lg border border-dashed border-line text-muted">No scans yet</span>
-                                    )}
-
-                                    {p.role === "owner" && p.latestScan && (
-                                        <button type="button" onClick={() => scanProject(p)} className="flex items-center gap-1.5 h-10 px-3 rounded-lg border border-line text-ink hover:border-accent hover:text-accent cursor-pointer transition-colors duration-200">
-                                            <LuRefreshCw size={15} aria-hidden="true" /> Re-scan<span className="sr-only"> {p.name}</span>
-                                        </button>
-                                    )}
-                                </div>
-                            </motion.li>
-                        ))}
-                    </AnimatePresence>
-                    {/* Shown after loading so it arrives after the last card */}
-                    {loaded && (
-                        <motion.li {...cardMotion(projects.length)} className="font-semibold">
+                <label className="relative flex items-center w-full sm:max-w-sm">
+                    <span className="sr-only">Search projects</span>
+                    <LuSearch size={16} aria-hidden="true" className="absolute left-3 text-muted pointer-events-none" />
+                    <input
+                        type="search"
+                        value={search}
+                        onChange={event => setSearch(event.target.value)}
+                        placeholder="Search by name, domain or repository"
+                        className="w-full h-10 pl-9 pr-3 rounded-lg border border-line bg-surface text-sm text-ink placeholder:text-muted focus:border-accent focus:outline-none"
+                    />
+                </label>
+                    <CardCarousel>
+                    <SwiperSlide tag="li" className="w-105! h-auto! font-semibold">
                             <button
                                 type="button"
                                 onClick={() => openModal(null)}
@@ -322,11 +313,81 @@ const ProjectPage = _ => {
                                 </span>
                                 New Project
                             </button>
-                        </motion.li>
-                    )}
-                </ul>
-            </LayoutGroup>
-        </div>
+                        </SwiperSlide>
+                    {shownProjects.map((p, index) => (
+                        <SwiperSlide key={p.id} tag="li" className="w-105! h-auto! flex! flex-col gap-4 p-5 border border-line rounded-2xl bg-surface shadow-sm hover:border-accent-soft hover:shadow-md transition-[translate,border-color,box-shadow] duration-200 motion-safe:hover:-translate-y-1">
+                            <div className="flex items-start gap-3">
+                                <GradeBadge grade={p.latestScan?.grade ?? null} size="md" />
+                                <div className="grid gap-0.5 min-w-0 flex-1">
+                                    <h3 className="font-semibold wrap-break-word">{p.name}</h3>
+                                    <span className="text-xs text-muted">
+                                        <span className="capitalize font-bold">{p.created_by === user?.id ? "Owner" : p.role}</span>
+                                        {p.latestScan && ` · Scanned ${shortDate(p.latestScan.created_at)}`}
+                                    </span>
+                                    <span className="text-xs text-muted">
+                                        {p.created_by !== user?.id && `Created by ${p.creatorName}`}
+                                    </span>
+                                </div>
+                                <div className="flex gap-0.5 -mr-1.5 -mt-1">
+                                    <IconButton label={`Manage members of ${p.name}`} onClick={() => openMemberModal(p)}><LuUserPlus size={17} /></IconButton>
+                                    {p.role === "admin" && (
+                                        <>
+                                            <IconButton label={`Edit ${p.name}`} onClick={() => openModal(p)}><LuPencil size={16} /></IconButton>
+                                        </>
+                                    )}
+                                    <IconButton label={`${p.created_by === user?.id ? "Delete" : "Leave"} ${p.name}`} danger onClick={() => openDeleteModal(p)}><LuTrash2 size={16} /></IconButton>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center justify-between gap-3 min-h-14 px-4 py-3 rounded-xl bg-surface-soft">
+                                {p.latestScan ? (
+                                    <p className="flex flex-wrap items-baseline gap-x-1.5 min-w-0">
+                                        <span className="text-3xl font-semibold leading-none tabular-nums">{p.latestScan.score}</span>
+                                        <span className="text-sm text-muted">/100</span>
+                                        {/* No grade means a critical check couldn't run, like "Incomplete, re-scan" on the Overview */}
+                                        <span className={`ml-1 text-sm font-semibold ${p.latestScan.grade ? scoreTone(p.latestScan.score) : "text-warm"}`}>
+                                            {p.latestScan.grade ? getRating(p.latestScan.score) : "Incomplete"}
+                                        </span>
+                                    </p>
+                                ) : (
+                                    <p className="text-sm text-muted">Not scanned yet</p>
+                                )}
+                                <ScoreSparkline scores={p.scores} />
+                            </div>
+
+                            <Targets domain={p.domain} repo={p.github_repo} />
+
+                            <Link href={`/project/${p.id}/history`} aria-label={`View history for ${p.name}`} className="w-fit text-sm font-semibold text-accent hover:underline">
+                                View history<span className="sr-only"> for {p.name}</span>
+                            </Link>
+
+                            <div className="flex min-w-0 flex-wrap gap-2 mt-auto text-sm font-semibold">
+                                {p.latestScan ? (
+                                    <Link href={`/scan/${p.latestScan.id}`} data-curious className="grid place-items-center flex-1 basis-36 min-w-0 min-h-11 rounded-lg bg-accent text-page! no-underline hover:bg-accent-bright transition-colors duration-200">
+                                        <span>View results<span className="sr-only"> for {p.name}</span></span>
+                                    </Link>
+                                ) : p.role === "admin" ? (
+                                    <button type="button" onClick={() => scanProject(p)} className="flex-1 h-10 rounded-lg bg-accent text-page hover:bg-accent-bright cursor-pointer transition-colors duration-200">
+                                        Run first scan
+                                    </button>
+                                ) : (
+                                    <span className="grid place-items-center flex-1 h-10 rounded-lg border border-dashed border-line text-muted">No scans yet</span>
+                                )}
+
+                                {p.role === "admin" && p.latestScan && (
+                                    <button type="button" data-curious aria-label={`${phase === "scanning" && scan?.projectId === p.id ? "Scanning..." : "Re-scan"} ${p.name}`} disabled={phase === "scanning" && scan?.projectId === p.id} onClick={() => scanProject(p)} className="flex items-center gap-1.5 min-h-11 px-3 rounded-lg border border-line text-ink hover:border-accent hover:text-accent cursor-pointer transition-colors duration-200 disabled:cursor-default disabled:opacity-60">
+                                        {phase === "scanning" && scan?.projectId === p.id 
+                                            ? <SmallLoader text="Scanning..." size={15} /> 
+                                            : <><LuRefreshCw size={15} aria-hidden="true" /> Re-scan</>} <span className="sr-only"> {p.name}</span>
+                                    </button>
+                                )}
+                            </div>
+                        </SwiperSlide>
+                    ))}
+                </CardCarousel>
+
+            </motion.div>
+        </>
     )
 }
 

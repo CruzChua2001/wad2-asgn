@@ -10,19 +10,23 @@ const PALETTES = {
     globe: "#efe7da",
     emissive: "#d8cdbb",
     land: "rgba(42, 110, 96, 0.55)",
-    atmosphere: "#7fae9d",
-    status: { healthy: "#2a6e60", attention: "#b8733f", critical: "#c85560" },
+    // The glow around the globe follows the grade
+    glow: { good: "#7fae9d", fair: "#d9a066", poor: "#d9707a", none: "#b5ad9f" },
+    status: { healthy: "#24917a", attention: "#d9822b", critical: "#de4655" },
   },
   dark: {
     globe: "#14201d",
     emissive: "#0b1311",
     land: "rgba(121, 197, 171, 0.5)",
-    atmosphere: "#3f7a68",
-    status: { healthy: "#79c5ab", attention: "#d7a36b", critical: "#ff6b7a" },
+    glow: { good: "#3f7a68", fair: "#9a6a35", poor: "#a3434e", none: "#56605a" },
+    status: { healthy: "#7fe0bd", attention: "#ffb066", critical: "#ff6b7a" },
   },
 };
 
 const STATUS_LABELS = { healthy: "Healthy", attention: "Needs attention", critical: "Critical" };
+const STATUS_RANK = { healthy: 0, attention: 1, critical: 2 };
+// Servers hidden by the status filter stay on the globe, just faded
+const DIM_ALPHA = 0.18;
 
 // The tooltip is raw HTML inside the canvas overlay, so the CDN tag uses the theme tokens directly
 const CDN_TAG_STYLE = "margin-left:4px;padding:0 3px;border:1px solid var(--line);border-radius:3px;color:var(--muted);font-size:9px;font-weight:500";
@@ -41,7 +45,37 @@ function withAlpha(hex, alpha) {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-export default function ExposureGlobe({ nodes, arcs, selectedId, highlightIds = [], onSelect, theme = "light", reduceMotion = false }) {
+// Servers only keep their ports as text ("80, 443", cut at 6 with "...", or "None found")
+function portCount(node) {
+  if (Array.isArray(node.ports)) return node.ports.length;
+  if (!node.service || node.service === "None found") return 0;
+  return node.service.split(",").length + (node.service.endsWith("...") ? 1 : 0);
+}
+
+function portLabel(node) {
+  const count = portCount(node);
+  const more = !Array.isArray(node.ports) && node.service?.endsWith("...") ? "+" : "";
+  return `${count}${more} open port${count === 1 ? "" : "s"}`;
+}
+
+// More open ports make a taller column, up to 8. New columns grow up from the ground (three-globe starts them at 0)
+function columnHeight(node) {
+  return 0.03 + 0.03 * Math.min(portCount(node), 8);
+}
+
+function glowColor(grade, palette) {
+  if (grade === "A" || grade === "B") return palette.glow.good;
+  if (grade === "C" || grade === "D") return palette.glow.fair;
+  if (grade === "F") return palette.glow.poor;
+  return palette.glow.none;
+}
+
+// ip-api says "The Netherlands", Natural Earth says "Netherlands"
+function countryName(node) {
+  return node.country.replace(/^The /, "");
+}
+
+export default function ExposureGlobe({ nodes, arcs, selectedId, highlightIds = [], dimIds = [], onSelect, theme = "light", grade = null, reduceMotion = false }) {
   const containerRef = useRef(null);
   const globeRef = useRef(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
@@ -51,11 +85,24 @@ export default function ExposureGlobe({ nodes, arcs, selectedId, highlightIds = 
   // Only servers we located have coordinates to draw
   const located = useMemo(() => nodes.filter((node) => node.located), [nodes]);
   const locatedArcs = useMemo(() => arcs.filter((arc) => arc.from.located && arc.to.located), [arcs]);
+  // A faint wider disc under each column, so it glows at the base
+  const points = useMemo(() => [...located.map((node) => ({ ...node, halo: true })), ...located], [located]);
   const selected = located.find((node) => node.id === selectedId);
   // The selected server, plus every server the selected finding affects
-  const marked = located.filter((node) => node.id === selectedId || highlightIds.includes(node.id));
-  // Critical servers always pulse so they stand out
-  const pulsing = located.filter((node) => node.status === "critical" || marked.includes(node));
+  const isMarked = (node) => node.id === selectedId || highlightIds.includes(node.id);
+  // The selected server is never faded, since Server details is showing it
+  const isDimmed = (node) => node.id !== selectedId && dimIds.includes(node.id);
+  // Critical servers always pulse so they stand out, unless they're faded
+  const pulsing = located.filter((node) => !isDimmed(node) && (node.status === "critical" || isMarked(node)));
+
+  // Countries with a server take the colour of their worst server
+  const countryStatus = {};
+  for (const node of located) {
+    const name = countryName(node);
+    if (!countryStatus[name] || STATUS_RANK[node.status] > STATUS_RANK[countryStatus[name]]) {
+      countryStatus[name] = node.status;
+    }
+  }
 
   const material = useMemo(
     () => new MeshPhongMaterial({ color: palette.globe, emissive: palette.emissive, emissiveIntensity: 0.35, shininess: 4 }),
@@ -95,7 +142,9 @@ export default function ExposureGlobe({ nodes, arcs, selectedId, highlightIds = 
     controls.enableZoom = false;
     controls.minDistance = MIN_DISTANCE;
     controls.maxDistance = MAX_DISTANCE;
-    globe.pointOfView({ lat: 20, lng: 60, altitude: 2.3 }, 0);
+    // Start facing the servers, not a fixed spot that may hide them all
+    const start = selected || located[0];
+    globe.pointOfView(start ? { lat: start.lat, lng: start.lng, altitude: 2 } : { lat: 20, lng: 60, altitude: 2.3 }, 0);
   }
 
   // Fly to the selected server and stop rotating so it stays in view.
@@ -107,6 +156,31 @@ export default function ExposureGlobe({ nodes, arcs, selectedId, highlightIds = 
   }, [selected, reduceMotion]);
 
   const statusColor = (node) => palette.status[node.status] || palette.status.healthy;
+
+  function landColor(feature) {
+    const { ADMIN, NAME_LONG } = feature.properties || {};
+    const status = countryStatus[ADMIN] || countryStatus[NAME_LONG];
+    return status ? withAlpha(palette.status[status], 0.9) : palette.land;
+  }
+
+  function pointColor(node) {
+    if (isDimmed(node)) return withAlpha(statusColor(node), node.halo ? DIM_ALPHA / 3 : DIM_ALPHA);
+    return node.halo ? withAlpha(statusColor(node), isMarked(node) ? 0.4 : 0.25) : statusColor(node);
+  }
+
+  function arcColor(arc) {
+    if (isDimmed(arc.to)) return [withAlpha(palette.status.healthy, DIM_ALPHA / 2), withAlpha(palette.status[arc.status], DIM_ALPHA)];
+    return [withAlpha(palette.status.healthy, 0.55), withAlpha(palette.status[arc.status], 0.9)];
+  }
+
+  function pointAltitude(node) {
+    return node.halo ? 0.004 : columnHeight(node);
+  }
+
+  function pointRadius(node) {
+    if (node.halo) return isMarked(node) ? 2.1 : 1.5;
+    return isMarked(node) ? 0.8 : 0.5;
+  }
 
   // Globe radius is 100, so altitude = camera distance / 100 - 1 (matches min/maxDistance).
   function zoom(factor) {
@@ -129,25 +203,27 @@ export default function ExposureGlobe({ nodes, arcs, selectedId, highlightIds = 
           backgroundColor="rgba(0,0,0,0)"
           globeMaterial={material}
           showAtmosphere
-          atmosphereColor={palette.atmosphere}
-          atmosphereAltitude={0.17}
+          atmosphereColor={glowColor(grade, palette)}
+          atmosphereAltitude={0.22}
           onGlobeReady={handleGlobeReady}
           hexPolygonsData={countries}
           hexPolygonResolution={3}
           hexPolygonMargin={0.55}
           hexPolygonUseDots
-          hexPolygonColor={() => palette.land}
-          pointsData={located}
+          hexPolygonColor={landColor}
+          pointsData={points}
           pointLat="lat"
           pointLng="lng"
-          pointColor={statusColor}
-          pointAltitude={(node) => (marked.includes(node) ? 0.12 : 0.06)}
-          pointRadius={(node) => (marked.includes(node) ? 0.75 : 0.55)}
+          pointColor={pointColor}
+          pointAltitude={pointAltitude}
+          pointRadius={pointRadius}
           pointsMerge={false}
+          pointsTransitionDuration={reduceMotion ? 0 : 1200}
           pointLabel={(node) => `
             <div class="globe-tooltip">
               <strong>${escapeHtml(node.host)}${node.isCdn ? ` <span style="${CDN_TAG_STYLE}">CDN</span>` : ""}</strong>
               <span>${escapeHtml(node.city)}, ${escapeHtml(node.country)} · ${escapeHtml(STATUS_LABELS[node.status])}</span>
+              <span>${portLabel(node)}</span>
             </div>`}
           onPointClick={(node) => onSelect?.(node.id)}
           arcsData={locatedArcs}
@@ -155,7 +231,7 @@ export default function ExposureGlobe({ nodes, arcs, selectedId, highlightIds = 
           arcStartLng={(arc) => arc.from.lng}
           arcEndLat={(arc) => arc.to.lat}
           arcEndLng={(arc) => arc.to.lng}
-          arcColor={(arc) => [withAlpha(palette.status.healthy, 0.55), withAlpha(palette.status[arc.status], 0.9)]}
+          arcColor={arcColor}
           arcStroke={0.45}
           arcAltitudeAutoScale={0.42}
           arcDashLength={0.45}

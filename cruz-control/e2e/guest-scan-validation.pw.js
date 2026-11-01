@@ -25,6 +25,12 @@ test("guest sees validation errors for invalid domain and repository inputs whil
   });
 
   // 1. User starts on Landing page
+  // The product tour opens for new visitors and its overlay blocks clicks, so mark it as seen
+  await page.addInitScript(() => {
+    localStorage.setItem("cruz-control-tour-seen-v1:intro:guest", "1");
+    localStorage.setItem("cruz-control-tour-seen-v1:results:guest", "1");
+  });
+
   await page.goto("/");
   await page.getByRole("link", { name: /Explore as guest/ }).click();
   // 2. Continue as Guest to Scan page

@@ -6,6 +6,7 @@ import { FaGithub } from "react-icons/fa6";
 import { FcGoogle } from "react-icons/fc";
 import { LuEye, LuEyeOff, LuLock, LuMail, LuUser, LuX } from "react-icons/lu";
 import { useAuth } from "./auth-provider";
+import SmallLoader from "@/components/small-loader";
 
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
@@ -66,7 +67,6 @@ const AuthModal = ({ initialTab, onClose }) => {
   const [showLoginPw, setShowLoginPw] = useState(false);
   const [showSignupPw, setShowSignupPw] = useState(false);
   const [pending, setPending] = useState(null);
-  const [resetNotice, setResetNotice] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
   // Focus management, Escape to close, and background scroll lock while the modal is open.
@@ -175,10 +175,10 @@ const AuthModal = ({ initialTab, onClose }) => {
         </div>
         <div className="grid grid-cols-2 gap-3">
           <button type="button" className="auth-outlineButton" disabled={busy} onClick={() => handleProvider("github")}>
-            <FaGithub className="social-icon" aria-hidden="true" /> {pending === "github" ? "Connecting…" : "GitHub"}
+            {pending === "github" ? <SmallLoader text="Connecting…" size={16} /> : <><FaGithub className="social-icon" aria-hidden="true" /> GitHub</>}
           </button>
           <button type="button" className="auth-outlineButton" disabled={busy} onClick={() => handleProvider("google")}>
-            <FcGoogle className="social-icon" aria-hidden="true" /> {pending === "google" ? "Connecting…" : "Google"}
+            {pending === "google" ? <SmallLoader text="Connecting…" size={16} /> : <><FcGoogle className="social-icon" aria-hidden="true" /> Google</>}
           </button>
         </div>
       </div>
@@ -192,20 +192,8 @@ const AuthModal = ({ initialTab, onClose }) => {
         <PasswordField id="login-password" autoComplete="current-password" visible={showLoginPw} onToggle={() => setShowLoginPw((value) => !value)} />
 
         <button type="submit" className="auth-primaryButton" disabled={busy}>
-          {pending === "login" ? "Signing in…" : "Sign in"}
+          {pending === "login" ? <SmallLoader text="Signing in…" size={16} /> : "Sign in"}
         </button>
-
-        {resetNotice && (
-          <p role="status" className="-mt-2 m-0 text-muted text-[12px]">
-            Password reset isn&apos;t available in this preview yet.
-          </p>
-        )}
-
-        <div className="flex justify-center">
-          <button type="button" className="p-0 text-muted bg-none text-[14px] cursor-pointer transition-colors duration-200 ease-[ease] underline hover:text-ink" onClick={() => setResetNotice(true)}>
-            Forgot password?
-          </button>
-        </div>
 
       </form>
     )
@@ -226,7 +214,7 @@ const AuthModal = ({ initialTab, onClose }) => {
         />
 
         <button type="submit" className="auth-primaryButton" disabled={busy}>
-          {pending === "signup" ? "Creating account…" : "Create account"}
+          {pending === "signup" ? <SmallLoader text="Creating account…" size={16} /> : "Create account"}
         </button>
       </form>
     )
@@ -237,7 +225,7 @@ const AuthModal = ({ initialTab, onClose }) => {
       <div className="fixed inset-0 bg-[color-mix(in_srgb,#0b1211 55%,transparent)] backdrop-blur-[6px] animate-auth-fade-in" aria-hidden="true" onClick={onClose} />
       <div
         ref={dialogRef}
-        className="relative w-full max-w-md m-auto animate-auth-dialog"
+        className="relative w-full max-w-lg m-auto animate-auth-dialog"
         role="dialog"
         aria-modal="true"
         aria-labelledby="auth-modal-title"

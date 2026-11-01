@@ -4,8 +4,9 @@ import { useState } from "react";
 import { LuTrash2 } from "react-icons/lu";
 
 import api from "@/lib/api";
+import SmallLoader from "@/components/small-loader";
 
-const DeleteModal = ({ project, modalRef, onDeleted }) => {
+const DeleteModal = ({ project, isOwner, modalRef, onDeleted }) => {
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
 
@@ -37,8 +38,8 @@ const DeleteModal = ({ project, modalRef, onDeleted }) => {
                         <LuTrash2 size={20} aria-hidden="true" />
                     </span>
                     <div className="grid gap-1 min-w-0">
-                        <h2 id="delete-project-title" className="text-xl font-semibold break-words">Delete {project?.name}?</h2>
-                        <p className="text-sm text-muted">This deletes the project and its scan history for every member. You can&apos;t undo this.</p>
+                        <h2 id="delete-project-title" className="text-xl font-semibold wrap-break-word">{isOwner ? "Delete" : "Leave"} {project?.name}?</h2>
+                        <p className="text-sm text-muted">{isOwner ? "This deletes the project and its scan history for every member. You can't undo this." : "You'll lose access to this project. An admin can invite you back."}</p>
                     </div>
                 </div>
 
@@ -52,7 +53,7 @@ const DeleteModal = ({ project, modalRef, onDeleted }) => {
                         disabled={loading}
                         className="flex-1 h-10 px-4 rounded-lg bg-critical text-page hover:opacity-90 cursor-pointer transition-opacity disabled:opacity-50 disabled:cursor-default"
                     >
-                        {loading ? "Deleting..." : "Delete project"}
+                        {loading ? <SmallLoader text={isOwner ? "Deleting..." : "Leaving..."} size={16} /> : isOwner ? "Delete project" : "Leave project"}
                     </button>
                 </div>
             </div>

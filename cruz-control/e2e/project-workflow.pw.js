@@ -229,6 +229,12 @@ test("user signs in, creates a project, and sees an improved score after fixing 
     await route.fulfill({ json: result });
   });
 
+  // The product tour opens for new users and its overlay blocks clicks, so mark it as seen
+  await page.addInitScript((userId) => {
+    localStorage.setItem(`cruz-control-tour-seen-v1:intro:${userId}`, "1");
+    localStorage.setItem(`cruz-control-tour-seen-v1:results:${userId}`, "1");
+  }, testUser.id);
+
   // 1. User starts on Landing page
   await page.goto("/");
   // 2. User clicks on Login button and signs in using mock test account
@@ -245,7 +251,9 @@ test("user signs in, creates a project, and sees an improved score after fixing 
   expect(authRequests[0]).toMatchObject({ email: testUser.email, password: "playwright-test-password" });
 
   // 4. User clicks on "Projects" nav tab and creates a new project
-  await page.getByRole("link", { name: "Projects" }).click();
+  // The results page also links to Projects in a hint, so use the one in the nav
+  const projectsNav = page.getByRole("navigation", { name: "Primary navigation" }).getByRole("link", { name: "Projects" });
+  await projectsNav.click();
   await expect(page.getByRole("heading", { name: "My Projects" })).toBeVisible();
   await page.getByRole("button", { name: "New project", exact: true }).click();
   const projectDialog = page.getByRole("dialog", { name: "Track a site or repo" });
@@ -256,21 +264,25 @@ test("user signs in, creates a project, and sees an improved score after fixing 
 
   // 6. User sees the first scan results, including the recommendations, and returns to the "Projects" page
   await expect(page).toHaveURL(new RegExp(`/scan/${scanId}$`));
+  const cardPicker = page.getByRole("group", { name: "Choose a card" });
+  await cardPicker.getByRole("button", { name: "Score" }).click();
   await expect(page.getByRole("heading", { name: "Exposure score" })).toBeVisible();
   await expect(page.getByRole("img", { name: "96 out of 100" })).toBeVisible();
-  await expect(page.getByText("HSTS header is missing")).toBeVisible();
-  await expect(page.locator("#finding-missing-hsts").getByText("Add a Strict-Transport-Security response header.")).toBeVisible();
   await expect(page.getByText("Issues found", { exact: true }).locator("..")).toContainText("1");
   const breakdown = page.getByRole("list", { name: "Score breakdown" });
   for (const [category, pointsLost] of [["HTTPS & headers", "-2"], ["DNS & email", "-2"]]) {
     const categoryRow = breakdown.getByRole("listitem").filter({ hasText: category });
     await expect(categoryRow).toContainText(pointsLost);
   }
+  // The carousel shows one card at a time, so turn to the findings
+  await cardPicker.getByRole("button", { name: "Findings" }).click();
+  await expect(page.getByText("HSTS header is missing")).toBeVisible();
+  await expect(page.locator("#finding-missing-hsts").getByText("Add a Strict-Transport-Security response header.")).toBeVisible();
   expect(projectCreateRequests).toEqual([{ name: projectName, domain: "example.com", githubRepo: "" }]);
   expect(scanRequests).toHaveLength(1);
   expect(scanRequests[0]).toEqual({ domain: "example.com", githubRepo: null, projectId, force: true });
 
-  await page.getByRole("link", { name: "Projects" }).click();
+  await projectsNav.click();
   await expect(page.getByRole("heading", { name: projectName, exact: true })).toBeVisible();
 
   // 7. User follows the recommendations mentioned in the scan results, then rescans the domain registered in the project
@@ -278,13 +290,14 @@ test("user signs in, creates a project, and sees an improved score after fixing 
   await expect(page).toHaveURL(new RegExp(`/scan/${rescanId}$`));
 
   // 8. User sees an improved score and fewer issues on the updated results page
+  await cardPicker.getByRole("button", { name: "Score" }).click();
   await expect(page.getByRole("img", { name: "100 out of 100" })).toBeVisible();
   await expect(page.getByText("Issues found", { exact: true }).locator("..")).toContainText("0");
   expect(scanRequests).toHaveLength(2);
   expect(scanRequests[1]).toEqual({ domain: "example.com", githubRepo: null, projectId, force: true });
 
   // 9. User returns to the "Projects" page and sees the updated score and score history graph
-  await page.getByRole("link", { name: "Projects" }).click();
+  await projectsNav.click();
   await expect(page.getByRole("heading", { name: "My Projects" })).toBeVisible();
   const projectCard = page.getByRole("heading", { name: projectName, exact: true }).locator("xpath=ancestor::li[1]");
   await expect(projectCard).toContainText("example.com");

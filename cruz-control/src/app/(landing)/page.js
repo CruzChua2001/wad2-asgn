@@ -7,14 +7,17 @@ import AnimatedThemeToggler from "@/components/animated-theme-toggler";
 import { useAuth } from "@/components/auth/auth-provider";
 import InteractiveSignalGrid from "./interactive-signal-grid";
 import RippleButton from "@/components/ripple-button";
+import PeekingRobots from "./peeking-robot";
 import ScanTerminal from "./scan-terminal";
 import TextAnimate from "./text-animate";
-import TypingAnimation from "./typing-animation";
+import TypingAnimation from "@/components/typing-animation";
 import { useTheme } from "@/lib/theme-store";
 
-// TEMPORARY LOGO
 function BrandMark() {
-  return <span className="brand-mark" aria-hidden="true"><span /><span /><span /><span /></span>;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element -- tiny static icon, next/image adds nothing here
+    <img src="/favicon.ico" alt="" className="brand-mark" aria-hidden="true" />
+  );
 }
 
 export default function Home() {
@@ -58,7 +61,7 @@ export default function Home() {
         </nav>
       </header>
 
-      <section className="hero grid grid-cols-1 items-center gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,.95fr)] lg:gap-6 xl:gap-8">
+      <section className="hero grid grid-cols-1 items-center gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,.95fr)] lg:gap-6 xl:gap-28">
         <div className="hero-copy">
           <p className="hero-kicker"><span /> FOR STUDENTS &amp; FIRST-TIME DEVELOPERS</p>
           <h1>
@@ -80,6 +83,7 @@ export default function Home() {
         </div>
 
         <div className="hero-visual">
+          <PeekingRobots />
           <ScanTerminal theme={theme} />
         </div>
       </section>

@@ -32,6 +32,11 @@ const getProjects = async (req, res) => {
     const projects = data.map(m => ({ ...m.projects, role: m.role, latestScan: null, scores: [] }))
         .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
+    for (const project of projects) {
+        const { data: creator } = await supabase.auth.admin.getUserById(project.created_by);
+        project.creatorName = creator.user?.user_metadata?.full_name || creator.user?.email;
+    }
+
     if (projects.length === 0) {
         return res.json(projects);
     }
@@ -95,13 +100,13 @@ const createProject = async (req, res) => {
     let newData = {
         project_id: data.id, 
         user_id: req.user.id, 
-        role: "owner"
+        role: "admin"
     }
     const { error: memberError } = await supabase.from("project_members").insert(newData);
 
     if(memberError) {
         await supabase.from("projects").delete().eq("id", data.id);
-        console.error("Add owner failed:", memberError);
+        console.error("Add admin failed:", memberError);
         return res.status(500).json({ error: "Could not create project. Please try again." });
     }
 
@@ -118,7 +123,7 @@ const createProject = async (req, res) => {
         }
     }
 
-    res.status(201).json({ ...data, role: "owner" });
+    res.status(201).json({ ...data, role: "admin" });
 };
 
 const updateProjectById = async (req, res) => {
@@ -148,7 +153,7 @@ const updateProjectById = async (req, res) => {
         console.error("Update project failed:", error);
         return res.status(500).json({ error: "Could not update project. Please try again." });
     }
-    res.json({ ...data, role: "owner" });
+    res.json({ ...data, role: "admin" });
 }
 
 const deleteProjectById = async (req, res) => {
@@ -159,15 +164,20 @@ const deleteProjectById = async (req, res) => {
         return res.status(500).json({ error: "Could not delete project. Please try again." });
     }
 
-    if(data.length === 0) {
-        return res.status(403).json({ error: "Only the project creator can delete it." });
-    }
+    if (data.length === 0) {
+        const { error: leaveError } = await supabase.from("project_members").delete().eq("project_id", req.params.id).eq("user_id", req.user.id);
 
+        if (leaveError) {
+            console.error("Leave project failed:", leaveError);
+            return res.status(500).json({ error: "Could not leave project. Please try again." });
+        }
+    }
+    
     res.status(204).end();
 }
 
 const getScansByProjectId = async (req, res) => {
-    const { data, error } = await supabase.from("scans").select("id, created_at, domain_scans(result), repo_scans(result)")
+    const { data, error } = await supabase.from("scans").select("id, created_at, domain_scans(domain, result, created_at), repo_scans(github_repo, result, created_at)")
         .eq("project_id", req.params.id).order("created_at", { ascending: false });
 
     if (error) {
@@ -178,7 +188,14 @@ const getScansByProjectId = async (req, res) => {
     // Scores use today's rules, so past scores move when the formula changes
     res.json(data.map(scan => {
         const { score, grade } = buildFindings(scan);
-        return { id: scan.id, created_at: scan.created_at, score, grade };
+        return {
+            id: scan.id, created_at: scan.created_at, score, grade,
+            // Use saved scan targets, since a project's targets can be edited later.
+            domain: scan.domain_scans?.domain ?? null,
+            github_repo: scan.repo_scans?.github_repo ?? null,
+            domain_captured_at: scan.domain_scans?.created_at ?? null,
+            repo_captured_at: scan.repo_scans?.created_at ?? null,
+        };
     }));
 }
 

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { LuCheck, LuCodeXml, LuFolder, LuGlobe, LuPlus, LuX } from "react-icons/lu";
+import SmallLoader from "@/components/small-loader";
 
 // Input with an icon inside, styled like the scan form
 const Field = ({ icon: Icon, label, ...props }) => (
@@ -47,7 +48,7 @@ const ProjectModal = ({ editing, modalRef, form, updateField, onSubmit, error, l
                         <p className="text-sm text-muted">
                             {editing
                                 ? "Changes apply from your next scan."
-                                : "Add a domain, a GitHub repository, or both. We'll scan it straight away."}
+                                : "Creates a separate project and runs its first scan. To add a scan to an existing project, close this dialog and choose Re-scan on its card."}
                         </p>
                     </div>
                     <button type="button" aria-label="Close" onClick={() => modalRef.current.close()} className="p-2 rounded-lg text-muted hover:text-ink hover:bg-surface-soft">
@@ -82,7 +83,7 @@ const ProjectModal = ({ editing, modalRef, form, updateField, onSubmit, error, l
                 <div className="flex gap-3 pt-5 border-t border-line">
                     <button type="button" className="auth-outlineButton flex-1" onClick={() => modalRef.current.close()}>Cancel</button>
                     <button type="submit" className="auth-primaryButton flex-1" disabled={loading}>
-                        {loading ? "Saving..." : editing ? "Save Changes" : "Create & scan"}
+                        {loading ? <SmallLoader text="Saving..." size={16} /> : editing ? "Save Changes" : "Create & scan"}
                     </button>
                 </div>
             </form>
