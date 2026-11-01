@@ -263,6 +263,7 @@ const ProjectPage = _ => {
                                         <div className="min-w-0">
                                             <h3 className="font-semibold wrap-break-word">{invite.projects?.name}</h3>
                                             <span className="text-xs text-accent capitalize">Invited as {invite.role}</span>
+                                            <span className="block text-xs text-muted">Created by {invite.creatorName}</span>
                                         </div>
 
                                         <Targets domain={invite.projects?.domain} repo={invite.projects?.github_repo} />
@@ -320,8 +321,11 @@ const ProjectPage = _ => {
                                 <div className="grid gap-0.5 min-w-0 flex-1">
                                     <h3 className="font-semibold wrap-break-word">{p.name}</h3>
                                     <span className="text-xs text-muted">
-                                        <span className="capitalize">{p.created_by === user?.id ? "Owner" : p.role}</span>
+                                        <span className="capitalize font-bold">{p.created_by === user?.id ? "Owner" : p.role}</span>
                                         {p.latestScan && ` · Scanned ${shortDate(p.latestScan.created_at)}`}
+                                    </span>
+                                    <span className="text-xs text-muted">
+                                        {p.created_by !== user?.id && `Created by ${p.creatorName}`}
                                     </span>
                                 </div>
                                 <div className="flex gap-0.5 -mr-1.5 -mt-1">

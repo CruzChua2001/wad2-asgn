@@ -75,14 +75,19 @@ const inviteMember = async (req, res) => {
 }
 
 const getInviteByCurrUser = async (req, res) => {
-    const { data, error } = await supabase.from("project_invites").select("id, role, expires_at, projects(name, domain, github_repo)").eq("email", req.user.email.toLowerCase()).gt("expires_at", new Date().toISOString());
+    const { data, error } = await supabase.from("project_invites").select("id, role, expires_at, projects(name, domain, github_repo, created_by)").eq("email", req.user.email.toLowerCase()).gt("expires_at", new Date().toISOString());
 
     if (error) {
         console.error("Failed to load invites:", error);
         return res.status(500).json({ error: "Could not load invites. Please try again." });
     }
 
-    res.json(data);
+    const withCreator = await Promise.all(data.map(async invite => {
+        const { data: creator } = await supabase.auth.admin.getUserById(invite.projects?.created_by);
+        return { ...invite, creatorName: creator.user?.user_metadata?.full_name || creator.user?.email };
+    }));
+
+    res.json(withCreator);
 }
 
 const acceptInvite = async (req, res) => {

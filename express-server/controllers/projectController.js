@@ -32,6 +32,11 @@ const getProjects = async (req, res) => {
     const projects = data.map(m => ({ ...m.projects, role: m.role, latestScan: null, scores: [] }))
         .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
+    for (const project of projects) {
+        const { data: creator } = await supabase.auth.admin.getUserById(project.created_by);
+        project.creatorName = creator.user?.user_metadata?.full_name || creator.user?.email;
+    }
+
     if (projects.length === 0) {
         return res.json(projects);
     }
