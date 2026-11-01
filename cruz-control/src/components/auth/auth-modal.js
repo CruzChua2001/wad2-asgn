@@ -67,7 +67,6 @@ const AuthModal = ({ initialTab, onClose }) => {
   const [showLoginPw, setShowLoginPw] = useState(false);
   const [showSignupPw, setShowSignupPw] = useState(false);
   const [pending, setPending] = useState(null);
-  const [resetNotice, setResetNotice] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
   // Focus management, Escape to close, and background scroll lock while the modal is open.
@@ -196,18 +195,6 @@ const AuthModal = ({ initialTab, onClose }) => {
           {pending === "login" ? <SmallLoader text="Signing in…" size={16} /> : "Sign in"}
         </button>
 
-        {resetNotice && (
-          <p role="status" className="-mt-2 m-0 text-muted text-[12px]">
-            Password reset isn&apos;t available in this preview yet.
-          </p>
-        )}
-
-        <div className="flex justify-center">
-          <button type="button" className="p-0 text-muted bg-none text-[14px] cursor-pointer transition-colors duration-200 ease-[ease] underline hover:text-ink" onClick={() => setResetNotice(true)}>
-            Forgot password?
-          </button>
-        </div>
-
       </form>
     )
   }
@@ -238,7 +225,7 @@ const AuthModal = ({ initialTab, onClose }) => {
       <div className="fixed inset-0 bg-[color-mix(in_srgb,#0b1211 55%,transparent)] backdrop-blur-[6px] animate-auth-fade-in" aria-hidden="true" onClick={onClose} />
       <div
         ref={dialogRef}
-        className="relative w-full max-w-md m-auto animate-auth-dialog"
+        className="relative w-full max-w-lg m-auto animate-auth-dialog"
         role="dialog"
         aria-modal="true"
         aria-labelledby="auth-modal-title"
