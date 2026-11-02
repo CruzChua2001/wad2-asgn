@@ -5,6 +5,7 @@ export const CHECKLIST_SECTIONS = [
         items: [
             {
                 id: "gitignore-node-modules",
+                checkIds: ["ignore-rules"],
                 title: "node_modules is in .gitignore",
                 hint: "Stops you uploading thousands of files you did not write.",
                 categories: ["ignore-rules"],
@@ -12,6 +13,7 @@ export const CHECKLIST_SECTIONS = [
             },
             {
                 id: "gitignore-env",
+                checkIds: ["ignore-rules", "secrets-files"],
                 title: ".env is in .gitignore",
                 hint: "Your .env file holds secret keys. If it is committed, anyone who sees the repo can read them.",
                 categories: ["ignore-rules", "secrets"],
@@ -19,6 +21,7 @@ export const CHECKLIST_SECTIONS = [
             },
             {
                 id: "lockfile",
+                checkIds: ["basics-lockfile"],
                 title: "A lockfile (package-lock.json) is committed",
                 hint: "Makes sure your teammates install exactly the same versions you did.",
                 categories: ["repo-basics"],
@@ -47,6 +50,7 @@ export const CHECKLIST_SECTIONS = [
             },
             {
                 id: "libraries-safe",
+                checkIds: ["packages-vulns"],
                 title: "Libraries have no known security bugs",
                 hint: "Old libraries can have publicly known weaknesses. Updating them closes those holes.",
                 categories: ["packages"],
@@ -63,6 +67,7 @@ export const CHECKLIST_SECTIONS = [
         items: [
             {
                 id: "certificate",
+                checkIds: ["cert-validity"],
                 title: "The site has a valid HTTPS certificate",
                 hint: "The padlock in the address bar. It keeps what visitors send and receive private.",
                 categories: ["certificate"],
@@ -70,6 +75,7 @@ export const CHECKLIST_SECTIONS = [
             },
             {
                 id: "https-redirect",
+                checkIds: ["web-https-hsts"],
                 title: "Visitors who type http:// are sent to https://",
                 hint: "Without this, someone on public Wi-Fi could read or change pages that were sent unencrypted.",
                 categories: ["web-settings"],
@@ -77,6 +83,7 @@ export const CHECKLIST_SECTIONS = [
             },
             {
                 id: "csp",
+                checkIds: ["web-headers"],
                 title: "A Content-Security-Policy header is set",
                 hint: "A browser rule that limits which scripts can run on your pages, which helps stop injected code.",
                 categories: ["web-settings"],
@@ -84,6 +91,7 @@ export const CHECKLIST_SECTIONS = [
             },
             {
                 id: "email-records",
+                checkIds: ["email-spoofing"],
                 title: "Email records are configured (SPF, DKIM, DMARC)",
                 hint: "These make it much harder for someone to send fake emails pretending to be your domain.",
                 categories: ["email-dns"],
