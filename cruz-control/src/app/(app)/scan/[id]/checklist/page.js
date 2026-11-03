@@ -14,15 +14,18 @@ const evaluate = (item, result) => {
         if (!item.categories.includes(f.category)) return false;
         if (f.kind !== "issue" && !item.includeTips) return false;
         if (!item.match) return true;
-        const haystack = `${f.id} ${f.title}`.toLowerCase();
+        // Aggregated findings name affected files in details, not always titles.
+        const haystack = `${f.id} ${f.title} ${JSON.stringify(f.details ?? {})}`.toLowerCase();
         const byId = item.match.ids?.some(prefix => f.id.startsWith(prefix));
         const byText = item.match.text?.some(word => haystack.includes(word.toLowerCase()));
         return !!(byId || byText);
     });
     if (findings.length > 0) return { status: "fail", findings };
 
-    const checks = (result.checks || []).filter(c => item.categories.includes(c.category));
-    const ran = checks.some(c => c.status !== "unavailable" && c.status !== "not_checked");
+    // A sibling check in the same category is not evidence for this item.
+    const checks = result.checks || [];
+    const ran = item.checkIds?.length > 0 && item.checkIds.every(id =>
+        checks.some(check => check.id === id && check.status === "ok"));
     return { status: ran ? "pass" : "unknown", findings: [] };
 };
 
