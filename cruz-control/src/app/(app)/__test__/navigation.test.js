@@ -16,5 +16,7 @@ test("shared navigation offers Scan and Projects, without the scrapped Learn des
     render(<AppLayout>Project content</AppLayout>);
     const links = within(screen.getByRole("navigation", { name: "Primary navigation" })).getAllByRole("link");
     expect(links.map(link => [link.textContent, link.getAttribute("href")])).toEqual([["Scan", "/scan"], ["Projects", "/project"]]);
+    expect(links[1].getAttribute("aria-current")).toBe("page");
+    expect(links[0].getAttribute("aria-current")).toBeNull();
     expect(screen.queryByRole("link", { name: "Learn" })).toBeNull();
 });

@@ -10,6 +10,11 @@ import { useTheme } from "@/lib/theme-store";
 import { useScan } from "./scan-context";
 import styles from "@/styles/overview/overview.module.css";
 
+// These local overrides beat the shared module's unlayered font/size rules.
+const SCAN_BUTTON = `${styles.scanButton} min-h-12! max-w-full text-base! font-[family-name:var(--font-geist-sans)]! font-semibold! whitespace-normal! [--ripple-color:color-mix(in_srgb,var(--ink)_20%,transparent)] [&_.ripple-content]:whitespace-normal! [&_.ripple-content]:flex-wrap [&_.ripple-content]:justify-center disabled:opacity-100! disabled:bg-surface-soft! disabled:text-muted! disabled:border-line! disabled:border-dashed!`;
+const FIELD_LABEL = "font-[family-name:var(--font-geist-sans)]! text-sm! leading-normal! tracking-normal!";
+const MODE_BUTTON = "font-[family-name:var(--font-geist-sans)]! text-ink! leading-normal! focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
+const SECONDARY_BUTTON = `${styles.ghostButton} min-h-11! max-w-full text-base! font-[family-name:var(--font-geist-sans)]! text-ink! whitespace-normal!`;
 
 const ICONS = {
   arrow: LuArrowRight,
@@ -121,37 +126,38 @@ export default function OverviewPage() {
   return (
         <AnimatePresence mode="wait" initial={false}>
         {phase === "idle" && (
-        <motion.div key="idle" {...viewTransition}>
+        <motion.div key="idle" className="min-w-0" {...viewTransition}>
         <motion.div className={styles.intro} {...entrance}>
-          <h1>What would you <em>like to scan?</em></h1>
+          <h1 className="text-[clamp(2rem,5vw,3.625rem)]! leading-tight!">What would you <em>like to scan?</em></h1>
         </motion.div>
 
-        <motion.div className={styles.commandDeck} {...(reduceMotion ? {} : { initial: { opacity: 0, scale: 0.985 }, animate: { opacity: 1, scale: 1 }, transition: { duration: 0.5, delay: 0.1 } })}>
+        <motion.div className={`${styles.commandDeck} grid-cols-1! xl:grid-cols-[minmax(0,1.5fr)_minmax(18rem,1fr)]!`} {...(reduceMotion ? {} : { initial: { opacity: 0, scale: 0.985 }, animate: { opacity: 1, scale: 1 }, transition: { duration: 0.5, delay: 0.1 } })}>
           <div className={styles.deckMain}>
             <div className={styles.deckHeading}>
-              <span className={styles.deckLabel}>TARGET TYPE</span>
+              <span className={`${styles.deckLabel} ${FIELD_LABEL}`}>Target type</span>
               <h2>Start a new assessment</h2>
             </div>
 
-            <div className={styles.modeGrid} role="group" aria-label="Select target type" data-tour="target-type">
-              <button type="button" className={mode === "website" ? styles.modeActive : ""} aria-pressed={mode === "website"} onClick={() => changeMode("website")}>
+            <div className={`${styles.modeGrid} grid-cols-[repeat(auto-fit,minmax(min(100%,17rem),1fr))]!`} role="group" aria-label="Select target type" data-tour="target-type">
+              <button type="button" className={`${MODE_BUTTON} ${mode === "website" ? styles.modeActive : "bg-surface!"}`} aria-pressed={mode === "website"} onClick={() => changeMode("website")}>
                 <span className={styles.modeIcon}><Icon name="globe" /></span>
-                <span><strong>Live website</strong><small>Domain, DNS, certificates, and headers</small></span>
+                <span className="min-w-0"><strong className="text-base!">Live website</strong><small className="overflow-visible! text-clip! text-sm! leading-relaxed! wrap-anywhere">Domain, DNS, certificates, and headers</small></span>
                 <i className={styles.modeCheck}><Icon name="check" size={14} /></i>
               </button>
-              <button type="button" className={mode === "repository" ? styles.modeActive : ""} aria-pressed={mode === "repository"} onClick={() => changeMode("repository")}>
+              <button type="button" className={`${MODE_BUTTON} ${mode === "repository" ? styles.modeActive : "bg-surface!"}`} aria-pressed={mode === "repository"} onClick={() => changeMode("repository")}>
                 <span className={styles.modeIcon}><Icon name="code" /></span>
-                <span><strong>GitHub repository</strong><small>Packages, secret files, and project basics</small></span>
+                <span className="min-w-0"><strong className="text-base!">GitHub repository</strong><small className="overflow-visible! text-clip! text-sm! leading-relaxed! wrap-anywhere">Packages, secret files, and project basics</small></span>
                 <i className={styles.modeCheck}><Icon name="check" size={14} /></i>
               </button>
             </div>
 
             <form className={styles.scanForm} onSubmit={handleSubmit} noValidate>
-              <label htmlFor="scan-target">{mode === "website" ? "Website or domain" : "Public repository"}</label>
-              <div className={`${styles.inputShell} ${target && !targetStatus.valid ? styles.inputInvalid : ""}`}>
+              <label htmlFor="scan-target" className={FIELD_LABEL}>{mode === "website" ? "Website or domain" : "Public repository"}</label>
+              <div className={`${styles.inputShell} grid-cols-[auto_minmax(0,1fr)]! lg:grid-cols-[auto_minmax(0,1fr)_auto]! ${target && !targetStatus.valid ? styles.inputInvalid : ""}`}>
                 <span className={styles.inputIcon}><Icon name={mode === "website" ? "globe" : "code"} /></span>
                 <input
                   id="scan-target"
+                  className="h-12! text-base! font-[family-name:var(--font-geist-mono)]!"
                   type="text"
                   value={target}
                   onChange={(event) => setTarget(event.target.value)}
@@ -161,70 +167,72 @@ export default function OverviewPage() {
                   aria-describedby="target-help"
                   aria-invalid={Boolean(target && !targetStatus.valid)}
                 />
-                <RippleButton className={styles.scanButton} type="submit" disabled={!canSubmit} data-curious>
+                <RippleButton className={`${SCAN_BUTTON} col-span-full! w-full! lg:col-auto! lg:w-auto!`} type="submit" disabled={!canSubmit} data-curious>
                   Start scan <Icon name="arrow" size={17} />
                 </RippleButton>
               </div>
-              <div id="target-help" className={`${styles.formHint} ${targetStatus.valid ? styles.formHintValid : ""}`} aria-live="polite">
-                <span>{targetStatus.valid ? <Icon name="check" size={13} /> : <Icon name="spark" size={13} />}</span>
-                {targetStatus.message}
+              <div id="target-help" className={`${styles.formHint} items-start! text-sm! leading-relaxed! ${targetStatus.valid ? styles.formHintValid : ""}`} aria-live="polite">
+                <span className="mt-1 shrink-0">{targetStatus.valid ? <Icon name="check" size={13} /> : <Icon name="spark" size={13} />}</span>
+                <p className="min-w-0 wrap-anywhere">{targetStatus.message}</p>
               </div>
 
               {mode === "website" && (
                 <div className={styles.linkedRepository}>
-                  <label className={styles.checkLabel}>
-                    <input type="checkbox" checked={linkRepository} onChange={(event) => setLinkRepository(event.target.checked)} />
+                  <label className={`${styles.checkLabel} min-h-11 items-start! py-2 font-[family-name:var(--font-geist-sans)]! text-base! text-ink! leading-normal!`}>
+                    <input type="checkbox" aria-describedby="link-repository-help" checked={linkRepository} onChange={(event) => setLinkRepository(event.target.checked)} />
                     <span className={styles.fakeCheckbox}><Icon name="check" size={12} /></span>
-                    <span><Icon name="link" size={15} /> Link a public GitHub repository for more context</span>
+                    <span className="min-w-0"><Icon name="link" size={15} /> Link a public GitHub repository</span>
                   </label>
+                  <p id="link-repository-help" className="pl-[29px] text-sm leading-relaxed text-muted">Adds checks for packages, secret file names and project basics.</p>
                   {linkRepository && (
-                    <motion.div className={styles.linkedInput} initial={reduceMotion ? false : { opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}>
-                      <label htmlFor="linked-repository">GitHub repository</label>
-                      <input id="linked-repository" value={repository} onChange={(event) => setRepository(event.target.value)} placeholder="github.com/owner/repository" aria-invalid={Boolean(repository && !repositoryStatus.valid)} />
-                      <small>{repositoryStatus.message}</small>
+                    <motion.div className={`${styles.linkedInput} px-1`} initial={reduceMotion ? false : { opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}>
+                      <label htmlFor="linked-repository" className={FIELD_LABEL}>GitHub repository</label>
+                      <input id="linked-repository" className="h-12! text-base! font-[family-name:var(--font-geist-mono)]!" aria-describedby="linked-repository-status" value={repository} onChange={(event) => setRepository(event.target.value)} placeholder="github.com/owner/repository" aria-invalid={Boolean(repository && !repositoryStatus.valid)} />
+                      <small id="linked-repository-status" className="text-sm! leading-relaxed! wrap-anywhere">{repositoryStatus.message}</small>
                     </motion.div>
                   )}
                 </div>
               )}
 
               <div className="mt-3">
-                <label className={styles.checkLabel}>
-                  <input type="checkbox" checked={forceScan} onChange={event => setForceScan(event.target.checked)} />
+                <label className={`${styles.checkLabel} min-h-11 items-start! py-2 font-[family-name:var(--font-geist-sans)]! text-base! text-ink! leading-normal!`}>
+                  <input type="checkbox" aria-describedby="fresh-scan-help" checked={forceScan} onChange={event => setForceScan(event.target.checked)} />
                   <span className={styles.fakeCheckbox}><Icon name="check" size={12} /></span>
-                  <span>Run a fresh scan (ignore saved results from the last 12 hours)</span>
+                  <span className="min-w-0">Run a fresh scan</span>
                 </label>
+                <p id="fresh-scan-help" className="pl-[29px] text-sm leading-relaxed text-muted">Bypasses cached results from the last 12 hours and checks your targets again.</p>
               </div>
             </form>
 
             <div className={styles.samples}>
-              <span>TRY AN EXAMPLE</span>
-              {SAMPLE_TARGETS[mode].map((sample) => <button type="button" key={sample} onClick={() => fillSample(sample)}>{sample.replace("github.com/", "")}</button>)}
+              <span className={FIELD_LABEL}>Try an example</span>
+              {SAMPLE_TARGETS[mode].map((sample) => <button type="button" key={sample} aria-label={`Use example ${sample.replace("github.com/", "")}`} className="min-h-11 min-w-0 max-w-full cursor-pointer border-accent! bg-accent-soft/30! px-3! py-2! text-sm! font-[family-name:var(--font-geist-mono)]! text-ink! leading-normal! tracking-normal! wrap-anywhere focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" onClick={() => fillSample(sample)}>{sample.replace("github.com/", "")}</button>)}
             </div>
           </div>
 
-          <aside className={styles.deckAside} aria-label="Scan coverage preview">
-            <div className={styles.asideTopline}><span><Icon name="radar" size={16} /> SCAN SEQUENCE</span><strong>3 STEPS</strong></div>
-            <div className={styles.checkList}>
+          <aside className={`${styles.deckAside} min-w-0 border-l-0! border-t border-line xl:border-l! xl:border-t-0!`} aria-label="Scan coverage preview">
+            <div className={`${styles.asideTopline} flex-wrap font-[family-name:var(--font-geist-sans)]! text-sm! tracking-normal!`}><span><Icon name="radar" size={16} /> Scan sequence</span><strong className="text-sm!">3 steps</strong></div>
+            <div className={`${styles.checkList} grid! grid-cols-1! md:grid-cols-3! md:gap-4! xl:block!`}>
               {CHECKS[mode].map((item, index) => (
-                <motion.article key={item.title} initial={reduceMotion ? false : { opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.18 + index * 0.08 }}>
+                <motion.article className="grid! grid-cols-[1.75rem_minmax(0,1fr)]! md:block! xl:grid!" key={item.title} initial={reduceMotion ? false : { opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.18 + index * 0.08 }}>
                   <span>{item.step}</span>
-                  <div><h3>{item.title}</h3><p>{item.detail}</p></div>
+                  <div className="min-w-0"><h3 className="text-base!">{item.title}</h3><p className="text-sm! leading-relaxed! wrap-anywhere">{item.detail}</p></div>
                 </motion.article>
               ))}
             </div>
             <div className={styles.coverageNote}>
               <Icon name="shield" size={18} />
-              <div><strong>Non-destructive by design</strong><p>Public records and a few ordinary requests only. What we can see depends on the site or repo.</p></div>
+              <div className="min-w-0"><strong className="text-base!">Non-destructive by design</strong><p className="text-sm! leading-relaxed!">Public records and a few ordinary requests only. What we can see depends on the site or repo.</p></div>
             </div>
           </aside>
         </motion.div>
 
-        <motion.div className={styles.trustStrip} {...(reduceMotion ? {} : { initial: { opacity: 0 }, animate: { opacity: 1 }, transition: { delay: 0.35 } })}>
-          <span><Icon name="shield" size={15} /> PUBLIC DATA + READ-ONLY CHECKS</span>
+        <motion.div className={`${styles.trustStrip} font-[family-name:var(--font-geist-sans)]! text-sm! leading-relaxed! tracking-normal!`} {...(reduceMotion ? {} : { initial: { opacity: 0 }, animate: { opacity: 1 }, transition: { delay: 0.35 } })}>
+          <span><Icon name="shield" size={15} /> Public data + read-only checks</span>
           <i />
-          <span><Icon name="spark" size={15} /> CLEAR, GUIDED EXPLANATIONS</span>
+          <span><Icon name="spark" size={15} /> Clear, guided explanations</span>
           <i />
-          <span>NO SCAN STARTS WITHOUT YOUR ACTION</span>
+          <span>No scan starts without your action</span>
         </motion.div>
         </motion.div>
         )}
@@ -233,7 +241,7 @@ export default function OverviewPage() {
         {phase !== "idle" && scan && (
           <motion.div key="scanning" className={styles.scanning} {...viewTransition}>
             <div className={styles.scanningIntro}>
-              <h1>{phase === "scanning" ? "Scanning" : phase === "failed" ? "Couldn't scan" : "Scanned"} <em>{scan.domain ?? scan.githubRepo}</em></h1>
+              <h1 className="text-[clamp(1.75rem,4vw,2.875rem)]! leading-tight!">{phase === "scanning" ? "Scanning" : phase === "failed" ? "Couldn't scan" : "Scanned"} <em>{scan.domain ?? scan.githubRepo}</em></h1>
             </div>
 
             <div className="scan-robot-stage">
@@ -246,22 +254,22 @@ export default function OverviewPage() {
               />
             </div>
             <div className={styles.scanProgress}>
-              <div className={styles.progressMeta}><span>{phase === "failed" ? "Scan stopped" : "Checks in progress"}</span><strong>{progress}%</strong></div>
+              <div className={`${styles.progressMeta} gap-3 font-[family-name:var(--font-geist-sans)]! text-sm! tracking-normal! normal-case!`}><span>{phase === "failed" ? "Scan stopped" : "Checks in progress"}</span><strong>{progress}%</strong></div>
               <div className={styles.progressTrack} role="progressbar" aria-label="Scan progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>
                 <span style={{ width: `${progress}%` }} />
               </div>
             </div>
-            <div className={styles.scanActions}>
+            <div className={`${styles.scanActions} flex-wrap`}>
               {phase === "scanning" && (
-                <button type="button" className={styles.ghostButton} onClick={cancelScan}>Cancel scan</button>
+                <button type="button" className={SECONDARY_BUTTON} onClick={cancelScan}>Cancel scan</button>
               )}
               {phase === "failed" && (
-                <button type="button" className={styles.ghostButton} onClick={cancelScan}>+ New scan</button>
+                <button type="button" className={SECONDARY_BUTTON} onClick={cancelScan}>+ New scan</button>
               )}
               {phase === "results" && (
                 <>
-                  <button type="button" className={styles.ghostButton} onClick={cancelScan}>+ New scan</button>
-                  <RippleButton className={styles.scanButton} href={`/scan/${scan.id}`}>View results <Icon name="arrow" size={17} /></RippleButton>
+                  <button type="button" className={SECONDARY_BUTTON} onClick={cancelScan}>+ New scan</button>
+                  <RippleButton className={SCAN_BUTTON} href={`/scan/${scan.id}`}>View results <Icon name="arrow" size={17} /></RippleButton>
                 </>
               )}
             </div>
