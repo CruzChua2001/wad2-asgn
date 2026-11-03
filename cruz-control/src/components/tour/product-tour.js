@@ -245,7 +245,7 @@ export default function ProductTour({ part, onStart, onClose }) {
                             <button
                                 type="button"
                                 onClick={goBack}
-                                className="rounded-full cursor-pointer border border-line px-3 py-1.5 text-xs! font-semibold! tracking-wide text-accent hover:bg-accent-soft"
+                                className="rounded-full cursor-pointer border border-line px-3 py-1.5 text-xs! font-semibold! tracking-wide text-accent hover:bg-accent-soft hover:text-ink"
                             >
                                 BACK
                             </button>
@@ -254,7 +254,7 @@ export default function ProductTour({ part, onStart, onClose }) {
                             ref={nextRef}
                             type="button"
                             onClick={goNext}
-                            className="rounded-full cursor-pointer border border-accent bg-accent-soft px-3 py-1.5 text-xs! font-semibold! tracking-wide text-accent hover:bg-accent hover:text-page"
+                            className="rounded-full cursor-pointer border border-accent bg-accent-soft px-3 py-1.5 text-xs! font-semibold! tracking-wide text-ink hover:bg-accent hover:text-page"
                         >
                             {isLast ? (part === "intro" ? "GOT IT" : "DONE") : "NEXT"}
                         </button>

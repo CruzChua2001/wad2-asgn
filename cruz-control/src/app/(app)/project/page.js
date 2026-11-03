@@ -5,19 +5,17 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { LuCodeXml, LuGlobe, LuPencil, LuPlus, LuRefreshCw, LuSearch, LuTrash2, LuUserPlus } from "react-icons/lu";
-import { Swiper, SwiperSlide } from "swiper/react";
-import { EffectCoverflow, Keyboard, Mousewheel, FreeMode } from "swiper/modules";
-import "swiper/css";
-import "swiper/css/effect-coverflow";
-import "swiper/css/navigation";
+import { SwiperSlide } from "swiper/react";
 
 import api from "@/lib/api";
+import { loadProjectData } from "@/lib/load-projects";
 import { getProjectCache, setProjectCache } from "@/lib/project-cache";
 import { useAuth } from "@/components/auth/auth-provider";
 import LoginRequired from "@/components/auth/login-required";
 import GradeBadge from "@/components/grade-badge";
 import LoadingOverlay from "@/components/loading-overlay";
 import SmallLoader from "@/components/small-loader";
+import CardCarousel from "./card-carousel";
 import ProjectModal from "./project-modal";
 import MemberModal from "./member-modal";
 import DeleteModal from "./delete-modal";
@@ -47,25 +45,6 @@ const Targets = ({ domain, repo }) => (
         <dt className="flex items-center gap-1.5 text-muted"><LuCodeXml size={14} aria-hidden="true" /> Repository</dt>
         <dd className="font-mono truncate" title={repo}>{repo ?? <i className="text-muted">none</i>}</dd>
     </dl>
-);
-
-const CardCarousel = ({ children }) => (
-    <Swiper
-        modules={[EffectCoverflow, Keyboard, Mousewheel, FreeMode]}
-        effect="coverflow"
-        coverflowEffect={{ rotate: 15, depth: 80, slideShadows: false }}
-        spaceBetween={24}
-        slidesPerView="auto"
-        centeredSlides
-        grabCursor
-        keyboard={{ enabled: true }}
-        mousewheel={{ forceToAxis: true }}
-        freeMode={{ enabled: true, sticky: true }}
-        wrapperTag="ul"
-        className="w-full py-4!"
-    >
-        {children}
-    </Swiper>
 );
 
 const ProjectPage = _ => {
@@ -99,9 +78,9 @@ const ProjectPage = _ => {
         const getAllProjects = async _ => {
             try {
                 // Load both together so the cards animate in at the same time. A failed invite list still shows the projects
-                const [projectResponse, inviteResponse] = await Promise.all([api.get("/api/project"), api.get("/api/invite").catch(_ => ({ data: [] }))]);
-                setProjects(projectResponse.data);
-                setInvites(inviteResponse.data);
+                const data = await loadProjectData();
+                setProjects(data.projects);
+                setInvites(data.invites);
             } catch (e) {
                 setError(e.response?.data?.error ?? "Could not load projects.")
             } finally {
@@ -269,9 +248,9 @@ const ProjectPage = _ => {
                                 <p className="text-sm text-muted">Accept an invite to see that project here.</p>
                             </div>
 
-                            <CardCarousel>
+                            <CardCarousel label="Invitations">
                                 {invites.map(invite => (
-                                    <SwiperSlide key={invite.id} tag="li" className="w-105! h-auto! grid! gap-4 p-5 border border-dashed border-accent rounded-2xl bg-surface shadow-sm hover:shadow-md transition-[translate,box-shadow] duration-200 motion-safe:hover:-translate-y-1">
+                                    <SwiperSlide key={invite.id} tag="li" className="w-105! max-w-[calc(100%-3rem)] h-auto! grid! gap-4 p-5 border border-dashed border-accent rounded-2xl bg-surface shadow-sm hover:shadow-md transition-[translate,box-shadow] duration-200 motion-safe:hover:-translate-y-1">
                                         <div className="min-w-0">
                                             <h3 className="font-semibold wrap-break-word">{invite.projects?.name}</h3>
                                             <span className="text-xs text-accent capitalize">Invited as {invite.role}</span>
@@ -313,8 +292,8 @@ const ProjectPage = _ => {
                         className="w-full h-10 pl-9 pr-3 rounded-lg border border-line bg-surface text-sm text-ink placeholder:text-muted focus:border-accent focus:outline-none"
                     />
                 </label>
-                    <CardCarousel>
-                    <SwiperSlide tag="li" className="w-105! h-auto! font-semibold">
+                    <CardCarousel label="Projects" startOnSecond>
+                    <SwiperSlide tag="li" className="w-105! max-w-[calc(100%-3rem)] h-auto! font-semibold">
                             <button
                                 type="button"
                                 onClick={() => openModal(null)}
@@ -327,7 +306,7 @@ const ProjectPage = _ => {
                             </button>
                         </SwiperSlide>
                     {shownProjects.map((p, index) => (
-                        <SwiperSlide key={p.id} tag="li" className="w-105! h-auto! flex! flex-col gap-4 p-5 border border-line rounded-2xl bg-surface shadow-sm hover:border-accent-soft hover:shadow-md transition-[translate,border-color,box-shadow] duration-200 motion-safe:hover:-translate-y-1">
+                        <SwiperSlide key={p.id} tag="li" className="w-105! max-w-[calc(100%-3rem)] h-auto! flex! flex-col gap-4 p-5 border border-line rounded-2xl bg-surface shadow-sm hover:border-accent-soft hover:shadow-md transition-[translate,border-color,box-shadow] duration-200 motion-safe:hover:-translate-y-1">
                             <div className="flex items-start gap-3">
                                 <GradeBadge grade={p.latestScan?.grade ?? null} size="md" />
                                 <div className="grid gap-0.5 min-w-0 flex-1">

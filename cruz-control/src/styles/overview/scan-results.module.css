@@ -31,19 +31,28 @@
 .tabs {
   min-width: 0;
   max-width: 100%;
-  scroll-padding-inline: 4px;
-  display: flex;
-  gap: 2px;
   margin: 0 0 16px;
   padding: 4px;
-  overflow-x: auto;
   border: 1px solid var(--line);
   border-radius: 9px;
   background: color-mix(in srgb, var(--surface) 70%, transparent);
+}
+/* The tabs scroll sideways inside the bar when they don't fit. Positioned, so tabs can be measured from its edge */
+.tabScroller {
+  position: relative;
+  display: flex;
+  gap: 2px;
+  overflow-x: auto;
+  scroll-padding-inline: 4px;
   scrollbar-width: none;
 }
-.tabs::-webkit-scrollbar {
+.tabScroller::-webkit-scrollbar {
   display: none;
+}
+/* Fades the sides that have more tabs. The widths are set from result-tabs.js, and 0 means no fade */
+.tabScroller[data-fade] {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 var(--fade-start), #000 calc(100% - var(--fade-end)), transparent);
+  mask-image: linear-gradient(to right, transparent, #000 var(--fade-start), #000 calc(100% - var(--fade-end)), transparent);
 }
 .tabs a {
   position: relative;

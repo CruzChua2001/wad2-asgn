@@ -92,7 +92,7 @@ export default function OverviewLayout({ children }) {
                 aria-label="Take the tour"
                 title="Take the tour"
                 onClick={() => setTour(showingResults ? "results" : "intro")}
-                className="inline-flex items-center gap-1.5 rounded-full border border-line px-3 py-1.5 text-xs! font-semibold! text-accent hover:bg-accent-soft max-sm:px-2"
+                className="inline-flex items-center gap-1.5 rounded-full border border-line px-3 py-1.5 text-xs! font-semibold! text-accent hover:bg-accent-soft hover:text-ink max-sm:px-2"
               >
                 <LuCompass className="h-4 w-4 sm:hidden" aria-hidden="true" />
                 <span className="max-sm:hidden">Take the tour</span>
