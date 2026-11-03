@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { createClient } from "@/lib/client";
 import AuthModal from "./auth-modal";
+import { clearProjectCache } from "@/lib/project-cache";
 
 const AuthContext = createContext(null);
 
@@ -72,6 +73,7 @@ export const AuthProvider = ({ children }) => {
   const signOut = async _ => {
     const supabase = createClient();
     await supabase.auth.signOut();
+    clearProjectCache();
   }
 
   const signInWithProvider = async provider => {
