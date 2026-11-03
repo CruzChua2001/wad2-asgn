@@ -63,7 +63,7 @@ export default function Home() {
 
       <section className="hero grid grid-cols-1 items-center gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,.95fr)] lg:gap-6 xl:gap-28">
         <div className="hero-copy">
-          <p className="hero-kicker"><span /> FOR STUDENTS &amp; FIRST-TIME DEVELOPERS</p>
+          <p className="hero-kicker"><span /> For students &amp; first-time developers</p>
           <h1>
             <TextAnimate className="hero-headline-line" by="word" animation="blurInUp">
               See what’s exposed.
@@ -79,7 +79,7 @@ export default function Home() {
             <RippleButton className="button button-primary" href="/scan">Explore as guest <span aria-hidden="true">↗</span></RippleButton>
             <RippleButton className="button button-secondary" onClick={() => openAuth("signup")}>Create an account</RippleButton>
           </div>
-          <p className="hero-footnote"><span>PUBLIC DATA ONLY</span><i /> <span>NON-INTRUSIVE</span><i /> <span>BUILT FOR LEARNING</span></p>
+          <p className="hero-footnote"><span>Public data only</span><i /> <span>Non-intrusive</span><i /> <span>Built for learning</span></p>
         </div>
 
         <div className="hero-visual">
