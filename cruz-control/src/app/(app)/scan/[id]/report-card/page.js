@@ -91,7 +91,7 @@ function RowGrade({ row }) {
 
 function RowScore({ row }) {
   if (row.status !== "ok") {
-    return <span className="font-mono text-xs text-muted">{row.status === "unavailable" ? "Couldn't check" : "Not checked"}</span>;
+    return <span className="text-sm text-muted">{row.status === "unavailable" ? "Couldn't check" : "Not checked"}</span>;
   }
 
   const tone = scoreTone(row.score * 10);
@@ -205,23 +205,23 @@ export default function ReportCardTab() {
             </div>
 
             {result.cap?.applied && result.uncappedScore > result.score && (
-              <p className="m-0 mt-4 text-xs text-critical">
+              <p className="m-0 mt-4 text-sm text-critical">
                 Capped at 50 until the critical {result.cap.checkIds.length > 1 ? "problems are" : "problem is"} fixed. Without the cap, you&apos;d score {result.uncappedScore}.
               </p>
             )}
             {result.incomplete && (
-              <p className="m-0 mt-4 text-xs text-warm">
+              <p className="m-0 mt-4 text-sm text-warm">
                 A critical check couldn&apos;t run, so there&apos;s no grade yet. {canRescan ? "Re-scan to try again." : "A project admin can re-scan to try again."}
               </p>
             )}
           </div>
 
-          <div className="w-full max-w-[34rem] lg:justify-self-end">
+          <div className="w-full max-w-136 lg:justify-self-end">
             <ScoreTrend projectId={result.projectId} scanId={id} />
           </div>
         </div>
 
-        <div className={`${ROW_GRID} mt-8 border-b border-line pb-2 font-mono text-[10px] font-semibold tracking-wider text-muted uppercase max-md:hidden!`} aria-hidden="true">
+        <div className={`${ROW_GRID} mt-8 border-b border-line pb-2 text-xs font-semibold tracking-wide text-muted uppercase max-md:hidden!`} aria-hidden="true">
           <span>Check</span>
           <span>Points earned</span>
           <span>Points lost</span>
@@ -230,7 +230,7 @@ export default function ReportCardTab() {
 
         {sides.map((side) => (
           <div key={side.label} className="mt-4">
-            <h3 className="m-0 font-mono text-[10px] font-semibold tracking-wider text-muted uppercase">
+            <h3 className="m-0 text-xs font-semibold tracking-wide text-muted uppercase">
               {side.label}
             </h3>
             <motion.ul className="m-0 list-none p-0" {...listMotion}>
@@ -262,13 +262,13 @@ export default function ReportCardTab() {
           </div>
         )}
 
-        <p className="m-0 mt-4 text-[11px] leading-relaxed text-muted">{SCORE_RULE}</p>
+        <p className="m-0 mt-4 text-sm leading-relaxed text-muted">{SCORE_RULE}</p>
       </motion.section>
 
       <motion.section className={styles.card} aria-labelledby="fix-first-title" {...reveal(0.14)}>
         <div className={styles.cardHead}>
           <h2 id="fix-first-title">Fix these first</h2>
-          <Link href={`/scan/${id}`} className="text-xs font-semibold text-accent!">See all findings</Link>
+          <Link href={`/scan/${id}`} className="text-sm font-semibold text-accent!">See all findings</Link>
         </div>
         {topFixes.length === 0 ? (
           <p className="m-0 text-sm text-muted">Nothing to fix right now. Re-scan now and then to keep it that way.</p>
@@ -283,7 +283,7 @@ export default function ReportCardTab() {
                       {finding.title}
                     </Link>
                   </p>
-                  <p className="m-0 mt-1 flex flex-wrap gap-x-3 gap-y-1 font-mono text-[10px] font-semibold tracking-wider uppercase">
+                  <p className="m-0 mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs font-semibold tracking-wide uppercase">
                     <span className={RISK_TONES[finding.severity]}>{RISK_LABELS[finding.severity]}</span>
                     {showGain(finding, result.incomplete) && (
                       <span className="text-accent" title={gainLabel(finding)} aria-label={gainLabel(finding)}>
