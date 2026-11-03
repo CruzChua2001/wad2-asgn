@@ -126,7 +126,7 @@ function hasDetails(details) {
 // Technical data behind a finding, shaped by the finding type (see the data shapes table).
 function FindingDetails({ details }) {
   return (
-    <dl className="m-0 flex flex-col gap-2 text-xs text-muted">
+    <dl className="m-0 flex flex-col gap-2 text-sm text-muted">
       {details.cves && (
         <div className="flex flex-col gap-2">
           {details.cves.slice(0, MAX_SHOWN_CVES).map((cve, index) => (
@@ -298,7 +298,7 @@ function ScoreBreakdown({ breakdown, checks, reduceMotion, findingCounts, active
 
   return (
     <div className="w-full">
-      <p className="m-0 mb-1 px-1.5 font-mono text-[10px] tracking-[.08em] text-muted uppercase">Points lost by category</p>
+      <p className="m-0 mb-1 px-1.5 text-sm font-semibold tracking-wide text-muted uppercase">Points lost by category</p>
       <ul className="m-0 flex w-full list-none flex-col gap-0.5 p-0" aria-label="Score breakdown">
         {shown.map((item, index) => {
           // Bars fill one after another, worst first
@@ -335,7 +335,7 @@ function ScoreBreakdown({ breakdown, checks, reduceMotion, findingCounts, active
           // Spans, not divs, since this can sit inside a button
           const row = (
             <>
-              <span className="mb-1 flex justify-between gap-2.5 font-mono text-[10px] text-muted">
+              <span className="mb-1 flex justify-between gap-2.5 text-sm text-muted">
                 <span className={active ? "text-ink" : ""}>
                   {item.label}
                   {count > 0 && <span aria-hidden="true"> · {count} {count === 1 ? "finding" : "findings"}</span>}
@@ -384,7 +384,7 @@ function ScoreBreakdown({ breakdown, checks, reduceMotion, findingCounts, active
         })}
       </ul>
       {passedItems.length > 0 && (
-        <p className="m-0 mt-1.5 flex gap-2.5 px-1.5 font-mono text-[10px] font-semibold">
+        <p className="m-0 mt-1.5 flex gap-2.5 px-1.5 text-sm font-semibold">
           {!showPassed && (
             <span className="text-accent">
               <span aria-hidden="true">✓</span>{" "}
@@ -414,12 +414,12 @@ function countOf(count, word) {
 
 // The second part of a carousel tab summary. Phones only keep the first part
 function TabNote({ tone, children }) {
-  return <span className={`truncate text-xs font-semibold max-md:hidden ${tone}`}>{children}</span>;
+  return <span className={`truncate text-sm font-semibold max-md:hidden ${tone}`}>{children}</span>;
 }
 
 function CdnBadge() {
   return (
-    <span className="ml-1.5 rounded-sm border border-line px-1 text-[9px] font-medium text-muted align-middle">CDN</span>
+    <span className="ml-1.5 rounded-sm border border-line px-1 text-xs font-medium text-muted align-middle">CDN</span>
   );
 }
 
@@ -779,7 +779,7 @@ export default function OverviewTab() {
       {/* Phones get the same map and server list as bigger screens, just smaller */}
       {locatedNodes.length > 0 ? (
         <div id="map-stage" className={`${styles.globeStage} flex-none h-75 md:h-[clamp(340px,50vh,480px)]`} onPointerDown={handleStagePointer}>
-          <div role="group" aria-label="Map view" className="absolute top-3 left-3 z-[2] flex overflow-hidden rounded-md border border-line bg-surface-strong text-xs font-semibold">
+          <div role="group" aria-label="Map view" className="absolute top-3 left-3 z-[2] flex overflow-hidden rounded-md border border-line bg-surface-strong text-sm font-semibold">
             {Object.entries(MAP_VIEWS).map(([view, label]) => (
               <button
                 key={view}
@@ -841,7 +841,7 @@ export default function OverviewTab() {
       )}
 
       {result.arcs.length > 0 && (
-        <p className="m-0 px-4 py-2 text-center text-xs text-muted">
+        <p className="m-0 px-4 py-2 text-center text-sm text-muted">
           Lines connect your main site to your other servers. They don&apos;t show real traffic.
         </p>
       )}
@@ -891,7 +891,7 @@ export default function OverviewTab() {
           <div className={styles.inspectorText}>
             <p className={styles.nodeSummary}>{selectedNode.summary}</p>
             {nodeFindingCount > 0 && (
-              <p className="m-0 flex flex-wrap gap-x-2 text-xs text-muted">
+              <p className="m-0 flex flex-wrap gap-x-2 text-sm text-muted">
                 {nodeFindingCount} {nodeFindingCount === 1 ? "finding" : "findings"} on this server
                 {filterNodeId === selectedNode.id ? (
                   <span>
@@ -963,7 +963,7 @@ export default function OverviewTab() {
         {repoChecks.map((check) => (
           <li key={check.id} className={`flex justify-between gap-3 ${checkTone(check)}`}>
             <span><span aria-hidden="true">{checkMark(check)}</span> {check.label}</span>
-            <span className="flex-none font-mono text-xs">{checkValue(check)}</span>
+            <span className="flex-none font-mono text-sm">{checkValue(check)}</span>
           </li>
         ))}
       </ul>
@@ -1008,7 +1008,7 @@ export default function OverviewTab() {
             </motion.span>
           </div>
           {projection && (
-            <p className="m-0 font-mono text-[11px] text-muted">
+            <p className="m-0 text-sm text-muted">
               Grade {result.grade} <span aria-hidden="true">→</span><span className="sr-only">to</span>{" "}
               <span className="font-semibold text-ink">{projection.grade}</span>
             </p>
@@ -1027,7 +1027,7 @@ export default function OverviewTab() {
       </div>
 
       {projection && (
-        <div className="mt-4 rounded-lg border border-dashed border-accent/50 bg-accent/5 p-3 text-xs text-muted">
+        <div className="mt-4 rounded-lg border border-dashed border-accent/50 bg-accent/5 p-3 text-sm text-muted">
           <div className="flex items-center justify-between gap-3">
             <p className="m-0 text-sm font-semibold text-ink">Estimate if you fix {planText}</p>
             <button type="button" onClick={clearPlan} className="flex-none cursor-pointer font-semibold! text-accent hover:underline">
@@ -1045,7 +1045,7 @@ export default function OverviewTab() {
         </div>
       )}
       {!projection && plannableCount > 0 && (
-        <p className="m-0 mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
+        <p className="m-0 mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
           Want to see your score go up? Tick &quot;Plan to fix&quot; on findings.
           <button type="button" onClick={() => goToCard("findings", "findings-title")} className="cursor-pointer font-semibold! text-accent hover:underline">
             Go to findings
@@ -1057,7 +1057,7 @@ export default function OverviewTab() {
         <div className="mt-4 flex items-start gap-2.5 rounded-lg border border-critical/30 bg-critical/8 p-3 text-sm text-ink">
           <LuTriangleAlert aria-hidden="true" className="mt-0.5 flex-none text-critical" />
           <p className="m-0 flex-1">{result.summary}</p>
-          <button type="button" onClick={showSerious} className="flex-none cursor-pointer text-xs! font-semibold! text-critical hover:underline">
+          <button type="button" onClick={showSerious} className="flex-none cursor-pointer text-sm! font-semibold! text-critical hover:underline">
             Show {seriousFindings.length === 1 ? "it" : "them"}
           </button>
         </div>
@@ -1078,26 +1078,26 @@ export default function OverviewTab() {
         </div>
       )}
       {result.cap?.applied && result.uncappedScore > result.score && (
-        <p className="m-0 mt-3 text-xs text-critical">
+        <p className="m-0 mt-3 text-sm text-critical">
           Capped at 50 until the critical {result.cap.checkIds.length > 1 ? "problems are" : "problem is"} fixed. Without the cap, you&apos;d score {result.uncappedScore}.
         </p>
       )}
       {result.incomplete && (
-        <p className="m-0 mt-3 text-xs text-warm">
+        <p className="m-0 mt-3 text-sm text-warm">
           A critical check couldn&apos;t run, so there&apos;s no grade yet. {retryText}
         </p>
       )}
       {result.breakdown?.some((item) => item.status === "unavailable") && (
-        <p className="m-0 mt-3 text-xs text-muted">
+        <p className="m-0 mt-3 text-sm text-muted">
           &quot;Couldn&apos;t check&quot; means a free lookup service didn&apos;t answer. It isn&apos;t counted in your score. {retryText}
         </p>
       )}
       {result.breakdown?.some((item) => item.status === "not_checked") && (
-        <p className="m-0 mt-3 text-xs text-muted">
+        <p className="m-0 mt-3 text-sm text-muted">
           &quot;Not checked&quot; means the check doesn&apos;t apply here, or this scan is older than the check. {canRescan ? "Re-scan to run every check." : "A new scan runs every check."}
         </p>
       )}
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-line pt-3 text-xs text-muted">
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-line pt-3 text-sm text-muted">
         {result.checks?.length > 0 && (
           <span>
             Based on {ranChecks} {ranChecks === 1 ? "check" : "checks"}.
@@ -1109,13 +1109,13 @@ export default function OverviewTab() {
           aria-expanded={ruleOpen}
           aria-controls="score-rule"
           onClick={() => setRuleOpen(!ruleOpen)}
-          className="ml-auto inline-flex cursor-pointer items-center gap-1 text-xs! font-semibold! text-accent hover:underline"
+          className="ml-auto inline-flex cursor-pointer items-center gap-1 text-sm! font-semibold! text-accent hover:underline"
         >
           How is this scored?
           <LuChevronDown aria-hidden="true" className={`transition-transform ${ruleOpen ? "rotate-180" : ""}`} />
         </button>
       </div>
-      {ruleOpen && <p id="score-rule" className="m-0 mt-2 text-xs leading-relaxed text-muted">{SCORE_RULE}</p>}
+      {ruleOpen && <p id="score-rule" className="m-0 mt-2 text-sm leading-relaxed text-muted">{SCORE_RULE}</p>}
     </motion.section>
   );
 
@@ -1126,7 +1126,7 @@ export default function OverviewTab() {
         <h2 id="findings-title">Findings · worst first</h2>
         <span className="flex items-center gap-3">
           {shownFindings.length > 0 && (
-            <button type="button" onClick={toggleAllFindings} className="cursor-pointer text-xs! font-semibold! text-accent">
+            <button type="button" onClick={toggleAllFindings} className="cursor-pointer text-sm! font-semibold! text-accent">
               {allFindingsOpen ? "Collapse all" : "Expand all"}
             </button>
           )}
@@ -1134,7 +1134,7 @@ export default function OverviewTab() {
         </span>
       </div>
       {projection && (
-        <div className="sticky top-0 z-10 mb-3 rounded-lg border border-accent/40 bg-surface-strong px-3 py-2 text-xs text-muted shadow-sm">
+        <div className="sticky top-0 z-10 mb-3 rounded-lg border border-accent/40 bg-surface-strong px-3 py-2 text-sm text-muted shadow-sm">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
             <p className="m-0 flex-auto text-ink">
               <span className="font-semibold">Plan: {plannedCount} {plannedCount === 1 ? "fix" : "fixes"}</span>
@@ -1160,7 +1160,7 @@ export default function OverviewTab() {
         </div>
       )}
       {filterNode && (
-        <p className="m-0 mb-3 text-xs text-muted">
+        <p className="m-0 mb-3 text-sm text-muted">
           Showing findings for <span className="font-mono text-ink">{filterNode.host}</span> ·{" "}
           <button type="button" onClick={() => setFilterNodeId(null)} className="cursor-pointer font-semibold! text-accent">
             Show all
@@ -1168,7 +1168,7 @@ export default function OverviewTab() {
         </p>
       )}
       {!filterNode && filterCategory && (
-        <p className="m-0 mb-3 text-xs text-muted">
+        <p className="m-0 mb-3 text-sm text-muted">
           Showing findings for <span className="font-semibold text-ink">{filterLabel}</span> ·{" "}
           <button type="button" onClick={() => setFilterCategory(null)} className="cursor-pointer font-semibold! text-accent">
             Show all
@@ -1209,7 +1209,7 @@ export default function OverviewTab() {
             </button>
 
             {isPlannable(finding) && (
-              <label className="flex w-15 cursor-pointer flex-col items-center justify-center gap-1 rounded-[7px] border border-line px-1 text-center font-mono text-[9px] leading-tight font-semibold tracking-[.04em] text-muted uppercase transition-colors hover:border-accent hover:text-accent has-checked:border-accent has-checked:bg-accent-soft/40 has-checked:text-accent">
+              <label className="flex w-15 cursor-pointer flex-col items-center justify-center gap-1 rounded-[7px] border border-line px-1 text-center text-sm leading-tight font-semibold text-muted uppercase transition-colors hover:border-accent hover:text-accent has-checked:border-accent has-checked:bg-accent-soft/40 has-checked:text-accent">
                 <input
                   type="checkbox"
                   checked={plannedIds.has(finding.id)}
@@ -1229,13 +1229,13 @@ export default function OverviewTab() {
                     href={finding.learnMore.url}
                     target="_blank"
                     rel="noreferrer"
-                    className="mt-1 inline-block text-xs! text-accent underline"
+                    className="mt-1 inline-block text-sm! text-accent underline"
                   >
                     {finding.learnMore.label} <span aria-hidden="true">↗</span>
                   </a>
                 )}
                 {showGain(finding, result.incomplete) && (
-                  <span className="mt-1.5 block text-xs text-ink">
+                  <span className="mt-1.5 block text-sm text-ink">
                     {finding.sharedCheck ? (
                       <>Fixing this and the related findings raises your score by up to <span className="font-semibold">{finding.gain}</span> points.</>
                     ) : (
@@ -1248,7 +1248,7 @@ export default function OverviewTab() {
             )}
 
             {openFindingIds.has(finding.id) && finding.nodeId && (
-              <p className="col-span-full m-0 mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 px-3 text-xs font-semibold text-accent">
+              <p className="col-span-full m-0 mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 px-3 text-sm font-semibold text-accent">
                 {finding.hosts?.length > 1 && <span>Affects {finding.hosts.length} of your {result.nodes.length} servers</span>}
                 {result.domain && (
                   <button
@@ -1269,7 +1269,7 @@ export default function OverviewTab() {
                   aria-expanded={detailsOpenIds.has(finding.id)}
                   aria-controls={`finding-details-${finding.id}`}
                   onClick={() => toggleDetails(finding.id)}
-                  className="w-auto! cursor-pointer border-0! bg-transparent! p-0! text-xs! font-semibold! text-accent"
+                  className="w-auto! cursor-pointer border-0! bg-transparent! p-0! text-sm! font-semibold! text-accent"
                 >
                   Technical details {detailsOpenIds.has(finding.id) ? "▲" : "▼"}
                 </button>
@@ -1343,7 +1343,7 @@ export default function OverviewTab() {
   slides.push({ key: "findings", label: "Findings", Icon: LuListChecks, summary: findingsSummary, node: findingsCard });
 
   const layoutToggle = (
-    <div role="group" aria-label="Overview layout" className="flex overflow-hidden rounded-md border border-line bg-surface-strong text-xs font-semibold">
+    <div role="group" aria-label="Overview layout" className="flex overflow-hidden rounded-md border border-line bg-surface-strong text-sm font-semibold">
       {LAYOUTS.map(({ id, label, Icon }) => (
         <button
           key={id}
