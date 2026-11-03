@@ -5,12 +5,13 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "prebuild": "npm run test && npm run lint",
+    "prebuild": "npm run test && npm run lint && npm run depcheck",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "depcheck": "npm audit --audit-level=high && knip"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
@@ -19,7 +20,7 @@
     "d3-geo": "3.1.1",
     "ldrs": "^1.1.9",
     "motion": "^14.0.0",
-    "next": "16.3.8",
+    "next": "16.4.4",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "react-globe.gl": "2.38.0",
@@ -36,8 +37,9 @@
     "@vitejs/plugin-react": "^6.1.2",
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9",
-    "eslint-config-next": "16.3.8",
+    "eslint-config-next": "16.4.4",
     "jsdom": "^29.1.1",
+    "knip": "6.44.1",
     "tailwindcss": "^4",
     "vitest": "^5.0.5"
   }
