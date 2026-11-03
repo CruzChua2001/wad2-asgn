@@ -28,7 +28,7 @@ const ScanLink = ({children, href = "/scan", ...props}) => {
 
 const RadarField = _ => {
   return (
-    <div className={styles.radarField} aria-hidden="true">
+    <div className={`${styles.radarField} overflow-clip`} aria-hidden="true">
       <div className={styles.radarHalo} />
       <div className={`${styles.radarRing} ${styles.radarRingOuter}`} />
       <div className={`${styles.radarRing} ${styles.radarRingMiddle}`} />
@@ -52,7 +52,10 @@ export default function OverviewLayout({ children }) {
   const showingResults = pathname.startsWith("/scan/");
   const onOverview = /^\/scan\/[^/]+$/.test(pathname);
   const showTourButton = pathname === "/scan" || onOverview;
-  const navProps = href => pathname.startsWith(href) ? { className: styles.navActive, "aria-current": "page" } : {};
+  const navProps = href => ({
+    className: `inline-flex min-h-11 items-center justify-center px-3! py-2! text-base! font-medium text-ink! focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent hover:text-accent! ${pathname.startsWith(href) ? styles.navActive : ""}`,
+    "aria-current": pathname.startsWith(href) ? "page" : undefined,
+  });
   const [tour, setTour] = useState(null);
 
   useEffect(() => {
@@ -73,33 +76,38 @@ export default function OverviewLayout({ children }) {
   }, [askOpen, pathname]);
   return (
     <ScanProvider>
-      <main className={styles.page} data-theme={theme}>
+      <main className={`${styles.page} overflow-visible!`} data-theme={theme}>
         <RadarField />
 
-        <header className={styles.header}>
+        <header className={`${styles.header} flex! h-auto! min-h-20! w-[calc(100%-2rem)]! flex-wrap items-center gap-3 py-3 lg:flex-nowrap`}>
            <ScanLink className="brand" href={status === "guest" ? "/" : "/scan"} aria-label="Cruz Control home">
             <BrandMark />
             <span>CRUZCONTROL</span>
           </ScanLink>
-          <nav className={styles.primaryNav} aria-label="Primary navigation">
+          <nav className={`${styles.primaryNav} order-3 basis-full border-t border-line pt-2 lg:order-none lg:basis-auto lg:border-t-0 lg:pt-0`} aria-label="Primary navigation">
             <ScanLink {...navProps("/scan")}>Scan</ScanLink>
             <Link href="/project" {...navProps("/project")}>Projects</Link>
           </nav>
-          <div className={styles.headerActions} aria-label="Account and display controls">
+          <div className={`${styles.headerActions} ml-auto min-w-0 max-w-full flex-wrap justify-end gap-2! [&_button]:min-h-11!`} aria-label="Account and display controls">
             {showTourButton && (
               <button
                 type="button"
                 aria-label="Take the tour"
                 title="Take the tour"
                 onClick={() => setTour(showingResults ? "results" : "intro")}
-                className="inline-flex items-center gap-1.5 rounded-full border border-line px-3 py-1.5 text-xs! font-semibold! text-accent hover:bg-accent-soft hover:text-ink max-sm:px-2"
+                className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-full border border-line px-3 py-2 text-sm! font-semibold! text-accent hover:bg-accent-soft hover:text-ink max-sm:px-2"
               >
                 <LuCompass className="h-4 w-4 sm:hidden" aria-hidden="true" />
                 <span className="max-sm:hidden">Take the tour</span>
               </button>
             )}
-            <AnimatedThemeToggler theme={theme} onThemeChange={updateTheme} />
-            <ProfileMenu />
+            <div className="shrink-0 [&_.theme-toggle]:px-2 [&_.theme-toggle]:text-sm! [&_.theme-toggle]:text-ink!">
+              <AnimatedThemeToggler theme={theme} onThemeChange={updateTheme} />
+            </div>
+            {/* Anchor Jeffers' menu to its trigger when the header grows or wraps. */}
+            <div className="min-w-0 max-w-full [&_button]:text-base! [&_button[aria-haspopup=dialog]]:max-w-full [&_button[aria-haspopup=dialog]]:wrap-anywhere [&_[role=dialog]]:absolute! [&_[role=dialog]]:right-0! [&_[role=dialog]]:top-[calc(100%+0.5rem)]! [&_[role=dialog]]:max-h-[60dvh] [&_[role=dialog]]:overflow-y-auto!">
+              <ProfileMenu />
+            </div>
           </div>
         </header>
 
@@ -111,7 +119,7 @@ export default function OverviewLayout({ children }) {
 
         <button
           type="button"
-          className={`${styles.askCruz} ${hop ? "ask-cruz-glow" : ""}`}
+          className={`${styles.askCruz} min-h-11! font-[family-name:var(--font-geist-sans)]! text-sm! tracking-normal! ${hop ? "ask-cruz-glow" : ""}`}
           aria-label="Ask Cruz, AI assistant"
           aria-expanded={askOpen}
           onClick={() => { setHop(false); setAskOpen(open => !open); }}
@@ -119,7 +127,7 @@ export default function OverviewLayout({ children }) {
         >
           {/* eslint-disable-next-line @next/next/no-img-element -- tiny static icon, next/image adds nothing here */}
           <img src="/AIChat.png" alt="" className={styles.askCruzIcon} />
-          <span>ASK CRUZ</span>
+          <span>Ask Cruz</span>
         </button>
 
         <AskCruzPanel open={askOpen} onClose={() => setAskOpen(false)} />
