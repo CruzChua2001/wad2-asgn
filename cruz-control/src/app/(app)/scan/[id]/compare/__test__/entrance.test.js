@@ -1,10 +1,13 @@
-import { expect, test, vi } from "vitest";
+import { beforeEach, expect, test, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import ComparePage from "../page";
 
 const nav = vi.hoisted(() => ({ query: "first=new&against=old", replace: vi.fn() }));
 vi.mock("next/navigation", () => ({ useParams: () => ({ id: "new" }), useSearchParams: () => new URLSearchParams(nav.query), useRouter: () => ({ replace: nav.replace }) }));
 vi.mock("next/link", () => ({ default: ({ href, children, ...props }) => <a href={href} {...props}>{children}</a> }));
+// Exercise the page's entrance gate, not the shared loader/carousel animation clocks.
+vi.mock("motion/react", async original => ({ ...await original(), useReducedMotion: () => true }));
+vi.mock("@/components/loading-overlay", () => ({ default: ({ show }) => show ? <p role="status">Loading history...</p> : null }));
 vi.mock("@/components/auth/auth-provider", () => ({ useAuth: () => ({ status: "authenticated", user: { id: "u" } }) }));
 vi.mock("../../../scan-context", () => ({ useScan: () => ({ result: { projectId: "p", role: "viewer" } }) }));
 vi.mock("@/components/scan-entrance", () => ({ default: ({ as: Tag = "div", enabled = true, delay: _delay, children, ...props }) => <Tag data-entrance={String(enabled)} {...props}>{children}</Tag> }));
@@ -13,8 +16,13 @@ vi.mock("@/lib/api", () => {
     return { default: { get: vi.fn(url => Promise.resolve({ data: url.includes("/project/") ? scans : scans.find(scan => scan.id === url.split("/").at(-1)) })) } };
 });
 
-test("dropdown changes retain card controls and do not replay results entrance after loading", async () => {
+beforeEach(() => {
+    vi.clearAllMocks();
+    nav.query = "first=new&against=old";
     nav.replace.mockImplementation(url => { nav.query = url.split("?")[1]; });
+});
+
+test("dropdown changes retain card controls and do not replay results entrance after loading", async () => {
     const { rerender } = render(<ComparePage />);
     expect((await screen.findByRole("region", { name: "Comparison summary" })).dataset.entrance).toBe("true");
     const card = screen.getByRole("region", { name: "Scan A" });
@@ -26,6 +34,9 @@ test("dropdown changes retain card controls and do not replay results entrance a
     expect(screen.getByRole("combobox", { name: "Select scan A" })).toBe(select);
     expect(document.activeElement).toBe(select);
     expect((await screen.findByRole("region", { name: "Comparison summary" })).dataset.entrance).toBe("false");
+    expect(screen.getByRole("region", { name: "Scan A" })).toBe(card);
+    expect(screen.getByRole("combobox", { name: "Select scan A" })).toBe(select);
+    expect(document.activeElement).toBe(select);
     expect(screen.getByRole("region", { name: "Issues" }).dataset.entrance).toBe("false");
     expect(screen.getByRole("region", { name: "Good-practice recommendations" }).dataset.entrance).toBe("false");
 });
