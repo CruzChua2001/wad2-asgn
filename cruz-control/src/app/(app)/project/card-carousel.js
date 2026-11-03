@@ -85,7 +85,8 @@ const CardCarousel = ({ label, startOnSecond = false, children }) => {
                 mousewheel={{ forceToAxis: true }}
                 freeMode={{ enabled: true, sticky: true }}
                 wrapperTag="ul"
-                className="w-full py-4!"
+                touchEventsTarget="container"
+                className="w-full py-4! [&_.swiper-wrapper]:pointer-events-none [&_.swiper-slide]:pointer-events-auto"
                 onSwiper={setSwiper}
                 onSlidesUpdated={sync}
                 onSetTranslate={sync}
