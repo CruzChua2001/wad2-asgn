@@ -2,35 +2,35 @@
 @import "./robot.css";
 
 :root {
-  --page: #e9e1d3;
-  --surface: #f2ebe0;
-  --surface-strong: #fff8f0;
-  --surface-soft: #ede5d8;
-  --ink: #26312e;
+  --page: #faf9f5;
+  --surface: #ffffff;
+  --surface-strong: #ffffff;
+  --surface-soft: #f0f3ed;
+  --ink: #24352b;
   --muted: #5b6057;
-  --line: #d2c9b9;
-  --accent: #2a6e60;
-  --accent-bright: #367f6f;
-  --accent-soft: #a8c4b5;
-  --warm: #b8733f;
-  --critical: #c85560;
+  --line: #7b897f;
+  --accent: #205e4e;
+  --accent-bright: #286d59;
+  --accent-soft: #e4f0e9;
+  --warm: #885020;
+  --critical: #a52f43;
   --background: var(--page);
   --foreground: var(--ink);
 }
 
 [data-theme="dark"] {
-  --page: #17201f;
-  --surface: #202b28;
-  --surface-strong: #25312e;
-  --surface-soft: #1b2623;
-  --ink: #efe6d9;
-  --muted: #adb6ae;
-  --line: #394640;
-  --accent: #79c5ab;
-  --accent-bright: #91d8be;
-  --accent-soft: #34584d;
-  --warm: #d7a36b;
-  --critical: #ff6b7a;
+  --page: #15201b;
+  --surface: #1d2b24;
+  --surface-strong: #24362c;
+  --surface-soft: #18261f;
+  --ink: #f4f4e9;
+  --muted: #bfccc1;
+  --line: #819589;
+  --accent: #96e0bd;
+  --accent-bright: #acedd0;
+  --accent-soft: #263e32;
+  --warm: #efc98d;
+  --critical: #ff9bad;
   --background: var(--page);
   --foreground: var(--ink);
 }
@@ -222,7 +222,6 @@ button {
 .landing {
   position: relative;
   min-height: 100svh;
-  overflow: hidden;
   isolation: isolate;
   background: radial-gradient(
       ellipse at 76% 47%,
@@ -234,6 +233,7 @@ button {
   transition:
     background-color 0.28s ease,
     color 0.28s ease;
+  line-height: 1.5;
 }
 
 .interactive-signal-grid {
@@ -244,7 +244,7 @@ button {
   inset: 0;
   overflow: hidden;
   pointer-events: none;
-  opacity: 0.45;
+  opacity: 0.24;
 }
 
 .signal-grid-layer {
@@ -261,8 +261,8 @@ button {
 }
 
 .signal-grid-layer-highlight {
-  background-image: linear-gradient(to right, color-mix(in srgb, var(--accent) 32%, transparent) 1px, transparent 1px),
-    linear-gradient(to bottom, color-mix(in srgb, var(--accent) 32%, transparent) 1px, transparent 1px);
+  background-image: linear-gradient(to right, color-mix(in srgb, var(--accent) 20%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--accent) 20%, transparent) 1px, transparent 1px);
   mask-image: radial-gradient(circle 230px at var(--pointer-x) var(--pointer-y), #000, transparent);
   transition: mask-position 0.12s ease-out;
 }
@@ -273,7 +273,7 @@ button {
   display: block;
   background: radial-gradient(
     ellipse 250px 190px at var(--pointer-x) var(--pointer-y),
-    color-mix(in srgb, var(--accent-soft) 28%, transparent),
+    color-mix(in srgb, var(--accent-soft) 16%, transparent),
     transparent 100%
   );
 }
@@ -282,12 +282,15 @@ button {
   position: relative;
   z-index: 2;
   width: min(1280px, calc(100% - 72px));
-  height: 88px;
   margin: auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+  min-height: 88px;
+  padding: 16px 0;
+  flex-wrap: wrap;
+  gap: 12px 20px;
 }
 
 .brand {
@@ -374,6 +377,7 @@ img.brand-mark {
   position: relative;
   z-index: 1;
   max-width: 620px;
+  min-width: 0;
 }
 
 .hero-kicker {
@@ -383,9 +387,9 @@ img.brand-mark {
   margin: 0 0 24px;
   color: var(--accent);
   font:
-    500 12px var(--font-geist-mono),
-    monospace;
-  letter-spacing: 0.06em;
+    500 0.875rem/1.5 var(--font-geist-sans), Arial, sans-serif;
+  letter-spacing: 0.04em;
+  flex-wrap: wrap;
 }
 
 .hero-kicker span {
@@ -400,10 +404,10 @@ img.brand-mark {
   max-width: 600px;
   margin: 0;
   color: var(--ink);
-  font-size: clamp(46px, 5vw, 66px);
+  font-size: clamp(2rem, 4vw + 0.5rem, 4rem);
   font-weight: 550;
   letter-spacing: -0.035em;
-  line-height: 1.06;
+  line-height: 1.13;
 }
 
 .hero-headline-line {
@@ -423,9 +427,9 @@ img.brand-mark {
   max-width: 490px;
   margin: 23px 0 27px;
   color: var(--muted);
-  font-size: 15px;
+  font-size: 1rem;
   font-weight: 400;
-  line-height: 1.75;
+  line-height: 1.6;
 }
 
 .typing-animation {
@@ -452,6 +456,7 @@ img.brand-mark {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 .button {
@@ -460,16 +465,19 @@ img.brand-mark {
   align-items: center;
   justify-content: center;
   gap: 22px;
-  padding: 0 18px;
+  padding: 10px 18px;
   border: 1px solid transparent;
   border-radius: 3px;
   text-decoration: none;
-  font-size: 12px;
+  font-size: 1rem;
   font-weight: 600;
   transition:
     background 0.2s,
     border-color 0.2s,
     transform 0.2s;
+  max-width: 100%;
+  line-height: 1.5;
+  text-align: center;
 }
 
 .button:hover {
@@ -499,9 +507,10 @@ img.brand-mark {
 
 /* Navbar size of the hero buttons: same colours and hover, shorter and tighter. */
 .nav-action {
-  min-height: 36px;
+  min-height: 44px;
   gap: 8px;
   padding: 0 14px;
+  font-size: 0.875rem;
 }
 
 .nav-action:hover {
@@ -561,9 +570,8 @@ img.brand-mark {
   margin: 42px 0 0;
   color: var(--muted);
   font:
-    500 12px var(--font-geist-mono),
-    monospace;
-  letter-spacing: 0.06em;
+    500 0.75rem/1.5 var(--font-geist-sans), Arial, sans-serif;
+  letter-spacing: 0.04em;
 }
 
 .hero-footnote i {
@@ -578,6 +586,7 @@ img.brand-mark {
   z-index: 0;
   width: min(100%, 560px);
   justify-self: end;
+  min-width: 0;
 }
 
 .magic-terminal {
@@ -837,7 +846,6 @@ img.brand-mark {
   }
   .hero h1 {
     margin: 0 auto;
-    font-size: clamp(48px, 6.2vw, 66px);
   }
   .hero-description {
     margin: 23px auto 27px;
@@ -859,7 +867,7 @@ img.brand-mark {
 @media (max-width: 767px) {
   .site-header {
     width: calc(100% - 36px);
-    height: 72px;
+    min-height: 72px;
   }
   .main-nav {
     gap: 15px;
@@ -875,12 +883,8 @@ img.brand-mark {
   .hero-copy {
     max-width: 540px;
   }
-  .hero h1 {
-    font-size: clamp(42px, 8.5vw, 60px);
-  }
   .hero-description {
     max-width: 450px;
-    font-size: 14px;
   }
   .hero-footnote {
     margin-top: 32px;
@@ -921,12 +925,6 @@ img.brand-mark {
     width: calc(100% - 38px);
     padding-top: 42px;
   }
-  .hero-kicker {
-    letter-spacing: 0.04em;
-  }
-  .hero h1 {
-    font-size: clamp(38px, 10.2vw, 52px);
-  }
   .terminal-body {
     min-height: 280px;
     padding: 20px 15px 23px;
@@ -961,6 +959,23 @@ img.brand-mark {
   .hero-footnote i {
     display: none;
   }
+  .landing .site-header {
+    align-items: flex-start;
+  }
+  .landing .main-nav {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+  }
+  .landing .nav-action {
+    min-width: 0;
+    padding: 8px;
+  }
+  .landing .theme-toggle {
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
 }
 
 @media (max-width: 360px) {
@@ -978,16 +993,66 @@ img.brand-mark {
     gap: 4px;
   }
   .nav-action {
-    min-height: 32px;
     padding: 0 8px;
   }
   .theme-toggle {
-    font-size: 0 !important;
+    font-size: 0;
   }
   .theme-toggle-icon {
     width: 15px;
     height: 15px;
   }
+}
+
+.landing .main-nav {
+  max-width: 100%;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.landing .theme-toggle {
+  min-height: 44px;
+  padding: 8px;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.landing .theme-toggle-icon {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+}
+
+.scan-terminal .terminal-body {
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.scan-terminal .terminal-titlebar {
+  flex-wrap: wrap;
+  padding-block: 12px;
+}
+
+.scan-terminal .terminal-mode {
+  flex-wrap: wrap;
+}
+
+.scan-terminal .terminal-typing-row {
+  font-size: 0.875rem;
+}
+
+.scan-terminal .terminal-typed-text {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.scan-terminal .terminal-explanation {
+  font-family: var(--font-geist-sans), Arial, sans-serif;
+}
+
+.button-primary .ripple-wave {
+  --ripple-color: color-mix(in srgb, var(--ink) 20%, transparent);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1069,21 +1134,21 @@ img.brand-mark {
     box-shadow 0.2s ease;
 }
 
-/* Faded so a placeholder doesn't read as typed text. In light this is 3.4:1, below AA (4.5:1), which was
-   accepted on purpose: every field has a visible label, and full strength was too close to typed text */
+/* Keep placeholders distinct from typed text while retaining at least 4.5:1 with the light palette. */
 .auth-input::placeholder {
-  color: color-mix(in srgb, var(--muted) 80%, transparent);
+  color: color-mix(in srgb, var(--muted) 90%, transparent);
 }
 
-/* Dark can fade further and still pass AA (4.6:1) */
+/* The brighter dark muted token permits the existing 70% placeholder opacity with at least 4.5:1 contrast. */
 [data-theme="dark"] .auth-input::placeholder {
   color: color-mix(in srgb, var(--muted) 70%, transparent);
 }
 
 .auth-input:focus-visible {
   border-color: var(--accent);
-  outline: none;
+  outline: 2px solid var(--accent);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
+  outline-offset: 2px;
 }
 
 .auth-toggle {
@@ -1129,7 +1194,7 @@ img.brand-mark {
 }
 
 .auth-primaryButton:hover {
-  background: color-mix(in srgb, var(--accent) 90%, transparent);
+  background: var(--accent-bright);
 }
 
 .auth-outlineButton {
@@ -1144,8 +1209,11 @@ img.brand-mark {
 
 .auth-primaryButton:disabled,
 .auth-outlineButton:disabled {
-  opacity: 0.5;
+  opacity: 1;
   pointer-events: none;
+  color: var(--muted);
+  background: var(--surface-soft);
+  border: 1px dashed var(--line);
 }
 
 .auth-close:focus-visible,
