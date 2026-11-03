@@ -7,7 +7,7 @@
   --surface-strong: #fff8f0;
   --surface-soft: #ede5d8;
   --ink: #26312e;
-  --muted: #6f746b;
+  --muted: #5b6057;
   --line: #d2c9b9;
   --accent: #2a6e60;
   --accent-bright: #367f6f;
@@ -300,7 +300,7 @@ button {
   font:
     600 12px var(--font-geist-mono),
     monospace;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.08em;
   white-space: nowrap;
 }
 
@@ -383,9 +383,9 @@ img.brand-mark {
   margin: 0 0 24px;
   color: var(--accent);
   font:
-    10px var(--font-geist-mono),
+    500 12px var(--font-geist-mono),
     monospace;
-  letter-spacing: 0.13em;
+  letter-spacing: 0.06em;
 }
 
 .hero-kicker span {
@@ -483,6 +483,7 @@ img.brand-mark {
 
 .button-primary:hover {
   background: var(--accent-bright);
+  color: var(--surface-strong);
 }
 
 .button-secondary {
@@ -554,14 +555,15 @@ img.brand-mark {
 
 .hero-footnote {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 11px;
+  gap: 8px 12px;
   margin: 42px 0 0;
   color: var(--muted);
   font:
-    9px var(--font-geist-mono),
+    500 12px var(--font-geist-mono),
     monospace;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.06em;
 }
 
 .hero-footnote i {
@@ -633,8 +635,8 @@ img.brand-mark {
 .terminal-window-title,
 .terminal-window-status {
   color: #a8b6ad;
-  font-size: 8px;
-  letter-spacing: 0.11em;
+  font-size: 12px;
+  letter-spacing: 0.05em;
 }
 
 .terminal-window-title {
@@ -673,7 +675,7 @@ img.brand-mark {
   gap: 12px;
   margin-bottom: 18px;
   color: #8ebda5;
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .terminal-summary {
@@ -721,7 +723,7 @@ img.brand-mark {
   height: clamp(260px, 42vh, 360px);
   overflow-y: auto;
   padding: 18px 22px 20px;
-  font-size: 11.5px;
+  font-size: 12px;
   scrollbar-width: thin;
   scrollbar-color: #3c4d47 transparent;
 }
@@ -736,7 +738,7 @@ img.brand-mark {
 }
 
 .live-time {
-  color: #6f8279;
+  color: #8a9d93;
   font-variant-numeric: tabular-nums;
 }
 
@@ -752,7 +754,7 @@ img.brand-mark {
 .live-line-command {
   margin-bottom: 6px;
   color: #f1eee6;
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 500;
 }
 
@@ -761,7 +763,7 @@ img.brand-mark {
 }
 
 .live-line-info .live-mark {
-  color: #6f8279;
+  color: #8a9d93;
 }
 
 .live-line-ok {
@@ -862,9 +864,6 @@ img.brand-mark {
   .main-nav {
     gap: 15px;
   }
-  .theme-toggle {
-    font-size: 11px;
-  }
   .nav-action {
     padding: 9px;
   }
@@ -885,7 +884,6 @@ img.brand-mark {
   }
   .hero-footnote {
     margin-top: 32px;
-    font-size: 8px;
   }
   .hero-visual {
     width: min(100%, 600px);
@@ -894,15 +892,13 @@ img.brand-mark {
   .terminal-body {
     min-height: 300px;
     padding: 23px 21px 26px;
-    font-size: 11px;
   }
 }
 
 @media (max-width: 575px) {
   .brand {
-    font-size: 10px;
     gap: 8px;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.06em;
   }
   .brand-mark {
     width: 20px;
@@ -910,9 +906,6 @@ img.brand-mark {
   }
   .main-nav {
     gap: 9px;
-  }
-  .theme-toggle {
-    font-size: 10px;
   }
   .nav-action {
     padding: 8px 7px;
@@ -929,8 +922,7 @@ img.brand-mark {
     padding-top: 42px;
   }
   .hero-kicker {
-    font-size: 8px;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.04em;
   }
   .hero h1 {
     font-size: clamp(38px, 10.2vw, 52px);
@@ -938,22 +930,16 @@ img.brand-mark {
   .terminal-body {
     min-height: 280px;
     padding: 20px 15px 23px;
-    font-size: 10px;
   }
   .terminal-titlebar {
     padding: 0 11px;
     gap: 8px;
-  }
-  .terminal-window-title,
-  .terminal-window-status {
-    font-size: 7px;
   }
   .terminal-typing-row {
     font-size: 12px;
   }
   .live-terminal-body {
     padding: 15px 14px 17px;
-    font-size: 10.5px;
   }
   .live-line {
     grid-template-columns: 14px minmax(0, 1fr);
@@ -970,9 +956,10 @@ img.brand-mark {
     width: min(320px, 100%);
   }
   .hero-footnote {
-    gap: 7px;
-    font-size: 7px;
-    letter-spacing: 0.05em;
+    gap: 6px 16px;
+  }
+  .hero-footnote i {
+    display: none;
   }
 }
 
@@ -982,7 +969,6 @@ img.brand-mark {
   }
   .brand {
     gap: 6px;
-    font-size: 8px;
   }
   .brand-mark {
     width: 17px;
@@ -993,8 +979,7 @@ img.brand-mark {
   }
   .nav-action {
     min-height: 32px;
-    padding: 0 6px;
-    font-size: 9px;
+    padding: 0 8px;
   }
   .theme-toggle {
     font-size: 0 !important;
@@ -1084,7 +1069,14 @@ img.brand-mark {
     box-shadow 0.2s ease;
 }
 
+/* Faded so a placeholder doesn't read as typed text. In light this is 3.4:1, below AA (4.5:1), which was
+   accepted on purpose: every field has a visible label, and full strength was too close to typed text */
 .auth-input::placeholder {
+  color: color-mix(in srgb, var(--muted) 80%, transparent);
+}
+
+/* Dark can fade further and still pass AA (4.6:1) */
+[data-theme="dark"] .auth-input::placeholder {
   color: color-mix(in srgb, var(--muted) 70%, transparent);
 }
 
