@@ -12,6 +12,7 @@ import "swiper/css/effect-coverflow";
 import "swiper/css/navigation";
 
 import api from "@/lib/api";
+import { getProjectCache, setProjectCache } from "@/lib/project-cache";
 import { useAuth } from "@/components/auth/auth-provider";
 import LoginRequired from "@/components/auth/login-required";
 import GradeBadge from "@/components/grade-badge";
@@ -69,6 +70,8 @@ const CardCarousel = ({ children }) => (
 
 const ProjectPage = _ => {
     const { status, user } = useAuth();
+    const saved = getProjectCache();
+    const cache = saved !== null && user && saved.userId === user.id ? saved : null;
     const router = useRouter();
     const { startScan, phase, scan } = useScan();
     const reduceMotion = useReducedMotion();
@@ -76,7 +79,7 @@ const ProjectPage = _ => {
     const memberRef = useRef(null);
     const deleteRef = useRef(null);
     const submitRef = useRef(false);
-    const [projects, setProjects] = useState([]);
+    const [projects, setProjects] = useState(cache ? cache.projects : []);
     const [error, setError] = useState("");
     const [formError, setFormError] = useState("");
     const [form, setForm] = useState({ name: "", domain: "", githubRepo: "" });
@@ -84,10 +87,10 @@ const ProjectPage = _ => {
     const [editingId, setEditingId] = useState(null);
     const [memberProject, setMemberProject] = useState(null);
     const [deletingProject, setDeletingProject] = useState(null);
-    const [invites, setInvites] = useState([]);
+    const [invites, setInvites] = useState(cache ? cache.invites : []);
     const [busyInviteId, setBusyInviteId] = useState(null);
     const [busyAction, setBusyAction] = useState(null);
-    const [loaded, setLoaded] = useState(false);
+    const [loaded, setLoaded] = useState(cache !== null);
     const [search, setSearch] = useState("");
 
     useEffect(() => {
@@ -108,6 +111,15 @@ const ProjectPage = _ => {
 
         getAllProjects();
     }, [status])
+
+    useEffect(() => {
+        if (!loaded || !user) return;
+        setProjectCache({
+          userId: user.id,
+          projects: projects,
+          invites: invites
+      });
+    }, [loaded, user, projects, invites]);
 
     if (status === "loading") return null;
 

@@ -2,6 +2,7 @@ import { useImperativeHandle } from "react";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, expect, test, vi } from "vitest";
 import api from "@/lib/api";
+import { clearProjectCache } from "@/lib/project-cache";
 import { useScan } from "../../scan/scan-context";
 import ProjectPage from "../page";
 
@@ -22,6 +23,7 @@ vi.mock("motion/react", async original => ({ ...await original(), useReducedMoti
 const project = id => ({ id, name: "General", domain: "example.com", github_repo: null, role: "admin", latestScan: { id: `scan-${id}`, score: 80, grade: "B", created_at: "2026-10-30" }, scores: [] });
 beforeEach(() => {
     vi.resetAllMocks();
+    clearProjectCache();
     useScan.mockReturnValue({ startScan: vi.fn(), phase: "idle" });
     api.get.mockImplementation(url => Promise.resolve({ data: url === "/api/project" ? [project("p1")] : [] }));
 });
