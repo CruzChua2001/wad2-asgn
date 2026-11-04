@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import AnimatedThemeToggler from "@/components/animated-theme-toggler";
+import RippleButton from "@/components/ripple-button";
 import { useTheme } from "@/lib/theme-store";
 import { useAuth } from "@/components/auth/auth-provider";
 import ProfileMenu from "./scan/profile-menu";
@@ -53,7 +54,7 @@ export default function OverviewLayout({ children }) {
   const onOverview = /^\/scan\/[^/]+$/.test(pathname);
   const showTourButton = pathname === "/scan" || onOverview;
   const navProps = href => ({
-    className: `inline-flex min-h-11 items-center justify-center px-3! py-2! text-base! font-medium text-ink! focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent hover:text-accent! ${pathname.startsWith(href) ? styles.navActive : ""}`,
+    className: `inline-flex min-h-11 items-center justify-center px-3! py-2! text-sm! leading-normal! font-semibold! text-ink! focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent hover:text-accent! ${pathname.startsWith(href) ? styles.navActive : ""}`,
     "aria-current": pathname.startsWith(href) ? "page" : undefined,
   });
   const [tour, setTour] = useState(null);
@@ -79,34 +80,33 @@ export default function OverviewLayout({ children }) {
       <main className={`${styles.page} overflow-visible!`} data-theme={theme}>
         <RadarField />
 
-        <header className={`${styles.header} flex! h-auto! min-h-20! w-[calc(100%-2rem)]! flex-wrap items-center gap-3 py-3 lg:flex-nowrap`}>
+        <header className={`${styles.header} flex! h-auto! min-h-22! flex-wrap items-center gap-3 py-4 md:flex-nowrap`}>
            <ScanLink className="brand" href={status === "guest" ? "/" : "/scan"} aria-label="Cruz Control home">
             <BrandMark />
             <span>CRUZCONTROL</span>
           </ScanLink>
-          <nav className={`${styles.primaryNav} order-3 basis-full border-t border-line pt-2 lg:order-none lg:basis-auto lg:border-t-0 lg:pt-0`} aria-label="Primary navigation">
+          <nav className={`${styles.primaryNav} order-3 basis-full border-t border-line pt-2 md:order-none md:basis-auto md:border-t-0 md:pt-0`} aria-label="Primary navigation">
             <ScanLink {...navProps("/scan")}>Scan</ScanLink>
             <Link href="/project" {...navProps("/project")}>Projects</Link>
           </nav>
-          <div className={`${styles.headerActions} ml-auto min-w-0 max-w-full flex-wrap justify-end gap-2! [&_button]:min-h-11!`} aria-label="Account and display controls">
+          <div className={`${styles.headerActions} relative ml-auto min-w-0 max-w-full flex-wrap justify-end gap-2! [&_button]:min-h-11! ${status === "loading" ? "invisible" : ""}`} aria-label="Account and display controls">
             {showTourButton && (
-              <button
-                type="button"
+              <RippleButton
                 aria-label="Take the tour"
                 title="Take the tour"
                 onClick={() => setTour(showingResults ? "results" : "intro")}
-                className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-full border border-line px-3 py-2 text-sm! font-semibold! text-accent hover:bg-accent-soft hover:text-ink max-sm:px-2"
+                className="button button-secondary nav-action min-w-11"
               >
                 <LuCompass className="h-4 w-4 sm:hidden" aria-hidden="true" />
                 <span className="max-sm:hidden">Take the tour</span>
-              </button>
+              </RippleButton>
             )}
-            <div className="shrink-0 [&_.theme-toggle]:px-2 [&_.theme-toggle]:text-sm! [&_.theme-toggle]:text-ink!">
-              <AnimatedThemeToggler theme={theme} onThemeChange={updateTheme} />
-            </div>
-            {/* Anchor Jeffers' menu to its trigger when the header grows or wraps. */}
-            <div className="min-w-0 max-w-full [&_button]:text-base! [&_button[aria-haspopup=dialog]]:max-w-full [&_button[aria-haspopup=dialog]]:wrap-anywhere [&_[role=dialog]]:absolute! [&_[role=dialog]]:right-0! [&_[role=dialog]]:top-[calc(100%+0.5rem)]! [&_[role=dialog]]:max-h-[60dvh] [&_[role=dialog]]:overflow-y-auto!">
+            {/* Open Jeffers' menu under the right edge of these buttons, so it stays on screen. */}
+            <div className="min-w-0 max-w-full [&>div]:static! [&_button[aria-haspopup=dialog]]:max-w-full [&_button[aria-haspopup=dialog]]:wrap-anywhere [&_[role=dialog]]:absolute! [&_[role=dialog]]:right-0! [&_[role=dialog]]:top-[calc(100%+0.5rem)]! [&_[role=dialog]]:max-h-[60dvh] [&_[role=dialog]]:overflow-y-auto!">
               <ProfileMenu />
+            </div>
+            <div className="shrink-0">
+              <AnimatedThemeToggler theme={theme} onThemeChange={updateTheme} />
             </div>
           </div>
         </header>
@@ -122,12 +122,13 @@ export default function OverviewLayout({ children }) {
           className={`${styles.askCruz} min-h-11! font-[family-name:var(--font-geist-sans)]! text-sm! tracking-normal! ${hop ? "ask-cruz-glow" : ""}`}
           aria-label="Ask Cruz, AI assistant"
           aria-expanded={askOpen}
+          aria-controls="ask-cruz-panel"
           onClick={() => { setHop(false); setAskOpen(open => !open); }}
           onAnimationEnd={() => setHop(false)}
         >
           {/* eslint-disable-next-line @next/next/no-img-element -- tiny static icon, next/image adds nothing here */}
           <img src="/AIChat.png" alt="" className={styles.askCruzIcon} />
-          <span>Ask Cruz</span>
+          <span className="max-sm:hidden">Ask Cruz</span>
         </button>
 
         <AskCruzPanel open={askOpen} onClose={() => setAskOpen(false)} />

@@ -153,7 +153,7 @@ export default function OverviewPage() {
 
             <form className={styles.scanForm} onSubmit={handleSubmit} noValidate>
               <label htmlFor="scan-target" className={FIELD_LABEL}>{mode === "website" ? "Website or domain" : "Public repository"}</label>
-              <div className={`${styles.inputShell} grid-cols-[auto_minmax(0,1fr)]! lg:grid-cols-[auto_minmax(0,1fr)_auto]! ${target && !targetStatus.valid ? styles.inputInvalid : ""}`}>
+              <div data-tour="scan-input" className={`${styles.inputShell} grid-cols-[auto_minmax(0,1fr)]! lg:grid-cols-[auto_minmax(0,1fr)_auto]! ${target && !targetStatus.valid ? styles.inputInvalid : ""}`}>
                 <span className={styles.inputIcon}><Icon name={mode === "website" ? "globe" : "code"} /></span>
                 <input
                   id="scan-target"
@@ -206,7 +206,7 @@ export default function OverviewPage() {
 
             <div className={styles.samples}>
               <span className={FIELD_LABEL}>Try an example</span>
-              {SAMPLE_TARGETS[mode].map((sample) => <button type="button" key={sample} aria-label={`Use example ${sample.replace("github.com/", "")}`} className="min-h-11 min-w-0 max-w-full cursor-pointer border-accent! bg-accent-soft/30! px-3! py-2! text-sm! font-[family-name:var(--font-geist-mono)]! text-ink! leading-normal! tracking-normal! wrap-anywhere focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" onClick={() => fillSample(sample)}>{sample.replace("github.com/", "")}</button>)}
+              {SAMPLE_TARGETS[mode].map((sample) => <button type="button" key={sample} aria-label={`Use example ${sample.replace("github.com/", "")}`} className="min-h-11 min-w-0 max-w-full cursor-pointer border-accent! bg-accent-soft/30! px-3! py-2! text-sm! font-[family-name:var(--font-geist-mono)]! text-ink! leading-normal! tracking-normal! focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" onClick={() => fillSample(sample)}>{sample.replace("github.com/", "")}</button>)}
             </div>
           </div>
 

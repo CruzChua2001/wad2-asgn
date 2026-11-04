@@ -41,8 +41,8 @@
 
 .triggerName {
   min-width: 26px;
-  font-size: 12px;
-  font-weight: 650;
+  font-size: 0.875rem;
+  font-weight: 600;
   text-align: left;
 }
 
@@ -118,15 +118,14 @@
 .signOut:hover { color: var(--ink); background: color-mix(in srgb, var(--warm) 8%, transparent); }
 .signOut:hover svg { color: var(--warm); }
 .signOut svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
-.loginLink { padding: 0; border: 0; color: var(--muted); background: none; font-size: 12px; cursor: pointer; transition: color .2s ease; }
-.loginLink:hover { color: var(--accent); }
 
 @keyframes profileMenuIn {
   from { opacity: 0; transform: translateY(-5px) scale(.985); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-@media (max-width: 767px) {
+/* Avatar only below 992px, so the header fits on one row */
+@media (max-width: 991px) {
   .trigger { gap: 5px; padding-right: 6px; }
   .triggerName { display: none; }
 }
