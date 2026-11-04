@@ -412,7 +412,8 @@ function countOf(count, word) {
   return `${count} ${count === 1 ? word : `${word}s`}`;
 }
 
-// The second part of a carousel tab summary. Phones only keep the first part
+// The second part of a carousel tab summary. It drops to a second line when the tab is narrow,
+// and phones only keep the first part
 function TabNote({ tone, children }) {
   return <span className={`truncate text-sm font-semibold max-md:hidden ${tone}`}>{children}</span>;
 }
@@ -763,13 +764,13 @@ export default function OverviewTab() {
               aria-pressed={statusFilter === status}
               disabled={!statusCounts[status]}
               onClick={() => changeStatusFilter(status)}
-              className="inline-flex min-h-6 cursor-pointer items-center gap-1.5 rounded-full border border-transparent px-2 py-0.5 transition-colors hover:bg-accent-soft/30 hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent aria-pressed:border-line aria-pressed:bg-accent-soft/50 aria-pressed:text-ink disabled:cursor-default disabled:opacity-45 disabled:hover:bg-transparent disabled:hover:text-muted"
+              className="inline-flex min-h-6 cursor-pointer items-center gap-1.5 rounded-full border border-transparent px-2 py-0.5 max-md:min-h-11 max-md:gap-1 max-md:px-1.5 transition-colors hover:bg-accent-soft/30 hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent aria-pressed:border-line aria-pressed:bg-accent-soft/50 aria-pressed:text-ink disabled:cursor-default disabled:opacity-45 disabled:hover:bg-transparent disabled:hover:text-muted"
             >
               <i aria-hidden="true" />{label} {statusCounts[status] || 0}
             </button>
           ))}
           {statusFilter && (
-            <button type="button" onClick={() => changeStatusFilter(null)} className="ml-1 min-h-6 cursor-pointer font-semibold! text-accent hover:underline">
+            <button type="button" onClick={() => changeStatusFilter(null)} className="ml-1 min-h-6 cursor-pointer font-semibold! text-accent hover:underline max-md:min-h-11">
               Show all
             </button>
           )}
@@ -786,7 +787,7 @@ export default function OverviewTab() {
                 type="button"
                 aria-pressed={mapView === view}
                 onClick={() => changeMapView(view)}
-                className={`cursor-pointer px-3 py-1.5 focus-visible:-outline-offset-2! ${mapView === view ? "bg-accent-soft text-ink" : "text-muted"}`}
+                className={`cursor-pointer px-3 py-1.5 focus-visible:-outline-offset-2! max-md:min-h-11 ${mapView === view ? "bg-accent-soft text-ink" : "text-muted"}`}
               >
                 {label}
               </button>
@@ -891,17 +892,17 @@ export default function OverviewTab() {
           <div className={styles.inspectorText}>
             <p className={styles.nodeSummary}>{selectedNode.summary}</p>
             {nodeFindingCount > 0 && (
-              <p className="m-0 flex flex-wrap gap-x-2 text-sm text-muted">
+              <p className="m-0 flex flex-wrap items-center gap-x-2 text-sm text-muted">
                 {nodeFindingCount} {nodeFindingCount === 1 ? "finding" : "findings"} on this server
                 {filterNodeId === selectedNode.id ? (
                   <span>
                     Showing only these ·{" "}
-                    <button type="button" onClick={() => setFilterNodeId(null)} className="cursor-pointer font-semibold! text-accent">
+                    <button type="button" onClick={() => setFilterNodeId(null)} className="cursor-pointer font-semibold! text-accent max-md:min-h-11">
                       Show all
                     </button>
                   </span>
                 ) : (
-                  <button type="button" onClick={() => showNodeFindings(selectedNode.id)} className="cursor-pointer font-semibold! text-accent">
+                  <button type="button" onClick={() => showNodeFindings(selectedNode.id)} className="cursor-pointer font-semibold! text-accent max-md:min-h-11">
                     Show only these
                   </button>
                 )}
@@ -1047,7 +1048,7 @@ export default function OverviewTab() {
       {!projection && plannableCount > 0 && (
         <p className="m-0 mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
           Want to see your score go up? Tick &quot;Plan to fix&quot; on findings.
-          <button type="button" onClick={() => goToCard("findings", "findings-title")} className="cursor-pointer font-semibold! text-accent hover:underline">
+          <button type="button" onClick={() => goToCard("findings", "findings-title")} className="cursor-pointer font-semibold! text-accent hover:underline max-md:min-h-11">
             Go to findings
           </button>
         </p>
@@ -1109,7 +1110,7 @@ export default function OverviewTab() {
           aria-expanded={ruleOpen}
           aria-controls="score-rule"
           onClick={() => setRuleOpen(!ruleOpen)}
-          className="ml-auto inline-flex cursor-pointer items-center gap-1 text-sm! font-semibold! text-accent hover:underline"
+          className="ml-auto inline-flex cursor-pointer items-center gap-1 text-sm! font-semibold! text-accent hover:underline max-md:min-h-11"
         >
           How is this scored?
           <LuChevronDown aria-hidden="true" className={`transition-transform ${ruleOpen ? "rotate-180" : ""}`} />
@@ -1122,11 +1123,12 @@ export default function OverviewTab() {
   // While planning the card lets the plan bar stick to the top of the page
   const findingsCard = (
     <motion.section className={`${styles.card} ${styles.findingsCard} ${projection ? "overflow-visible!" : ""}`} aria-labelledby="findings-title" {...reveal(0.27)}>
-      <div className={styles.cardHead}>
+      {/* On narrow phones the buttons drop under the title */}
+      <div className={`${styles.cardHead} flex-wrap`}>
         <h2 id="findings-title">Findings · worst first</h2>
-        <span className="flex items-center gap-3">
+        <span className="ml-auto flex items-center gap-3">
           {shownFindings.length > 0 && (
-            <button type="button" onClick={toggleAllFindings} className="cursor-pointer text-sm! font-semibold! text-accent">
+            <button type="button" onClick={toggleAllFindings} className="cursor-pointer text-sm! font-semibold! whitespace-nowrap text-accent max-md:min-h-11">
               {allFindingsOpen ? "Collapse all" : "Expand all"}
             </button>
           )}
@@ -1162,7 +1164,7 @@ export default function OverviewTab() {
       {filterNode && (
         <p className="m-0 mb-3 text-sm text-muted">
           Showing findings for <span className="font-mono text-ink">{filterNode.host}</span> ·{" "}
-          <button type="button" onClick={() => setFilterNodeId(null)} className="cursor-pointer font-semibold! text-accent">
+          <button type="button" onClick={() => setFilterNodeId(null)} className="cursor-pointer font-semibold! text-accent max-md:min-h-11">
             Show all
           </button>
         </p>
@@ -1170,7 +1172,7 @@ export default function OverviewTab() {
       {!filterNode && filterCategory && (
         <p className="m-0 mb-3 text-sm text-muted">
           Showing findings for <span className="font-semibold text-ink">{filterLabel}</span> ·{" "}
-          <button type="button" onClick={() => setFilterCategory(null)} className="cursor-pointer font-semibold! text-accent">
+          <button type="button" onClick={() => setFilterCategory(null)} className="cursor-pointer font-semibold! text-accent max-md:min-h-11">
             Show all
           </button>
         </p>
@@ -1209,7 +1211,7 @@ export default function OverviewTab() {
             </button>
 
             {isPlannable(finding) && (
-              <label className="flex w-15 cursor-pointer flex-col items-center justify-center gap-1 rounded-[7px] border border-line px-1 text-center text-sm leading-tight font-semibold text-muted uppercase transition-colors hover:border-accent hover:text-accent has-checked:border-accent has-checked:bg-accent-soft/40 has-checked:text-accent">
+              <label className="flex w-16 cursor-pointer flex-col items-center justify-center gap-1 rounded-[7px] border border-line px-1 text-center text-xs leading-tight font-semibold tracking-wide text-muted uppercase transition-colors hover:border-accent hover:text-accent has-checked:border-accent has-checked:bg-accent-soft/40 has-checked:text-accent">
                 <input
                   type="checkbox"
                   checked={plannedIds.has(finding.id)}
@@ -1217,7 +1219,7 @@ export default function OverviewTab() {
                   aria-label={`Plan to fix: ${finding.title}`}
                   className="size-3.5 cursor-pointer accent-accent"
                 />
-                Plan to fix
+                <span>Plan <span className="whitespace-nowrap">to fix</span></span>
               </label>
             )}
 
@@ -1254,7 +1256,7 @@ export default function OverviewTab() {
                   <button
                     type="button"
                     onClick={() => seeOnMap(finding)}
-                    className="inline-flex! w-auto! cursor-pointer items-center gap-1 border-0! bg-transparent! p-0! text-accent! hover:underline"
+                    className="inline-flex! w-auto! cursor-pointer items-center gap-1 border-0! bg-transparent! p-0! text-accent! hover:underline max-md:min-h-11"
                   >
                     <LuMapPin aria-hidden="true" /> See on map
                   </button>
@@ -1269,7 +1271,7 @@ export default function OverviewTab() {
                   aria-expanded={detailsOpenIds.has(finding.id)}
                   aria-controls={`finding-details-${finding.id}`}
                   onClick={() => toggleDetails(finding.id)}
-                  className="w-auto! cursor-pointer border-0! bg-transparent! p-0! text-sm! font-semibold! text-accent"
+                  className="w-auto! cursor-pointer border-0! bg-transparent! p-0! text-sm! font-semibold! text-accent max-md:min-h-11"
                 >
                   Technical details {detailsOpenIds.has(finding.id) ? "▲" : "▼"}
                 </button>
@@ -1350,7 +1352,7 @@ export default function OverviewTab() {
           type="button"
           aria-pressed={layout === id}
           onClick={() => changeLayout(id)}
-          className={`inline-flex cursor-pointer items-center gap-1.5 px-3 py-1.5 focus-visible:-outline-offset-2! ${layout === id ? "bg-accent-soft text-ink" : "text-muted hover:text-ink"}`}
+          className={`inline-flex cursor-pointer items-center gap-1.5 px-3 py-1.5 focus-visible:-outline-offset-2! max-md:min-h-11 ${layout === id ? "bg-accent-soft text-ink" : "text-muted hover:text-ink"}`}
         >
           <Icon aria-hidden="true" />
           {label}

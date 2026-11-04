@@ -51,7 +51,7 @@ const ProgressRing = ({ done, total }) => {
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <span className="text-2xl font-bold text-ink">{percent}</span>
-                <span className="text-[10px] text-muted">%</span>
+                <span className="text-[11px] text-muted">%</span>
             </div>
         </div>
     );
@@ -103,12 +103,12 @@ const ChecklistRow = ({ item, status, findings, ticked, onToggle, fixGuideHref }
                     <div className="flex flex-wrap items-center gap-2">
                         <span className={`font-semibold text-ink ${done ? "line-through" : ""}`}>{item.title}</span>
                         {isAuto && (status === "pass" || status === "fail") && (
-                            <span className="rounded border border-line px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-accent">
+                            <span className="rounded border border-line px-1.5 py-0.5 text-[11px] font-semibold tracking-wide text-accent">
                                 AUTO
                             </span>
                         )}
                         {status === "unknown" && (
-                            <span className="rounded border border-line px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-muted">
+                            <span className="rounded border border-line px-1.5 py-0.5 text-[11px] font-semibold tracking-wide text-muted">
                                 NOT SCANNED
                             </span>
                         )}

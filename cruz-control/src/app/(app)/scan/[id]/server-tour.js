@@ -80,7 +80,7 @@ export default function ServerTour({ nodes, findings, mainHost = null, onSelect,
         ref={buttonRef}
         type="button"
         onClick={start}
-        className="absolute top-3 right-3 z-[2] inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-line bg-surface-strong px-3 py-1.5 text-xs! font-semibold! text-ink hover:text-accent"
+        className="absolute top-3 right-3 z-[2] inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-line bg-surface-strong px-3 py-1.5 text-xs! font-semibold! text-ink hover:text-accent max-md:min-h-11"
       >
         <LuPlay aria-hidden="true" /> Tour my servers
       </button>
@@ -100,8 +100,8 @@ export default function ServerTour({ nodes, findings, mainHost = null, onSelect,
     >
       <div aria-live="polite">
         <div className="flex items-center justify-between gap-2">
-          <span className="font-mono text-[10px] tracking-[.08em] text-muted uppercase">{step + 1} of {order.length}</span>
-          <span className={`rounded-full border border-current px-2 py-0.5 font-mono text-[9px] font-semibold uppercase ${STATUS_TONES[node.status]}`}>
+          <span className="font-mono text-[11px] tracking-[.08em] text-muted uppercase">{step + 1} of {order.length}</span>
+          <span className={`rounded-full border border-current px-2 py-0.5 font-mono text-[11px] font-semibold uppercase ${STATUS_TONES[node.status]}`}>
             {STATUS_LABELS[node.status]}
           </span>
         </div>

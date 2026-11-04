@@ -353,7 +353,7 @@ export default function ServerMap({ nodes, arcs, selectedId, highlightIds = [], 
               <>
                 <strong>
                   {tip.node.host}
-                  {tip.node.isCdn && <span className="ml-1 rounded-sm border border-line px-1 text-[9px] font-medium text-muted">CDN</span>}
+                  {tip.node.isCdn && <span className="ml-1 rounded-sm border border-line px-1 text-[11px] font-medium text-muted">CDN</span>}
                 </strong>
                 <span>{tip.node.city}, {tip.node.country} · {STATUS_LABELS[tip.node.status]}</span>
               </>
@@ -366,11 +366,12 @@ export default function ServerMap({ nodes, arcs, selectedId, highlightIds = [], 
           </div>
         )}
       </div>
-      <div className="globe-zoom" role="group" aria-label="Map zoom">
-        <button type="button" onClick={() => zoom(1.5)} aria-label="Zoom in" title="Zoom in">
+      {/* At the top, so the floating Ask Cruz button can't cover it */}
+      <div className="globe-zoom bottom-auto! top-3!" role="group" aria-label="Map zoom">
+        <button type="button" onClick={() => zoom(1.5)} aria-label="Zoom in" title="Zoom in" className="max-md:size-11!">
           <LuPlus aria-hidden="true" />
         </button>
-        <button type="button" onClick={() => zoom(1 / 1.5)} aria-label="Zoom out" title="Zoom out">
+        <button type="button" onClick={() => zoom(1 / 1.5)} aria-label="Zoom out" title="Zoom out" className="max-md:size-11!">
           <LuMinus aria-hidden="true" />
         </button>
       </div>
