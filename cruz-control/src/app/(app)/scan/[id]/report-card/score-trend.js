@@ -62,10 +62,10 @@ function scoreChange(scans, scanId) {
 
 function ChangeNote({ change }) {
   if (change === null) return null;
-  if (change === 0) return <span className="text-xs text-muted">Same as the last scan</span>;
+  if (change === 0) return <span className="text-sm text-muted">Same as the last scan</span>;
 
   return (
-    <span className={`text-xs font-semibold ${change > 0 ? "text-accent" : "text-critical"}`}>
+    <span className={`text-sm font-semibold ${change > 0 ? "text-accent" : "text-critical"}`}>
       {change > 0 ? `Up ${change}` : `Down ${-change}`} since the last scan
     </span>
   );
@@ -76,7 +76,7 @@ function Panel({ title, change = null, children }) {
   return (
     <div className="rounded-lg border border-line bg-surface p-4">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <h3 className="m-0 font-mono text-[10px] font-semibold tracking-wider text-muted uppercase">{title}</h3>
+        <h3 className="m-0 text-xs font-semibold tracking-wide text-muted uppercase">{title}</h3>
         <ChangeNote change={change} />
       </div>
       {children}
@@ -117,7 +117,7 @@ export default function ScoreTrend({ projectId, scanId }) {
             Saved. <Link href="/project" className="font-semibold text-accent! hover:underline">View it in Projects</Link>
           </p>
         ) : (
-          <div className="mt-3 text-xs font-semibold">
+          <div className="mt-3 text-sm font-semibold">
             <button
               type="button"
               onClick={() => saveToProject(scanId)}
@@ -217,7 +217,7 @@ export default function ScoreTrend({ projectId, scanId }) {
             <motion.span
               key={p.id}
               aria-hidden="true"
-              className={`absolute -translate-x-1/2 -translate-y-full pb-2.5 font-mono text-[11px] leading-none ${p.id === scanId ? "font-bold" : ""} ${dotTone(p.score)}`}
+              className={`absolute -translate-x-1/2 -translate-y-full pb-2.5 font-mono text-xs leading-none ${p.id === scanId ? "font-bold" : ""} ${dotTone(p.score)}`}
               style={{ left: leftOf(p.x), top: topOf(p.y) }}
               initial={from({ opacity: 0 })}
               animate={{ opacity: 1 }}
@@ -226,7 +226,7 @@ export default function ScoreTrend({ projectId, scanId }) {
               {p.score}
             </motion.span>
           ))}
-          <span aria-hidden="true" className="absolute -translate-y-1/2 pl-1.5 font-mono text-[10px] leading-none text-muted" style={{ left: leftOf(WIDTH - PAD.right), top: topOf(yFor(50)) }}>
+          <span aria-hidden="true" className="absolute -translate-y-1/2 pl-1.5 font-mono text-xs leading-none text-muted" style={{ left: leftOf(WIDTH - PAD.right), top: topOf(yFor(50)) }}>
             50
           </span>
 
@@ -235,7 +235,7 @@ export default function ScoreTrend({ projectId, scanId }) {
             <motion.span
               key={tip.id}
               aria-hidden="true"
-              className={`pointer-events-none absolute z-10 -mt-2.5 -translate-y-full rounded-md border border-line bg-surface-strong px-2 py-1 text-xs whitespace-nowrap text-ink shadow-lg ${tipAlign(tip.x)}`}
+              className={`pointer-events-none absolute z-10 -mt-2.5 -translate-y-full rounded-md border border-line bg-surface-strong px-2 py-1 text-sm whitespace-nowrap text-ink shadow-lg ${tipAlign(tip.x)}`}
               style={{ left: leftOf(tip.x), top: topOf(tip.y) }}
               initial={from({ opacity: 0 })}
               animate={{ opacity: 1 }}
@@ -258,7 +258,7 @@ export default function ScoreTrend({ projectId, scanId }) {
               onMouseLeave={() => setActive(null)}
               onFocus={() => setActive(i)}
               onBlur={() => setActive(null)}
-              className={`font-mono text-[10px] no-underline hover:text-accent! ${p.id === scanId ? "font-semibold text-accent!" : "text-muted!"}`}
+              className={`text-xs no-underline hover:text-accent! ${p.id === scanId ? "font-semibold text-accent!" : "text-muted!"}`}
             >
               #{offset + i + 1}
             </Link>
@@ -266,7 +266,7 @@ export default function ScoreTrend({ projectId, scanId }) {
         ))}
       </ol>
 
-      <p className="m-0 mt-1 text-[11px] text-muted">{scanDate(shown[0].created_at)} to {scanDate(last.created_at)}</p>
+      <p className="m-0 mt-1 text-sm text-muted">{scanDate(shown[0].created_at)} to {scanDate(last.created_at)}</p>
     </Panel>
   );
 }

@@ -29,8 +29,8 @@
   place-items: center;
   color: var(--page);
   background: var(--accent);
-  font: 650 10px var(--font-geist-mono), monospace;
-  letter-spacing: .03em;
+  font: 650 12px var(--font-geist-mono), monospace;
+  letter-spacing: 0;
 }
 
 .avatar {
@@ -41,7 +41,7 @@
 
 .triggerName {
   min-width: 26px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 650;
   text-align: left;
 }
@@ -88,7 +88,7 @@
   width: 42px;
   height: 42px;
   border-radius: 5px;
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .identity strong,
@@ -98,8 +98,8 @@
   display: block;
 }
 
-.identity strong { margin-bottom: 3px; font-size: 12px; }
-.identity div > span { overflow: hidden; color: var(--muted); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.identity strong { margin-bottom: 3px; font-size: 14px; }
+.identity div > span { overflow: hidden; color: var(--muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 
 .section { padding: 13px 15px 14px; border-bottom: 1px solid var(--line); }
 .sectionHeading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; color: var(--muted); font: 650 8px var(--font-geist-mono), monospace; letter-spacing: .1em; text-transform: uppercase; }
@@ -114,8 +114,9 @@
 .website { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 10px; }
 .website > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .website small { flex: 0 0 auto; padding: 3px 6px; border: 1px solid var(--line); color: var(--muted); background: var(--surface); font: 600 8px var(--font-geist-mono), monospace; text-transform: uppercase; }
-.signOut { width: 100%; min-height: 45px; display: flex; align-items: center; gap: 9px; padding: 0 15px; border: 0; color: var(--muted); background: transparent; cursor: pointer; font-size: 10px; text-align: left; transition: color .2s ease, background-color .2s ease; }
-.signOut:hover { color: var(--warm); background: color-mix(in srgb, var(--warm) 8%, transparent); }
+.signOut { width: 100%; min-height: 45px; display: flex; align-items: center; gap: 9px; padding: 0 15px; border: 0; color: var(--muted); background: transparent; cursor: pointer; font-size: 13px; text-align: left; transition: color .2s ease, background-color .2s ease; }
+.signOut:hover { color: var(--ink); background: color-mix(in srgb, var(--warm) 8%, transparent); }
+.signOut:hover svg { color: var(--warm); }
 .signOut svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
 .loginLink { padding: 0; border: 0; color: var(--muted); background: none; font-size: 12px; cursor: pointer; transition: color .2s ease; }
 .loginLink:hover { color: var(--accent); }
