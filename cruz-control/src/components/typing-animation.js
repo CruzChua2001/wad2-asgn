@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useReducedMotion } from "motion/react";
 
-export default function TypingAnimation({ children, className = "", typeSpeed = 10 }) {
+export default function TypingAnimation({ children, className = "", typeSpeed = 10, keepSpace = false }) {
   const [visibleCharacters, setVisibleCharacters] = useState(0);
   const prefersReducedMotion = useReducedMotion();
 
@@ -27,13 +27,16 @@ export default function TypingAnimation({ children, className = "", typeSpeed = 
   }, [children, prefersReducedMotion, typeSpeed]);
 
   const displayedText = prefersReducedMotion ? children : children.slice(0, visibleCharacters);
+  const cursor = !prefersReducedMotion && <span className="typing-cursor" />;
 
   return (
-    <p className={`typing-animation ${className}`.trim()}>
+    <p className={`typing-animation ${keepSpace ? "typing-keep-space" : ""} ${className}`.trim()}>
       <span className="sr-only">{children}</span>
+      {/* Invisible full text, so the box has its final size before typing ends */}
+      {keepSpace && <span className="typing-ghost" aria-hidden="true">{children}{cursor}</span>}
       <span aria-hidden="true">
         {displayedText}
-        {!prefersReducedMotion && <span className="typing-cursor" />}
+        {cursor}
       </span>
     </p>
   );
