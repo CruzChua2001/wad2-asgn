@@ -29,7 +29,7 @@ const STATUS_RANK = { healthy: 0, attention: 1, critical: 2 };
 const DIM_ALPHA = 0.18;
 
 // The tooltip is raw HTML inside the canvas overlay, so the CDN tag uses the theme tokens directly
-const CDN_TAG_STYLE = "margin-left:4px;padding:0 3px;border:1px solid var(--line);border-radius:3px;color:var(--muted);font-size:9px;font-weight:500";
+const CDN_TAG_STYLE = "margin-left:4px;padding:0 3px;border:1px solid var(--line);border-radius:3px;color:var(--muted);font-size:11px;font-weight:500";
 const MIN_DISTANCE = 180;
 const MAX_DISTANCE = 420;
 const MIN_ALTITUDE = MIN_DISTANCE / 100 - 1;
@@ -247,11 +247,12 @@ export default function ExposureGlobe({ nodes, arcs, selectedId, highlightIds = 
         />
       )}
     </div>
-    <div className="globe-zoom" role="group" aria-label="Map zoom">
-      <button type="button" onClick={() => zoom(0.75)} aria-label="Zoom in" title="Zoom in">
+    {/* Under the tour button, so the floating Ask Cruz button can't cover it */}
+    <div className="globe-zoom bottom-auto! top-12.5! max-md:top-16!" role="group" aria-label="Map zoom">
+      <button type="button" onClick={() => zoom(0.75)} aria-label="Zoom in" title="Zoom in" className="max-md:size-11!">
         <LuPlus aria-hidden="true" />
       </button>
-      <button type="button" onClick={() => zoom(1 / 0.75)} aria-label="Zoom out" title="Zoom out">
+      <button type="button" onClick={() => zoom(1 / 0.75)} aria-label="Zoom out" title="Zoom out" className="max-md:size-11!">
         <LuMinus aria-hidden="true" />
       </button>
     </div>

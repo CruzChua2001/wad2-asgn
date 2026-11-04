@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { LuChevronDown, LuFolder, LuLogOut } from "react-icons/lu";
 import { useAuth } from "@/components/auth/auth-provider";
 import GradeBadge from "@/components/grade-badge";
+import RippleButton from "@/components/ripple-button";
 import { loadProjectData } from "@/lib/load-projects";
 import { getProjectCache, setProjectCache } from "@/lib/project-cache";
 import { getRating } from "./scan-result";
@@ -99,7 +100,7 @@ export default function ProfileMenu() {
   if (status === "loading") return null;
 
   if (!profile) {
-    return <button type="button" className={styles.loginLink} onClick={() => openAuth("login")}>Login</button>;
+    return <RippleButton className="button button-primary nav-action" onClick={() => openAuth("login")}>Login</RippleButton>;
   }
 
   return (

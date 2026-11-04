@@ -43,10 +43,34 @@ export default function AskCruzPanel({ open, onClose }) {
     const [error, setError] = useState("");
     const inputRef = useRef(null);
     const listRef = useRef(null);
+    const panelRef = useRef(null);
 
     useEffect(() => {
         if (open) inputRef.current?.focus();
     }, [open]);
+
+    // Close on a click outside the panel or on Escape. The Ask Cruz button toggles it itself,
+    // and nothing closes while another modal (log in, tour) is on top
+    useEffect(() => {
+        if (!open) return;
+        const toggle = () => document.querySelector('[aria-controls="ask-cruz-panel"]');
+        const onPointerDown = e => {
+            if (document.querySelector('[aria-modal="true"]')) return;
+            if (panelRef.current?.contains(e.target) || toggle()?.contains(e.target)) return;
+            onClose();
+        };
+        const onKeyDown = e => {
+            if (e.key !== "Escape" || document.querySelector('[aria-modal="true"]')) return;
+            onClose();
+            toggle()?.focus();
+        };
+        document.addEventListener("pointerdown", onPointerDown);
+        document.addEventListener("keydown", onKeyDown);
+        return () => {
+            document.removeEventListener("pointerdown", onPointerDown);
+            document.removeEventListener("keydown", onKeyDown);
+        };
+    }, [open, onClose]);
 
     useEffect(() => {
         const list = listRef.current;
@@ -84,11 +108,10 @@ export default function AskCruzPanel({ open, onClose }) {
 
     return (
         <section
+            ref={panelRef}
+            id="ask-cruz-panel"
             role="dialog"
             aria-label="Ask Cruz"
-            onKeyDown={e => {
-                if (e.key === "Escape") onClose();
-            }}
             className="fixed bottom-24 right-4 z-50 flex h-[min(36rem,calc(100vh-7rem))] w-[min(26rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-xl"
         >
             <header className="flex items-center gap-3 border-b border-line px-4 py-3">
@@ -104,7 +127,7 @@ export default function AskCruzPanel({ open, onClose }) {
                     type="button"
                     onClick={onClose}
                     aria-label="Close Ask Cruz"
-                    className="rounded-full cursor-pointer p-1.5 text-muted transition-colors hover:bg-accent-soft hover:text-ink"
+                    className="rounded-full cursor-pointer p-1.5 text-muted transition-colors hover:bg-accent-soft hover:text-ink max-sm:-m-2 max-sm:p-3.5"
                 >
                     <LuX className="h-4 w-4" aria-hidden="true" />
                 </button>

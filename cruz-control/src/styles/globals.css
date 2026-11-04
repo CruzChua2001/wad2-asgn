@@ -202,6 +202,8 @@
 
 html {
   scroll-behavior: smooth;
+  /* Always keep space for the scrollbar so the header doesn't shift between pages */
+  scrollbar-gutter: stable;
 }
 
 body {
@@ -217,6 +219,11 @@ a {
 
 button {
   font: inherit;
+}
+
+/* Long placeholders end with "…" instead of being cut mid-word */
+input {
+  text-overflow: ellipsis;
 }
 
 .landing {
@@ -301,15 +308,15 @@ button {
   color: var(--ink);
   text-decoration: none;
   font:
-    600 12px var(--font-geist-mono),
+    600 16px var(--font-geist-mono),
     monospace;
   letter-spacing: 0.08em;
   white-space: nowrap;
 }
 
 .brand-mark {
-  width: 24px;
-  height: 24px;
+  width: 32px;
+  height: 32px;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 3px;
@@ -373,6 +380,14 @@ img.brand-mark {
   padding: 28px 20px 88px;
 }
 
+/* Short desktop windows: move the hero down so the top robot's antenna stays on screen */
+@media (min-width: 1300px) and (max-height: 820px) {
+  .hero {
+    padding-top: 72px;
+    padding-bottom: 44px;
+  }
+}
+
 .hero-copy {
   position: relative;
   z-index: 1;
@@ -434,6 +449,19 @@ img.brand-mark {
 
 .typing-animation {
   min-height: 3.5em;
+}
+
+/* The ghost and the typed text share one grid cell, so the ghost sets the height */
+.typing-keep-space {
+  display: grid;
+}
+
+.typing-keep-space > * {
+  grid-area: 1 / 1;
+}
+
+.typing-ghost {
+  visibility: hidden;
 }
 
 .typing-cursor {
@@ -903,10 +931,11 @@ img.brand-mark {
   .brand {
     gap: 8px;
     letter-spacing: 0.06em;
+    font-size: 14px;
   }
   .brand-mark {
-    width: 20px;
-    height: 20px;
+    width: 26px;
+    height: 26px;
   }
   .main-nav {
     gap: 9px;
@@ -962,19 +991,18 @@ img.brand-mark {
   .landing .site-header {
     align-items: flex-start;
   }
+  /* Same row height as the app header, so the logo sits in the same place */
+  .landing .brand {
+    min-height: 44px;
+  }
   .landing .main-nav {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
     width: 100%;
   }
   .landing .nav-action {
     min-width: 0;
     padding: 8px;
-  }
-  .landing .theme-toggle {
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 4px;
   }
 }
 
@@ -984,10 +1012,11 @@ img.brand-mark {
   }
   .brand {
     gap: 6px;
+    font-size: 12px;
   }
   .brand-mark {
-    width: 17px;
-    height: 17px;
+    width: 22px;
+    height: 22px;
   }
   .main-nav {
     gap: 4px;
@@ -1010,14 +1039,17 @@ img.brand-mark {
   gap: 8px;
 }
 
-.landing .theme-toggle {
+/* Same theme toggle in the landing and app headers, sized like the nav buttons */
+header .theme-toggle {
   min-height: 44px;
   padding: 8px;
+  color: var(--ink);
   font-size: 0.875rem;
+  font-weight: 600;
   line-height: 1.5;
 }
 
-.landing .theme-toggle-icon {
+header .theme-toggle-icon {
   flex-shrink: 0;
   width: 18px;
   height: 18px;

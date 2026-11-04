@@ -72,7 +72,7 @@ export default function Home() {
               Learn how to fix it.
             </TextAnimate>
           </h1>
-          <TypingAnimation className="hero-description">
+          <TypingAnimation className="hero-description" keepSpace>
             Scan any website or public GitHub repository for security issues, then get clear explanations and practical fixes before or after deployment.
           </TypingAnimation>
           <div className="hero-actions">

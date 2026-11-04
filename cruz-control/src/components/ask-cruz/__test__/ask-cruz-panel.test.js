@@ -31,6 +31,22 @@ test("closed and guest states avoid requests and expose login and close controls
     expect(api.post).not.toHaveBeenCalled();
 });
 
+test("clicks outside the panel close it, but clicks inside it or on the Ask Cruz button do not", () => {
+    const onClose = vi.fn();
+    render(
+        <>
+            <button type="button" aria-controls="ask-cruz-panel">Ask Cruz</button>
+            <p>Page behind</p>
+            <AskCruzPanel open onClose={onClose} />
+        </>
+    );
+    fireEvent.pointerDown(screen.getByRole("textbox"));
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Ask Cruz" }));
+    expect(onClose).not.toHaveBeenCalled();
+    fireEvent.pointerDown(screen.getByText("Page behind"));
+    expect(onClose).toHaveBeenCalledTimes(1);
+});
+
 test("trims questions, blocks empty and pending submissions, then displays the real reply", async () => {
     let finish;
     api.post.mockReturnValue(new Promise(resolve => { finish = resolve; }));
