@@ -17,7 +17,11 @@ const row = title => within(screen.getByText(title).closest("li"));
 const cspTitle = "A Content-Security-Policy header is set";
 const envTitle = ".env is in .gitignore";
 // Fake timers keep one test's pending save from firing inside the next test
-beforeEach(() => { vi.useFakeTimers(); showScan({ result: { findings: [], checks: [] } }); });
+beforeEach(() => {
+    vi.useFakeTimers();
+    api.put.mockReset().mockResolvedValue({});
+    showScan({ result: { findings: [], checks: [] } });
+});
 afterEach(() => { vi.useRealTimers(); });
 
 test("loading, manual ticks and bulk controls show honest progress without changing scanner failures", () => {
@@ -101,4 +105,36 @@ test("starts from the ticks saved on the account and saves a change once, after 
     expect(api.put).toHaveBeenCalledTimes(1);
     expect(api.put.mock.calls[0][0]).toBe("/api/scan/scan-1/progress");
     expect(api.put.mock.calls[0][1].checklist).toMatchObject({ "stored-item": true });
+});
+
+
+const manualBox = _ => screen.getByRole("checkbox", { name: 'Mark "Database rules require a login" as done' });
+const pause = ms => act(async () => { await vi.advanceTimersByTimeAsync(ms); });
+
+test("never sends two saves at once; the newest ticks go out after the first one finishes", async () => {
+    let finish;
+    api.put.mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
+    render(<ChecklistPage />);
+
+    fireEvent.click(manualBox());
+    await pause(700);
+    expect(api.put).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(manualBox());
+    await pause(700);
+    expect(api.put).toHaveBeenCalledTimes(1);
+
+    await act(async () => { finish({}); });
+    expect(api.put).toHaveBeenCalledTimes(2);
+    expect(Object.values(api.put.mock.calls[1][1].checklist).every(ticked => ticked === false)).toBe(true);
+});
+
+test("a save that fails once is tried again", async () => {
+    api.put.mockRejectedValueOnce({ response: { status: 500 } });
+    render(<ChecklistPage />);
+    fireEvent.click(manualBox());
+    await pause(700);
+    expect(api.put).toHaveBeenCalledTimes(1);
+    await pause(1100);
+    expect(api.put).toHaveBeenCalledTimes(2);
 });
