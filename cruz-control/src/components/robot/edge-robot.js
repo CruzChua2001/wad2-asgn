@@ -1,15 +1,16 @@
 import RobotHead from "./robot-head";
 
-const EdgeRobot = ({ edge = "bottom", offset = 50, curious = false, onDone }) => (
+const EdgeRobot = ({ edge = "bottom", offset = 50, curious = false, startled = false, onDone }) => (
     <div
-        className={`edge-robot edge-robot-${edge} ${curious ? "edge-robot-curious" : ""}`}
+        className={`edge-robot edge-robot-${edge} ${curious ? "edge-robot-curious" : ""} ${startled ? "edge-robot-startled" : ""}`}
         style={{ "--offset": `${offset}%` }}
         aria-hidden="true"
     >
         <div
             className="edge-robot-body"
             onAnimationEnd={event => {
-                if (event.animationName === "edge-peek" && onDone) onDone();
+                const name = event.animationName;
+                if ((name === "edge-peek" || name === "edge-startle") && onDone) onDone();
             }}
         >
             <RobotHead>
