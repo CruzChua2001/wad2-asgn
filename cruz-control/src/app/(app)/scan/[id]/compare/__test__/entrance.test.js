@@ -25,17 +25,17 @@ beforeEach(() => {
 test("dropdown changes retain card controls and do not replay results entrance after loading", async () => {
     const { rerender } = render(<ComparePage />);
     expect((await screen.findByRole("region", { name: "Comparison summary" })).dataset.entrance).toBe("true");
-    const card = screen.getByRole("region", { name: "Scan A" });
-    const select = screen.getByRole("combobox", { name: "Select scan A" });
+    const card = screen.getByRole("region", { name: "Before" });
+    const select = screen.getByRole("combobox", { name: "Saved result for Before" });
     select.focus();
     fireEvent.change(select, { target: { value: "oldest" } });
     rerender(<ComparePage />);
-    expect(screen.getByRole("region", { name: "Scan A" })).toBe(card);
-    expect(screen.getByRole("combobox", { name: "Select scan A" })).toBe(select);
+    expect(screen.getByRole("region", { name: "Before" })).toBe(card);
+    expect(screen.getByRole("combobox", { name: "Saved result for Before" })).toBe(select);
     expect(document.activeElement).toBe(select);
     expect((await screen.findByRole("region", { name: "Comparison summary" })).dataset.entrance).toBe("false");
-    expect(screen.getByRole("region", { name: "Scan A" })).toBe(card);
-    expect(screen.getByRole("combobox", { name: "Select scan A" })).toBe(select);
+    expect(screen.getByRole("region", { name: "Before" })).toBe(card);
+    expect(screen.getByRole("combobox", { name: "Saved result for Before" })).toBe(select);
     expect(document.activeElement).toBe(select);
     expect(screen.getByRole("region", { name: "Issues" }).dataset.entrance).toBe("false");
     expect(screen.getByRole("region", { name: "Good-practice recommendations" }).dataset.entrance).toBe("false");

@@ -26,16 +26,20 @@ function ProjectComparison({ id, projectId, role }) {
     const [pairAttempt, setPairAttempt] = useState(0);
     const [pair, setPair] = useState(null);
     // Results unmount while fetching another pair; only the first pair gets an
-    // entrance. Card keys stay tied to A/B so their controls and focus survive.
+    // entrance. Card keys stay tied to Before/After so focus survives.
     const entrancePending = useRef(true);
-    // Legacy first/against query names now preserve the visual A/B positions.
-    const first = query.get("first") || id;
+    // Keep legacy query names, but normalize reversed links for Before/After.
+    const requestedFirst = query.get("first") || id;
     const anchor = history?.scans?.find(scan => scan.id === id);
     const options = anchor ? history.scans.filter(scan => sameTargets(anchor, scan)) : [];
-    const second = query.get("against") ?? options.find(scan => scan.id !== first)?.id ?? "";
     const numbers = scanNumbers(history?.scans || []);
+    const requestedSecond = query.get("against") ?? options.find(scan => scan.id !== requestedFirst)?.id ?? "";
+    const reversed = options.some(scan => scan.id === requestedFirst) && options.some(scan => scan.id === requestedSecond)
+        && numbers.get(requestedFirst) > numbers.get(requestedSecond);
+    const first = reversed ? requestedSecond : requestedFirst;
+    const second = reversed ? requestedFirst : requestedSecond;
     const sourceId = query.get("fromHistory");
-    const fromHistory = sourceId === first && options.some(scan => scan.id === sourceId);
+    const fromHistory = [first, second].includes(sourceId) && options.some(scan => scan.id === sourceId);
     const aDate = Date.parse(options.find(scan => scan.id === first)?.created_at);
     const bDate = Date.parse(options.find(scan => scan.id === second)?.created_at);
     const sameSavedTime = first !== second && Number.isFinite(aDate) && aDate === bDate;
@@ -43,6 +47,13 @@ function ProjectComparison({ id, projectId, role }) {
         : !options.some(scan => scan.id === first) || !options.some(scan => scan.id === second)
             ? "A selected scan is unavailable or has different targets. Choose two matching scans." : "";
     const requestKey = `${first}:${second}:${pairAttempt}`;
+
+    useEffect(() => {
+        if (!reversed) return;
+        const params = new URLSearchParams({ first, against: second });
+        if (fromHistory) params.set("fromHistory", sourceId);
+        router.replace(`/scan/${id}/compare?${params}`, { scroll: false });
+    }, [reversed, id, first, second, fromHistory, sourceId, router]);
 
     useEffect(() => {
         let active = true;
@@ -70,11 +81,8 @@ function ProjectComparison({ id, projectId, role }) {
                 if (a.project_id !== projectId || b.project_id !== projectId || a.id !== first || b.id !== second) {
                     setPair({ key: requestKey, error: "These scans are no longer available in this project." });
                 } else {
-                    // The helper retains input order for ties. Supply consistent history
-                    // order for equal timestamps without moving either visible card.
-                    const tied = Date.parse(a.created_at) === Date.parse(b.created_at);
-                    const bFirst = tied && history.scans.findIndex(scan => scan.id === b.id) < history.scans.findIndex(scan => scan.id === a.id);
-                    setPair({ key: requestKey, animateEntrance: entrancePending.current, ...compareScans(bFirst ? b : a, bFirst ? a : b) });
+                    // Use the cards' normalized date/UUID order for tied evidence too.
+                    setPair({ key: requestKey, animateEntrance: entrancePending.current, ...compareScans(a, b) });
                     entrancePending.current = false;
                 }
             } catch (e) {
@@ -88,10 +96,11 @@ function ProjectComparison({ id, projectId, role }) {
     const select = (name, value) => {
         const selected = options.find(scan => scan.id === value);
         const other = options.find(scan => scan.id === (name === "first" ? second : first));
-        if (!selected || selected.id === other?.id) return;
+        if (!selected) return;
+        if (other && (name === "first" ? numbers.get(selected.id) >= numbers.get(other.id) : numbers.get(selected.id) <= numbers.get(other.id))) return;
         const params = new URLSearchParams({ first, against: second });
         params.set(name, value);
-        if (name !== "first" && fromHistory) params.set("fromHistory", sourceId);
+        if (fromHistory && [params.get("first"), params.get("against")].includes(sourceId)) params.set("fromHistory", sourceId);
         router.replace(`/scan/${id}/compare?${params}`, { scroll: false });
     };
     if (!history || history.attempt !== historyAttempt) return <LoadingOverlay show />;
@@ -113,19 +122,17 @@ function ProjectComparison({ id, projectId, role }) {
                     <span className="break-all"><span className="font-semibold text-ink">Repository</span> {anchor.github_repo ?? "Not included"}</span>
                     <Link href={`/project/${projectId}/history`} className="inline-flex min-h-11 max-w-full items-center rounded-lg px-2 py-2 sm:ml-auto text-accent underline underline-offset-4 hover:bg-accent-soft focus-visible:outline-2 focus-visible:outline-accent">View scan history</Link>
                 </div>
-                <p className="text-sm text-muted">Choose two different scans. Changes are calculated from earlier to later.</p>
-                {fromHistory && <p className="rounded-lg bg-accent-soft px-4 py-3 text-sm text-ink">Scan #{numbers.get(first)} is selected as Scan A. Choose another scan to compare.</p>}
+                <p className="text-sm text-muted">Choose an older result for Before and a newer result for After. Changes are calculated in that order.</p>
+                {fromHistory && <p className="rounded-lg border border-accent/20 bg-accent-soft/60 px-4 py-3 text-sm text-ink">From history: Scan #{numbers.get(sourceId)} is selected. You can change either selection.</p>}
                 {sameSavedTime && (
-                    <p className="text-sm text-muted">These scans have the same saved time, so their chronological order cannot be established. Scan numbers do not show which ran first.</p>
+                    <p className="text-sm text-muted">These scans have the same saved time. Before and After use a consistent display order; their actual chronological order cannot be established.</p>
                 )}
                 <div className="grid items-stretch gap-4 grid-cols-[repeat(auto-fit,minmax(min(100%,24rem),1fr))]">
-                    {[["first", first, second, "Scan A"], ["against", second, first, "Scan B"]].map(([name, value, otherId, label]) => {
+                    {[["first", first, second, "Before"], ["against", second, first, "After"]].map(([name, value, otherId, label]) => {
                         const selected = options.find(scan => scan.id === value);
-                        const other = options.find(scan => scan.id === otherId);
-                        const difference = selected && other ? Date.parse(selected.created_at) - Date.parse(other.created_at) : NaN;
-                        const timing = !Number.isFinite(difference) ? null : difference === 0 ? "Same saved time" : difference < 0 ? "Earlier" : "Later";
+                        const disabledIds = options.filter(scan => name === "first" ? numbers.get(scan.id) >= numbers.get(otherId) : numbers.get(scan.id) <= numbers.get(otherId)).map(scan => scan.id);
                         const details = currentPair?.rows ? [currentPair.older, currentPair.newer].find(scan => scan.id === value) : null;
-                        return <ScanCard key={name} label={label} value={value} scan={details || selected} choices={options} otherId={otherId} timing={timing} numbers={numbers} fromHistory={name === "first" && fromHistory} onChange={value => select(name, value)} />;
+                        return <ScanCard key={name} label={label} value={value} scan={details || selected} choices={options} disabledIds={disabledIds} numbers={numbers} fromHistory={fromHistory && value === sourceId} onChange={value => select(name, value)} />;
                     })}
                 </div>
                 {selectionError ? <p role="alert" className="text-critical">{selectionError}</p> : !currentPair ? <SmallLoader text="Loading comparison..." className="text-sm text-muted" /> : currentPair.error ? (
