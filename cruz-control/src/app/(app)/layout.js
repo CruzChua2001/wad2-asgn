@@ -13,7 +13,8 @@ import ProductTour from "@/components/tour/product-tour";
 import AskCruzPanel from "@/components/ask-cruz/ask-cruz-panel";
 import RandomPeek from "@/components/robot/random-peek";
 import { useEffect, useState } from "react";
-import { LuCompass } from "react-icons/lu";
+import { LuCompass, LuFolder, LuLogIn, LuScanSearch } from "react-icons/lu";
+import MobileMenu, { menuItemClass } from "@/components/mobile-menu";
 
 const BrandMark = _ => {
   return (
@@ -46,7 +47,7 @@ const RadarField = _ => {
 
 export default function OverviewLayout({ children }) {
   const [theme, updateTheme] = useTheme();
-  const { status } = useAuth();
+  const { status, openAuth } = useAuth();
   const [askOpen, setAskOpen] = useState(false);
   const [hop, setHop] = useState(false);
   const pathname = usePathname();
@@ -55,6 +56,10 @@ export default function OverviewLayout({ children }) {
   const showTourButton = pathname === "/scan" || onOverview;
   const navProps = href => ({
     className: `inline-flex min-h-11 items-center justify-center px-3! py-2! text-sm! leading-normal! font-semibold! text-ink! focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent hover:text-accent! ${pathname.startsWith(href) ? styles.navActive : ""}`,
+    "aria-current": pathname.startsWith(href) ? "page" : undefined,
+  });
+  const menuProps = href => ({
+    className: menuItemClass,
     "aria-current": pathname.startsWith(href) ? "page" : undefined,
   });
   const [tour, setTour] = useState(null);
@@ -80,12 +85,12 @@ export default function OverviewLayout({ children }) {
       <main className={`${styles.page} overflow-visible!`} data-theme={theme}>
         <RadarField />
 
-        <header className={`${styles.header} flex! h-auto! min-h-22! flex-wrap items-center gap-3 py-4 md:flex-nowrap`}>
+        <header className={`${styles.header} flex! h-auto! min-h-18! items-center gap-3 py-4 md:min-h-22!`}>
            <ScanLink className="brand" href={status === "guest" ? "/" : "/scan"} aria-label="Cruz Control home">
             <BrandMark />
             <span>CRUZCONTROL</span>
           </ScanLink>
-          <nav className={`${styles.primaryNav} order-3 basis-full border-t border-line pt-2 md:order-none md:basis-auto md:border-t-0 md:pt-0`} aria-label="Primary navigation">
+          <nav className={`${styles.primaryNav} max-md:hidden!`} aria-label="Primary navigation">
             <ScanLink {...navProps("/scan")}>Scan</ScanLink>
             <Link href="/project" {...navProps("/project")}>Projects</Link>
           </nav>
@@ -95,20 +100,34 @@ export default function OverviewLayout({ children }) {
                 aria-label="Take the tour"
                 title="Take the tour"
                 onClick={() => setTour(showingResults ? "results" : "intro")}
-                className="button button-secondary nav-action min-w-11"
+                className="button button-secondary nav-action min-w-11 max-md:hidden!"
               >
-                <LuCompass className="h-4 w-4 sm:hidden" aria-hidden="true" />
-                <span className="max-sm:hidden">Take the tour</span>
+                Take the tour
               </RippleButton>
             )}
             {/* Open Jeffers' menu under the right edge of these buttons, so it stays on screen. */}
-            <div className="min-w-0 max-w-full [&>div]:static! [&_button[aria-haspopup=dialog]]:max-w-full [&_button[aria-haspopup=dialog]]:wrap-anywhere [&_[role=dialog]]:absolute! [&_[role=dialog]]:right-0! [&_[role=dialog]]:top-[calc(100%+0.5rem)]! [&_[role=dialog]]:max-h-[60dvh] [&_[role=dialog]]:overflow-y-auto!">
+            {/* Guests get Login in the phone menu instead */}
+            <div className={`min-w-0 max-w-full ${status === "guest" ? "max-md:hidden" : ""} [&>div]:static! [&_button[aria-haspopup=dialog]]:max-w-full [&_button[aria-haspopup=dialog]]:wrap-anywhere [&_[role=dialog]]:absolute! [&_[role=dialog]]:right-0! [&_[role=dialog]]:top-[calc(100%+0.5rem)]! [&_[role=dialog]]:max-h-[60dvh] [&_[role=dialog]]:overflow-y-auto!`}>
               <ProfileMenu />
             </div>
             <div className="shrink-0">
               <AnimatedThemeToggler theme={theme} onThemeChange={updateTheme} />
             </div>
           </div>
+          <MobileMenu className={status === "loading" ? "invisible" : ""}>
+            <ScanLink {...menuProps("/scan")}><LuScanSearch className="h-4 w-4" aria-hidden="true" />Scan</ScanLink>
+            <Link href="/project" {...menuProps("/project")}><LuFolder className="h-4 w-4" aria-hidden="true" />Projects</Link>
+            {showTourButton && (
+              <button type="button" className={menuItemClass} onClick={() => setTour(showingResults ? "results" : "intro")}>
+                <LuCompass className="h-4 w-4" aria-hidden="true" />Take the tour
+              </button>
+            )}
+            {status === "guest" && (
+              <button type="button" className={menuItemClass} onClick={() => openAuth("login")}>
+                <LuLogIn className="h-4 w-4" aria-hidden="true" />Login
+              </button>
+            )}
+          </MobileMenu>
         </header>
 
         <section className={`${styles.content} ${showingResults ? styles.contentWide : ""}`.trim()}>

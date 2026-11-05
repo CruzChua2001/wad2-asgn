@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { LuLogIn, LuUserPlus } from "react-icons/lu";
 import AnimatedThemeToggler from "@/components/animated-theme-toggler";
+import MobileMenu, { menuItemClass } from "@/components/mobile-menu";
 import { useAuth } from "@/components/auth/auth-provider";
 import InteractiveSignalGrid from "./interactive-signal-grid";
 import RippleButton from "@/components/ripple-button";
@@ -55,9 +57,17 @@ export default function Home() {
           <span>CRUZCONTROL</span>
         </Link>
         <nav className="main-nav" aria-label="Main navigation">
-          <RippleButton className="button button-secondary nav-action" onClick={() => openAuth("signup")}>Sign up</RippleButton>
-          <RippleButton className="button button-primary nav-action" onClick={() => openAuth("login")}>Login</RippleButton>
+          <RippleButton className="button button-secondary nav-action max-md:hidden!" onClick={() => openAuth("signup")}>Sign up</RippleButton>
+          <RippleButton className="button button-primary nav-action max-md:hidden!" onClick={() => openAuth("login")}>Login</RippleButton>
           <AnimatedThemeToggler theme={theme} onThemeChange={updateTheme} />
+          <MobileMenu>
+            <button type="button" className={menuItemClass} onClick={() => openAuth("signup")}>
+              <LuUserPlus className="h-4 w-4" aria-hidden="true" />Sign up
+            </button>
+            <button type="button" className={menuItemClass} onClick={() => openAuth("login")}>
+              <LuLogIn className="h-4 w-4" aria-hidden="true" />Login
+            </button>
+          </MobileMenu>
         </nav>
       </header>
 

@@ -236,11 +236,7 @@
 }
 
 @media (max-width: 767px) {
-  .header { width: calc(100% - 36px); min-height: 70px; height: auto; grid-template-columns: auto minmax(0, 1fr) auto; }
-  .primaryNav { gap: 0; }
-  .primaryNav a { padding: 8px 7px; }
-  .primaryNav a.navActive::after { right: 7px; left: 7px; }
-  .headerActions { gap: 14px; }
+  .header { width: calc(100% - 36px); }
   .content { width: calc(100% - 32px); padding: 42px 0 88px; }
   .content.contentWide { width: calc(100% - 32px); padding-top: 26px; }
   .intro { margin-bottom: 26px; }
@@ -257,10 +253,6 @@
 }
 
 @media (max-width: 575px) {
-  .header { min-height: 102px; grid-template-columns: 1fr auto; grid-template-rows: 58px 43px; }
-  .primaryNav { grid-row: 2; grid-column: 1 / -1; align-self: stretch; border-top: 1px solid color-mix(in srgb, var(--line) 62%, transparent); }
-  .primaryNav a { flex: 1; padding: 9px 5px; text-align: center; }
-  .headerActions { grid-row: 1; grid-column: 2; }
   .modeGrid > button { min-height: 72px; }
   .samples { align-items: stretch; }
   .samples > span { width: 100%; margin-bottom: 2px; }
