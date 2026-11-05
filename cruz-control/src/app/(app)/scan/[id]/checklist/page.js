@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { LuCheck, LuX } from "react-icons/lu";
 import { useScan } from "../../scan-context";
+import { useSavedTicks } from "../use-saved-ticks";
 import { CHECKLIST_SECTIONS } from "./checklist-items";
 
 const evaluate = (item, result) => {
@@ -139,10 +139,15 @@ const ChecklistRow = ({ item, status, findings, ticked, onToggle, fixGuideHref }
 
 export default function ChecklistPage() {
     const { result } = useScan();
-    const { id: scanId } = useParams();
-    const [tickedIds, setTickedIds] = useState({});
 
     if (!result) return <p className="text-muted">Loading...</p>;
+
+    return <Checklist result={result} />;
+}
+
+const Checklist = ({ result }) => {
+    const { id: scanId } = useParams();
+    const [tickedIds, setTickedIds, saveFailed] = useSavedTicks(scanId, "checklist", result.savedTicks?.checklist);
 
     const sections = CHECKLIST_SECTIONS.map(section => ({
         ...section,
@@ -179,6 +184,11 @@ export default function ChecklistPage() {
                             ? `${failCount} ${failCount === 1 ? "item needs" : "items need"} fixing. Work down the list, then run a new scan.`
                             : "Work down the list. Nothing here takes more than a few minutes."}
                     </p>
+                    {saveFailed && (
+                        <p role="alert" className="mt-1 text-sm text-critical">
+                            We couldn&apos;t save your ticks. They will be lost if you leave this page.
+                        </p>
+                    )}
                     {tickableRows.length > 0 && (
                         <div className="mt-3 flex flex-wrap gap-2 text-sm">
                             <button

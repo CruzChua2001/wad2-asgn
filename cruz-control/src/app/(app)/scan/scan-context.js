@@ -186,6 +186,16 @@ export function ScanProvider({ children }) {
     }
   }, [status, openAuth, savedScanId, result]);
 
+  // Keeps the latest ticks of a tab ("fixed" or "checklist") on the loaded result, so they are still there after switching tabs
+  const rememberTicks = useCallback((field, ticks) => {
+    setResult((current) => (current && !current.error ? { ...current, savedTicks: { ...current.savedTicks, [field]: ticks } } : current));
+  }, []);
+
+  // Remember a guide the AI wrote, so it stays on screen after switching tabs
+  const rememberGuide = useCallback((findingId, guide) => {
+    setResult((current) => (current && !current.error ? { ...current, guides: { ...current.guides, [findingId]: guide } } : current));
+  }, []);
+
   // Used by "Cancel scan" and "+ New scan": back to the empty pre-scan form.
   const resetScan = useCallback(() => {
     setPhase("idle");
@@ -195,8 +205,8 @@ export function ScanProvider({ children }) {
   }, []);
 
   const value = useMemo(
-    () => ({ phase, scan, lines, progress, startScan, resetScan, result, loadResult, saveToProject, savedScanId, saving, saveError }),
-    [phase, scan, lines, progress, startScan, resetScan, result, loadResult, saveToProject, savedScanId, saving, saveError],
+    () => ({ phase, scan, lines, progress, startScan, resetScan, result, loadResult, rememberTicks, rememberGuide, saveToProject, savedScanId, saving, saveError }),
+    [phase, scan, lines, progress, startScan, resetScan, result, loadResult, rememberTicks, rememberGuide, saveToProject, savedScanId, saving, saveError],
   );
 
   return <ScanContext value={value}>{children}</ScanContext>;

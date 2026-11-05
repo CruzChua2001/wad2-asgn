@@ -16,9 +16,9 @@ const FALLBACK_STYLE = { label: "Tip", chip: "bg-accent-soft text-accent", bar: 
 
 const styleFor = severity => SEVERITY_STYLE[severity] || FALLBACK_STYLE;
 
-export default function FixItem({ scanId, finding, done, open, onToggleDone, onToggleOpen }) {
+export default function FixItem({ scanId, finding, savedGuide, onGuide = () => {}, done, open, onToggleDone, onToggleOpen }) {
     const { status, openAuth } = useAuth();
-    const [guide, setGuide] = useState("");
+    const [guide, setGuide] = useState(savedGuide ?? ""); // a guide saved on an earlier visit shows straight away
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
@@ -36,6 +36,7 @@ export default function FixItem({ scanId, finding, done, open, onToggleDone, onT
         try {
             const res = await api.post(`/api/scan/${scanId}/finding/${finding.id}/guide`);
             setGuide(res.data.guide);
+            onGuide(finding.id, res.data.guide);
         } catch (e) {
             setError(e.response?.data?.error || "Couldn't create the guide. Please try again.");
         } finally {

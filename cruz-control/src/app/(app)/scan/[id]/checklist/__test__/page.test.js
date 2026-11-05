@@ -1,22 +1,30 @@
-import { beforeEach, expect, test, vi } from "vitest";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import api from "@/lib/api";
 import { useScan } from "../../../scan-context";
 import ChecklistPage from "../page";
 
 vi.mock("../../../scan-context", () => ({ useScan: vi.fn() }));
 vi.mock("next/navigation", () => ({ useParams: () => ({ id: "scan-1" }) }));
 vi.mock("next/link", () => ({ default: ({ href, children, ...props }) => <a href={href} {...props}>{children}</a> }));
+vi.mock("@/components/auth/auth-provider", () => ({ useAuth: () => ({ status: "authenticated" }) }));
+vi.mock("@/lib/api", () => ({ default: { put: vi.fn().mockResolvedValue({}) } }));
+
+const rememberTicks = vi.fn();
+const showScan = value => useScan.mockReturnValue({ rememberTicks, ...value });
 const check = (id, category, status = "ok") => ({ id, category, status });
 const row = title => within(screen.getByText(title).closest("li"));
 const cspTitle = "A Content-Security-Policy header is set";
 const envTitle = ".env is in .gitignore";
-beforeEach(() => { useScan.mockReturnValue({ result: { findings: [], checks: [] } }); });
+// Fake timers keep one test's pending save from firing inside the next test
+beforeEach(() => { vi.useFakeTimers(); showScan({ result: { findings: [], checks: [] } }); });
+afterEach(() => { vi.useRealTimers(); });
 
 test("loading, manual ticks and bulk controls show honest progress without changing scanner failures", () => {
-    useScan.mockReturnValue({ result: null });
+    showScan({ result: null });
     const view = render(<ChecklistPage />);
     expect(screen.getByText("Loading...")).toBeTruthy();
-    useScan.mockReturnValue({ result: {
+    showScan({ result: {
         checks: [check("cert-validity", "certificate"), check("web-headers", "web-settings")],
         findings: [{ id: "web-csp", category: "web-settings", kind: "issue", title: "Missing CSP" }],
     } });
@@ -39,7 +47,7 @@ test("loading, manual ticks and bulk controls show honest progress without chang
 });
 
 test.each(["unavailable", "not_checked", undefined])("a completed HTTPS check cannot prove the separate CSP check passed: %s", status => {
-    useScan.mockReturnValue({ result: { findings: [], checks: [check("web-https-hsts", "web-settings"), ...(status ? [check("web-headers", "web-settings", status)] : [])] } });
+    showScan({ result: { findings: [], checks: [check("web-https-hsts", "web-settings"), ...(status ? [check("web-headers", "web-settings", status)] : [])] } });
     render(<ChecklistPage />);
     expect(row(cspTitle).queryByRole("img", { name: "Passed" })).toBeNull();
     expect(row(cspTitle).getByText("NOT SCANNED")).toBeTruthy();
@@ -47,14 +55,14 @@ test.each(["unavailable", "not_checked", undefined])("a completed HTTPS check ca
 });
 
 test("the .env item stays unknown until both relevant checks succeed", () => {
-    useScan.mockReturnValue({ result: { findings: [], checks: [check("secrets-files", "secrets")] } });
+    showScan({ result: { findings: [], checks: [check("secrets-files", "secrets")] } });
     render(<ChecklistPage />);
     expect(row(envTitle).getByText("NOT SCANNED")).toBeTruthy();
     expect(row(envTitle).queryByRole("img", { name: "Passed" })).toBeNull();
 });
 
 test("aggregated finding details cannot become a false pass when all relevant checks succeeded", () => {
-    useScan.mockReturnValue({ result: {
+    showScan({ result: {
         checks: [check("secrets-files", "secrets"), check("ignore-rules", "ignore-rules")],
         findings: [{ id: "repo-gitignore", category: "ignore-rules", checkId: "ignore-rules", kind: "issue", title: "Your .gitignore misses some risky files", details: { missing: [".env", "node_modules"] } }],
     } });
@@ -65,11 +73,32 @@ test("aggregated finding details cannot become a false pass when all relevant ch
 });
 
 test("lockfile recommendations count as failures; a successful sibling check is not lockfile coverage", () => {
-    useScan.mockReturnValue({ result: { findings: [], checks: [check("basics-dependabot", "repo-basics")] } });
+    showScan({ result: { findings: [], checks: [check("basics-dependabot", "repo-basics")] } });
     const view = render(<ChecklistPage />);
     const title = "A lockfile (package-lock.json) is committed";
     expect(row(title).getByText("NOT SCANNED")).toBeTruthy();
-    useScan.mockReturnValue({ result: { findings: [{ id: "repo-lockfile", category: "repo-basics", kind: "recommendation", title: "No lockfile is committed" }], checks: [check("basics-lockfile", "repo-basics")] } });
+    showScan({ result: { findings: [{ id: "repo-lockfile", category: "repo-basics", kind: "recommendation", title: "No lockfile is committed" }], checks: [check("basics-lockfile", "repo-basics")] } });
     view.rerender(<ChecklistPage />);
     expect(row(title).getByRole("img", { name: "Not passing" })).toBeTruthy();
+});
+
+
+test("starts from the ticks saved on the account and saves a change once, after a short pause", async () => {
+    api.put.mockClear();
+    rememberTicks.mockClear();
+    showScan({ result: { findings: [], checks: [], savedTicks: { checklist: { "stored-item": true } } } });
+    render(<ChecklistPage />);
+    const manual = screen.getByRole("checkbox", { name: 'Mark "Database rules require a login" as done' });
+    expect(manual.getAttribute("aria-checked")).toBe("false");
+
+    fireEvent.click(manual);
+    fireEvent.click(manual);
+    fireEvent.click(manual);
+    expect(api.put).not.toHaveBeenCalled();
+    expect(rememberTicks).toHaveBeenLastCalledWith("checklist", expect.objectContaining({ "stored-item": true }));
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(700); });
+    expect(api.put).toHaveBeenCalledTimes(1);
+    expect(api.put.mock.calls[0][0]).toBe("/api/scan/scan-1/progress");
+    expect(api.put.mock.calls[0][1].checklist).toMatchObject({ "stored-item": true });
 });

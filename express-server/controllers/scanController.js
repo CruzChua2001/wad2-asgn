@@ -17,7 +17,13 @@ const { buildFindings } = require("../lib/findings");
 const { isCdnIp } = require("../lib/cdn");
 
 const { SYSTEM_PROMPT, buildPrompt } = require("../lib/guidePrompt");
+const crypto = require("node:crypto");
 const guideCache = new Map();
+
+// Same text and servers means the same guide. A changed rule changes the fingerprint, so an old saved guide is ignored
+const guideFingerprint = finding => crypto.createHash("sha256")
+    .update([finding.id, finding.title, finding.fix, (finding.hosts || []).join(",")].join("|"))
+    .digest("hex");
 
 const cacheLimit = _ => new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString()
 
@@ -349,8 +355,95 @@ const getScanById = async (req, res) => {
         role = member.role;
     }
 
-    res.json({ ...scan, role, ...buildFindings(scan) });
+    const built = buildFindings(scan);
+
+    // My ticks (signed in only) and the AI guides saved for this scan. A failed read leaves them empty instead of hiding the scan
+    let progress = { fixed: {}, checklist: {} };
+    const guides = {};
+
+    if (req.user) {
+        const { data, error: progressError } = await supabase.from("scan_progress").select("fixed, checklist")
+            .eq("scan_id", scan.id).eq("user_id", req.user.id).maybeSingle();
+
+        if (progressError) {
+            console.error("Failed to load scan progress:", progressError);
+        } else if (data) {
+            progress = data;
+        }
+    }
+
+    const { data: savedGuides, error: guideError } = await supabase.from("finding_guides").select("finding_id, fingerprint, guide").eq("scan_id", scan.id);
+
+    if (guideError) {
+        console.error("Failed to load saved guides:", guideError);
+    }
+
+    for (const saved of savedGuides ?? []) {
+        const finding = built.findings.find(f => f.id === saved.finding_id);
+
+        if (finding && guideFingerprint(finding) === saved.fingerprint) {
+            guides[saved.finding_id] = saved.guide;
+        }
+    }
+
+    res.json({ ...scan, role, ...built, progress, guides });
 }
+
+// Only keep the ticked ids, and refuse anything that is not a small { id: true/false } object
+const cleanTicks = value => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+
+    const ids = Object.keys(value);
+
+    if (ids.length > 200 || ids.some(id => id.length > 100) || Object.values(value).some(ticked => typeof ticked !== "boolean")) return null;
+
+    return Object.fromEntries(ids.filter(id => value[id]).map(id => [id, true]));
+};
+
+const saveProgress = async (req, res) => {
+    try {
+        const { fixed, checklist } = req.body;
+        const row = { scan_id: req.params.id, user_id: req.user.id, updated_at: new Date().toISOString() };
+
+        if (fixed === undefined && checklist === undefined) {
+            return res.status(400).json({ error: "Nothing to save." });
+        }
+
+        // Send only the part that changed: the other part keeps what was saved
+        if (fixed !== undefined) {
+            row.fixed = cleanTicks(fixed);
+        }
+        if (checklist !== undefined) {
+            row.checklist = cleanTicks(checklist);
+        }
+        if (row.fixed === null || row.checklist === null) {
+            return res.status(400).json({ error: "Those ticks look wrong. Please try again." });
+        }
+
+        const { data: scan } = await supabase.from("scans").select("id, project_id").eq("id", req.params.id).maybeSingle();
+
+        if (!scan) {
+            return res.status(404).json({ error: "Scan not found." });
+        }
+
+        if (scan.project_id) {
+            const { data: member } = await supabase.from("project_members").select("role")
+                .eq("project_id", scan.project_id).eq("user_id", req.user.id).maybeSingle();
+
+            if (!member) {
+                return res.status(404).json({ error: "Scan not found." });
+            }
+        }
+
+        const { error } = await supabase.from("scan_progress").upsert(row, { onConflict: "scan_id,user_id" });
+        if (error) throw error;
+
+        res.json({ ok: true });
+    } catch (error) {
+        console.error("Failed to save scan progress:", error);
+        res.status(500).json({ error: "Couldn't save your progress. Please try again." });
+    }
+};
 
 const getFindingGuide = async (req, res) => {
     try {
@@ -380,13 +473,34 @@ const getFindingGuide = async (req, res) => {
 
         const { findings } = buildFindings(scan);
         const finding = findings.find(f => f.id === findingId);
-        const cacheKey = [finding.id, finding.title, finding.fix, (finding.hosts || []).join(",")].join("|");
-        if (guideCache.has(cacheKey)) {
-            return res.json({ guide: guideCache.get(cacheKey) });
-        }
 
         if (!finding) {
             return res.status(404).json({ error: "Finding not found." });
+        }
+
+        const fingerprint = guideFingerprint(finding);
+
+        // Save the guide for this scan, so opening the scan later shows it without asking the AI again
+        const saveGuide = async guide => {
+            const { error: saveError } = await supabase.from("finding_guides")
+                .upsert({ scan_id: scan.id, finding_id: finding.id, fingerprint, guide, created_at: new Date().toISOString() }, { onConflict: "scan_id,finding_id" });
+
+            if (saveError) {
+                console.error("Failed to save guide:", saveError);
+            }
+        };
+
+        const { data: saved } = await supabase.from("finding_guides").select("guide")
+            .eq("scan_id", scan.id).eq("finding_id", finding.id).eq("fingerprint", fingerprint).maybeSingle();
+
+        if (saved) {
+            return res.json({ guide: saved.guide });
+        }
+
+        if (guideCache.has(fingerprint)) {
+            const guide = guideCache.get(fingerprint);
+            await saveGuide(guide);
+            return res.json({ guide });
         }
 
         const response = await fetch(
@@ -419,7 +533,8 @@ const getFindingGuide = async (req, res) => {
             console.error("Gemini request failed:", response.status, JSON.stringify(data));
             throw new Error("AI request failed");
         }
-        guideCache.set(cacheKey, guide);
+        guideCache.set(fingerprint, guide);
+        await saveGuide(guide);
         res.json({ guide });
     } catch (error) {
         console.error("Error creating fix guide:", error);
@@ -427,4 +542,4 @@ const getFindingGuide = async (req, res) => {
     }
 };
 
-module.exports = { createScan, getScanById, getFindingGuide }
+module.exports = { createScan, getScanById, getFindingGuide, saveProgress }
