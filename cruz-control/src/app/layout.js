@@ -13,12 +13,26 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const title = "CruzControl — Public Exposure, Made Clear";
+const description =
+  "Understand the public security signals around your website and projects, with clear findings and practical next steps.";
+
 export const metadata = {
-  title: "CruzControl — Public Exposure, Made Clear",
-  description:
-    "Understand the public security signals around your website and projects, with clear findings and practical next steps.",
+  // Link previews need full image URLs, so they point at the production site
+  metadataBase: new URL("https://cruz-control-wad2-app.vercel.app"),
+  title,
+  description,
   icons: {
     icon: [{ url: "/favicon.ico", sizes: "48x48" }],
+  },
+  openGraph: {
+    title,
+    description,
+    siteName: "CruzControl",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
   },
 };
 
