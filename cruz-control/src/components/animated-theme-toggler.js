@@ -45,7 +45,7 @@ export default function AnimatedThemeToggler({ theme, onThemeChange }) {
   const isLight = theme === "light";
   return (
     <button
-      className="theme-toggle"
+      className="theme-toggle max-sm:min-w-11 max-sm:justify-center"
       type="button"
       onClick={toggleTheme}
       aria-label={`Switch to ${isLight ? "dark" : "light"} mode`}
@@ -54,7 +54,8 @@ export default function AnimatedThemeToggler({ theme, onThemeChange }) {
       {isLight
         ? <LuSun aria-hidden="true" className="theme-toggle-icon" />
         : <LuMoon aria-hidden="true" className="theme-toggle-icon" />}
-      <span>{isLight ? "Dark mode" : "Light mode"}</span>
+      {/* Icon only on phones, the aria-label still names it */}
+      <span className="max-sm:hidden">{isLight ? "Dark mode" : "Light mode"}</span>
     </button>
   );
 }

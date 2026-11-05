@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useParams } from "next/navigation";
 import { LuPartyPopper } from "react-icons/lu";
 import { useScan } from "../../scan-context";
+import { useSavedTicks } from "../use-saved-ticks";
 import FixItem from "./fix-item";
 
 const SEVERITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };
@@ -34,19 +35,24 @@ const ProgressRing = ({ done, total }) => {
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <span className="text-2xl font-bold text-ink">{percent}</span>
-                <span className="text-[10px] text-muted">%</span>
+                <span className="text-[11px] text-muted">%</span>
             </div>
         </div>
     );
 };
 
 export default function FixGuidePage() {
-    const { result } = useScan();
-    const { id: scanId } = useParams(); // the [id] in /scan/[id]/fix-guide
-    const [doneIds, setDoneIds] = useState({}); // PLACEHOLDER: ticks live on the page only, they reset on refresh.
-    const [openIds, setOpenIds] = useState({});
+    const { result, rememberGuide } = useScan();
 
     if (!result) return <p className="text-muted">Loading...</p>;
+
+    return <FixGuide result={result} rememberGuide={rememberGuide} />;
+}
+
+const FixGuide = ({ result, rememberGuide }) => {
+    const { id: scanId } = useParams(); // the [id] in /scan/[id]/fix-guide
+    const [doneIds, setDoneIds, saveFailed] = useSavedTicks(scanId, "fixed", result.savedTicks?.fixed);
+    const [openIds, setOpenIds] = useState({});
 
     const findings = result.findings || [];
     const issues = findings.filter(f => f.kind === "issue").sort(bySeverity);
@@ -68,6 +74,8 @@ export default function FixGuidePage() {
                     key={f.id}
                     scanId={scanId}
                     finding={f}
+                    savedGuide={result.guides?.[f.id]}
+                    onGuide={rememberGuide}
                     done={!!doneIds[f.id]}
                     open={!!openIds[f.id]}
                     onToggleDone={() => toggle(setDoneIds, f.id)}
@@ -91,6 +99,11 @@ export default function FixGuidePage() {
                         {doneCount} of {issues.length} fixed
                     </p>
                     <p className="mt-1 text-sm text-muted">Tick each one off as you go, then run a new scan to check your fixes.</p>
+                    {saveFailed && (
+                        <p role="alert" className="mt-1 text-sm text-critical">
+                            We couldn&apos;t save your ticks. They will be lost if you leave this page.
+                        </p>
+                    )}
                     {issues.length > 0 && (
                         <div className="mt-3 flex flex-wrap gap-2 text-sm">
                             <button

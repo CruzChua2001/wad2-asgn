@@ -7,20 +7,23 @@ import FixGuidePage from "../page";
 vi.mock("../../../scan-context", () => ({ useScan: vi.fn() }));
 vi.mock("next/navigation", () => ({ useParams: () => ({ id: "scan-1" }) }));
 vi.mock("@/components/auth/auth-provider", () => ({ useAuth: () => ({ status: "authenticated" }) }));
-vi.mock("@/lib/api", () => ({ default: { post: vi.fn() } }));
+vi.mock("@/lib/api", () => ({ default: { post: vi.fn(), put: vi.fn() } }));
 vi.mock("@/components/small-loader", () => ({ default: ({ text }) => <span role="status">{text}</span> }));
+
+const rememberTicks = vi.fn();
+const showScan = value => useScan.mockReturnValue({ rememberTicks, rememberGuide: vi.fn(), ...value });
 
 const finding = (id, severity, kind = "issue") => ({ id, severity, kind, title: `Finding ${id}`, why: `Why ${id} matters`, fix: `Fix ${id}` });
 beforeEach(() => {
     vi.clearAllMocks();
-    useScan.mockReturnValue({ result: { findings: [finding("low", "low"), finding("tip", "high", "recommendation"), finding("critical", "critical")] } });
+    showScan({ result: { findings: [finding("low", "low"), finding("tip", "high", "recommendation"), finding("critical", "critical")] } });
 });
 
 test("loading and empty scans have useful states without requesting AI", () => {
-    useScan.mockReturnValue({ result: null });
+    showScan({ result: null });
     const view = render(<FixGuidePage />);
     expect(screen.getByText("Loading...")).toBeTruthy();
-    useScan.mockReturnValue({ result: { findings: [] } });
+    showScan({ result: { findings: [] } });
     view.rerender(<FixGuidePage />);
     expect(screen.getByText("No problems to fix. Nice work!")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Fixed all" })).toBeNull();
@@ -56,4 +59,23 @@ test("manual issue ticks and bulk actions update progress; optional tips do not 
     expect(screen.getByText("0 of 2 fixed")).toBeTruthy();
     expect(screen.getByRole("checkbox", { name: 'Mark "Finding tip" as fixed' }).getAttribute("aria-checked")).toBe("true");
     expect(screen.getByText(/run a new scan to check your fixes/)).toBeTruthy();
+});
+
+
+test("starts from the ticks and AI guides saved earlier, and hands a ticked change to be saved", () => {
+    showScan({ result: {
+        findings: [finding("low", "low"), finding("critical", "critical")],
+        savedTicks: { fixed: { critical: true } },
+        guides: { low: "1. Saved step one." },
+    } });
+    render(<FixGuidePage />);
+    expect(screen.getByText("1 of 2 fixed")).toBeTruthy();
+    expect(screen.getByRole("checkbox", { name: 'Mark "Finding critical" as fixed' }).getAttribute("aria-checked")).toBe("true");
+
+    fireEvent.click(screen.getByRole("button", { name: /^Finding low\s*Low$/ }));
+    expect(screen.getByText("1. Saved step one.")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Get step-by-step guide" })).toBeNull();
+
+    fireEvent.click(screen.getByRole("checkbox", { name: 'Mark "Finding low" as fixed' }));
+    expect(rememberTicks).toHaveBeenLastCalledWith("fixed", { critical: true, low: true });
 });

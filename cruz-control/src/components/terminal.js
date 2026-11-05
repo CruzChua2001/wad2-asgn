@@ -55,14 +55,16 @@ export function Terminal({
 
 export function TypingAnimation({ children, className = "", duration = 20, sequenceDelay = 0 }) {
   const { active, reduceMotion } = useContext(TerminalSequenceContext);
-  const width = `${children.length}ch`;
+  const hidden = "inset(0 100% 0 0)";
+  const shown = "inset(0 0% 0 0)";
 
+  // Reveal with clip-path so the line keeps its final size while it types
   return (
     <p className={`terminal-typing-row ${className}`.trim()} aria-label={children}>
       <motion.span
         className="terminal-typed-text"
-        initial={reduceMotion ? false : { width: 0 }}
-        animate={{ width: active || reduceMotion ? width : 0 }}
+        initial={reduceMotion ? false : { clipPath: hidden }}
+        animate={{ clipPath: active || reduceMotion ? shown : hidden }}
         transition={{
           duration: reduceMotion ? 0 : (children.length * duration) / 1000,
           delay: reduceMotion ? 0 : sequenceDelay / 1000,
@@ -83,7 +85,7 @@ export function AnimatedSpan({ children, className = "", sequenceDelay = 0 }) {
     <motion.div
       className={`terminal-output-row ${className}`.trim()}
       initial={reduceMotion ? false : { opacity: 0, y: 7 }}
-      animate={active ? { opacity: 1, y: 0 } : { opacity: 0, y: 7 }}
+      animate={active || reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 7 }}
       transition={{ duration: reduceMotion ? 0 : 0.28, delay: reduceMotion ? 0 : sequenceDelay / 1000 }}
     >
       {children}

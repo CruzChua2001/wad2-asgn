@@ -10,6 +10,7 @@ import OverviewCarousel from "./overview-carousel";
 import ServerTour from "./server-tour";
 import { Term, withTerms } from "./glossary";
 import FixText from "./fix-text";
+import FindingDetails from "./finding-details";
 import { projectScore } from "./what-if";
 import { useTheme } from "@/lib/theme-store";
 import GradeBadge from "@/components/grade-badge";
@@ -62,7 +63,6 @@ const LEGEND = [
 ];
 const SEVERITY_TONES = { critical: "text-critical", high: "text-warm", medium: "text-muted", low: "text-muted" };
 
-const MAX_SHOWN_CVES = 10;
 
 const SCORE_RULE = "Your score is out of 100, and higher is safer. Each check scores 0 to 10, and riskier checks count for more. A critical problem keeps your score at 50 or below until it's fixed.";
 
@@ -105,114 +105,8 @@ function showGain(finding, incomplete) {
   return !incomplete && Boolean(finding.checkId) && Boolean(finding.gain);
 }
 
-// Package vulnerabilities use OSV and GitHub IDs (GHSA-...), not only CVEs.
-function vulnUrl(id) {
-  if (id.startsWith("CVE-")) {
-    return `https://nvd.nist.gov/vuln/detail/${id}`;
-  }
-  return `https://osv.dev/vulnerability/${id}`;
-}
-
-function VulnLink({ id }) {
-  return (
-    <a href={vulnUrl(id)} target="_blank" rel="noreferrer" className="font-mono text-accent underline">{id}</a>
-  );
-}
-
 function hasDetails(details) {
   return Boolean(details) && Object.keys(details).length > 0;
-}
-
-// Technical data behind a finding, shaped by the finding type (see the data shapes table).
-function FindingDetails({ details }) {
-  return (
-    <dl className="m-0 flex flex-col gap-2 text-sm text-muted">
-      {details.cves && (
-        <div className="flex flex-col gap-2">
-          {details.cves.slice(0, MAX_SHOWN_CVES).map((cve, index) => (
-            <div key={cve.id}>
-              <VulnLink id={cve.id} />
-              <span className="ml-2">
-                {index === 0 ? <Term term="CVSS" /> : "CVSS"} {cve.cvss ?? "?"} ·{" "}
-                {index === 0 ? <Term term="EPSS" /> : "EPSS"} {cve.epss == null ? "?" : `${Math.round(cve.epss * 100)}%`}
-                {cve.kev && <strong className="ml-2 text-critical">Actively exploited</strong>}
-              </span>
-              {cve.summary && <p className="mt-0.5 mb-0 line-clamp-2">{cve.summary}</p>}
-              {cve.hosts?.length > 0 && <p className="mt-0.5 mb-0 font-mono break-all">{cve.hosts.join(", ")}</p>}
-            </div>
-          ))}
-          {details.cves.length > MAX_SHOWN_CVES && (
-            <p className="m-0">+{details.cves.length - MAX_SHOWN_CVES} more</p>
-          )}
-        </div>
-      )}
-
-      {details.port != null && (
-        <div><dt className="inline font-semibold">{withTerms("Port")}</dt><dd className="ml-2 inline">{details.port} · {details.service}</dd></div>
-      )}
-
-      {details.domain !== undefined && (
-        <>
-          <div><dt className="inline font-semibold">Domain</dt><dd className="ml-2 inline font-mono">{details.domain || "Unknown"}</dd></div>
-          <div><dt className="inline font-semibold">Record</dt><dd className="ml-2 inline font-mono break-all">{details.record || "None"}</dd></div>
-        </>
-      )}
-
-      {details.files && (
-        <div>
-          <dt className="font-semibold">Files</dt>
-          {details.files.map((file) => <dd key={file} className="ml-0 font-mono break-all">{file}</dd>)}
-        </div>
-      )}
-
-      {details.lines && (
-        <div>
-          <dt className="font-semibold">Lines</dt>
-          {details.lines.map((item, index) => (
-            <dd key={index} className="ml-0 font-mono break-all">{item.file}:{item.line} {item.text}</dd>
-          ))}
-        </div>
-      )}
-
-      {details.actions && (
-        <div>
-          <dt className="font-semibold">Actions</dt>
-          {details.actions.map((item, index) => <dd key={index} className="ml-0 font-mono break-all">{item.file}: {item.uses}</dd>)}
-        </div>
-      )}
-
-      {details.missing && (
-        <div><dt className="inline font-semibold">Missing</dt><dd className="ml-2 inline">{details.missing.join(", ")}</dd></div>
-      )}
-
-      {details.package && (
-        <>
-          <div><dt className="inline font-semibold">Package</dt><dd className="ml-2 inline font-mono">{details.package} {details.version}</dd></div>
-          <div>
-            <dt className="font-semibold">Vulnerabilities</dt>
-            <dd className="ml-0 flex flex-wrap gap-x-3 gap-y-1">
-              {details.vulns.map((id) => <VulnLink key={id} id={id} />)}
-            </dd>
-          </div>
-        </>
-      )}
-
-      {details.issuer && (
-        <>
-          <div><dt className="inline font-semibold">Issuer</dt><dd className="ml-2 inline">{details.issuer}</dd></div>
-          <div><dt className="inline font-semibold">Expires</dt><dd className="ml-2 inline">{new Date(details.validTo).toLocaleDateString()} ({details.daysLeft < 0 ? "expired" : `${details.daysLeft} days`})</dd></div>
-          <div><dt className="inline font-semibold">Key</dt><dd className="ml-2 inline font-mono">{details.keyBits ? `${details.keyBits}-bit · ` : ""}{details.tlsVersion}</dd></div>
-        </>
-      )}
-
-      {details.header && (
-        <>
-          <div><dt className="inline font-semibold">Page</dt><dd className="ml-2 inline font-mono break-all">{details.url}</dd></div>
-          <div><dt className="inline font-semibold">{withTerms(details.header)}</dt><dd className="ml-2 inline font-mono break-all">{details.value || "Not set"}</dd></div>
-        </>
-      )}
-    </dl>
-  );
 }
 
 // Shown in the map card when no server can be placed on the map
@@ -412,7 +306,8 @@ function countOf(count, word) {
   return `${count} ${count === 1 ? word : `${word}s`}`;
 }
 
-// The second part of a carousel tab summary. Phones only keep the first part
+// The second part of a carousel tab summary. It drops to a second line when the tab is narrow,
+// and phones only keep the first part
 function TabNote({ tone, children }) {
   return <span className={`truncate text-sm font-semibold max-md:hidden ${tone}`}>{children}</span>;
 }
@@ -763,13 +658,13 @@ export default function OverviewTab() {
               aria-pressed={statusFilter === status}
               disabled={!statusCounts[status]}
               onClick={() => changeStatusFilter(status)}
-              className="inline-flex min-h-6 cursor-pointer items-center gap-1.5 rounded-full border border-transparent px-2 py-0.5 transition-colors hover:bg-accent-soft/30 hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent aria-pressed:border-line aria-pressed:bg-accent-soft/50 aria-pressed:text-ink disabled:cursor-default disabled:opacity-45 disabled:hover:bg-transparent disabled:hover:text-muted"
+              className="inline-flex min-h-6 cursor-pointer items-center gap-1.5 rounded-full border border-transparent px-2 py-0.5 max-md:min-h-11 max-md:gap-1 max-md:px-1.5 transition-colors hover:bg-accent-soft/30 hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent aria-pressed:border-line aria-pressed:bg-accent-soft/50 aria-pressed:text-ink disabled:cursor-default disabled:opacity-45 disabled:hover:bg-transparent disabled:hover:text-muted"
             >
               <i aria-hidden="true" />{label} {statusCounts[status] || 0}
             </button>
           ))}
           {statusFilter && (
-            <button type="button" onClick={() => changeStatusFilter(null)} className="ml-1 min-h-6 cursor-pointer font-semibold! text-accent hover:underline">
+            <button type="button" onClick={() => changeStatusFilter(null)} className="ml-1 min-h-6 cursor-pointer font-semibold! text-accent hover:underline max-md:min-h-11">
               Show all
             </button>
           )}
@@ -786,7 +681,7 @@ export default function OverviewTab() {
                 type="button"
                 aria-pressed={mapView === view}
                 onClick={() => changeMapView(view)}
-                className={`cursor-pointer px-3 py-1.5 focus-visible:-outline-offset-2! ${mapView === view ? "bg-accent-soft text-ink" : "text-muted"}`}
+                className={`cursor-pointer px-3 py-1.5 focus-visible:-outline-offset-2! max-md:min-h-11 ${mapView === view ? "bg-accent-soft text-ink" : "text-muted"}`}
               >
                 {label}
               </button>
@@ -891,17 +786,17 @@ export default function OverviewTab() {
           <div className={styles.inspectorText}>
             <p className={styles.nodeSummary}>{selectedNode.summary}</p>
             {nodeFindingCount > 0 && (
-              <p className="m-0 flex flex-wrap gap-x-2 text-sm text-muted">
+              <p className="m-0 flex flex-wrap items-center gap-x-2 text-sm text-muted">
                 {nodeFindingCount} {nodeFindingCount === 1 ? "finding" : "findings"} on this server
                 {filterNodeId === selectedNode.id ? (
                   <span>
                     Showing only these ·{" "}
-                    <button type="button" onClick={() => setFilterNodeId(null)} className="cursor-pointer font-semibold! text-accent">
+                    <button type="button" onClick={() => setFilterNodeId(null)} className="cursor-pointer font-semibold! text-accent max-md:min-h-11">
                       Show all
                     </button>
                   </span>
                 ) : (
-                  <button type="button" onClick={() => showNodeFindings(selectedNode.id)} className="cursor-pointer font-semibold! text-accent">
+                  <button type="button" onClick={() => showNodeFindings(selectedNode.id)} className="cursor-pointer font-semibold! text-accent max-md:min-h-11">
                     Show only these
                   </button>
                 )}
@@ -1047,7 +942,7 @@ export default function OverviewTab() {
       {!projection && plannableCount > 0 && (
         <p className="m-0 mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
           Want to see your score go up? Tick &quot;Plan to fix&quot; on findings.
-          <button type="button" onClick={() => goToCard("findings", "findings-title")} className="cursor-pointer font-semibold! text-accent hover:underline">
+          <button type="button" onClick={() => goToCard("findings", "findings-title")} className="cursor-pointer font-semibold! text-accent hover:underline max-md:min-h-11">
             Go to findings
           </button>
         </p>
@@ -1109,7 +1004,7 @@ export default function OverviewTab() {
           aria-expanded={ruleOpen}
           aria-controls="score-rule"
           onClick={() => setRuleOpen(!ruleOpen)}
-          className="ml-auto inline-flex cursor-pointer items-center gap-1 text-sm! font-semibold! text-accent hover:underline"
+          className="ml-auto inline-flex cursor-pointer items-center gap-1 text-sm! font-semibold! text-accent hover:underline max-md:min-h-11"
         >
           How is this scored?
           <LuChevronDown aria-hidden="true" className={`transition-transform ${ruleOpen ? "rotate-180" : ""}`} />
@@ -1122,11 +1017,12 @@ export default function OverviewTab() {
   // While planning the card lets the plan bar stick to the top of the page
   const findingsCard = (
     <motion.section className={`${styles.card} ${styles.findingsCard} ${projection ? "overflow-visible!" : ""}`} aria-labelledby="findings-title" {...reveal(0.27)}>
-      <div className={styles.cardHead}>
+      {/* On narrow phones the buttons drop under the title */}
+      <div className={`${styles.cardHead} flex-wrap`}>
         <h2 id="findings-title">Findings · worst first</h2>
-        <span className="flex items-center gap-3">
+        <span className="ml-auto flex items-center gap-3">
           {shownFindings.length > 0 && (
-            <button type="button" onClick={toggleAllFindings} className="cursor-pointer text-sm! font-semibold! text-accent">
+            <button type="button" onClick={toggleAllFindings} className="cursor-pointer text-sm! font-semibold! whitespace-nowrap text-accent max-md:min-h-11">
               {allFindingsOpen ? "Collapse all" : "Expand all"}
             </button>
           )}
@@ -1162,7 +1058,7 @@ export default function OverviewTab() {
       {filterNode && (
         <p className="m-0 mb-3 text-sm text-muted">
           Showing findings for <span className="font-mono text-ink">{filterNode.host}</span> ·{" "}
-          <button type="button" onClick={() => setFilterNodeId(null)} className="cursor-pointer font-semibold! text-accent">
+          <button type="button" onClick={() => setFilterNodeId(null)} className="cursor-pointer font-semibold! text-accent max-md:min-h-11">
             Show all
           </button>
         </p>
@@ -1170,7 +1066,7 @@ export default function OverviewTab() {
       {!filterNode && filterCategory && (
         <p className="m-0 mb-3 text-sm text-muted">
           Showing findings for <span className="font-semibold text-ink">{filterLabel}</span> ·{" "}
-          <button type="button" onClick={() => setFilterCategory(null)} className="cursor-pointer font-semibold! text-accent">
+          <button type="button" onClick={() => setFilterCategory(null)} className="cursor-pointer font-semibold! text-accent max-md:min-h-11">
             Show all
           </button>
         </p>
@@ -1209,7 +1105,7 @@ export default function OverviewTab() {
             </button>
 
             {isPlannable(finding) && (
-              <label className="flex w-15 cursor-pointer flex-col items-center justify-center gap-1 rounded-[7px] border border-line px-1 text-center text-sm leading-tight font-semibold text-muted uppercase transition-colors hover:border-accent hover:text-accent has-checked:border-accent has-checked:bg-accent-soft/40 has-checked:text-accent">
+              <label className="flex w-16 cursor-pointer flex-col items-center justify-center gap-1 rounded-[7px] border border-line px-1 text-center text-xs leading-tight font-semibold tracking-wide text-muted uppercase transition-colors hover:border-accent hover:text-accent has-checked:border-accent has-checked:bg-accent-soft/40 has-checked:text-accent">
                 <input
                   type="checkbox"
                   checked={plannedIds.has(finding.id)}
@@ -1217,7 +1113,7 @@ export default function OverviewTab() {
                   aria-label={`Plan to fix: ${finding.title}`}
                   className="size-3.5 cursor-pointer accent-accent"
                 />
-                Plan to fix
+                <span>Plan <span className="whitespace-nowrap">to fix</span></span>
               </label>
             )}
 
@@ -1254,7 +1150,7 @@ export default function OverviewTab() {
                   <button
                     type="button"
                     onClick={() => seeOnMap(finding)}
-                    className="inline-flex! w-auto! cursor-pointer items-center gap-1 border-0! bg-transparent! p-0! text-accent! hover:underline"
+                    className="inline-flex! w-auto! cursor-pointer items-center gap-1 border-0! bg-transparent! p-0! text-accent! hover:underline max-md:min-h-11"
                   >
                     <LuMapPin aria-hidden="true" /> See on map
                   </button>
@@ -1269,7 +1165,7 @@ export default function OverviewTab() {
                   aria-expanded={detailsOpenIds.has(finding.id)}
                   aria-controls={`finding-details-${finding.id}`}
                   onClick={() => toggleDetails(finding.id)}
-                  className="w-auto! cursor-pointer border-0! bg-transparent! p-0! text-sm! font-semibold! text-accent"
+                  className="w-auto! cursor-pointer border-0! bg-transparent! p-0! text-sm! font-semibold! text-accent max-md:min-h-11"
                 >
                   Technical details {detailsOpenIds.has(finding.id) ? "▲" : "▼"}
                 </button>
@@ -1350,7 +1246,7 @@ export default function OverviewTab() {
           type="button"
           aria-pressed={layout === id}
           onClick={() => changeLayout(id)}
-          className={`inline-flex cursor-pointer items-center gap-1.5 px-3 py-1.5 focus-visible:-outline-offset-2! ${layout === id ? "bg-accent-soft text-ink" : "text-muted hover:text-ink"}`}
+          className={`inline-flex cursor-pointer items-center gap-1.5 px-3 py-1.5 focus-visible:-outline-offset-2! max-md:min-h-11 ${layout === id ? "bg-accent-soft text-ink" : "text-muted hover:text-ink"}`}
         >
           <Icon aria-hidden="true" />
           {label}

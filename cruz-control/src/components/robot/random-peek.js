@@ -5,7 +5,8 @@ import { useReducedMotion } from "motion/react";
 import EdgeRobot from "./edge-robot";
 
 const EDGES = ["top", "right", "bottom", "left"];
-const CURIOUS_COOLDOWN = 10000;
+const IDLE_TIME = 8000;
+const ACTIVITY_EVENTS = ["mousemove", "scroll", "wheel", "keydown", "touchstart", "mousedown"];
 
 const randomBetween = (min, max) => min + Math.random() * (max - min);
 
@@ -18,34 +19,48 @@ const randomSpot = curious => ({
 const RandomPeek = _ => {
     const reduceMotion = useReducedMotion();
     const [peek, setPeek] = useState(null);
+    const [idle, setIdle] = useState(false);
 
-    // Waits a random time, peeks, then waits again once the robot has slid away
-    useEffect(() => {
-        if (reduceMotion || peek) return;
-        const timer = setTimeout(() => {
-            setPeek(randomSpot(false));
-        }, randomBetween(5000, 12000));
-        return () => clearTimeout(timer);
-    }, [reduceMotion, peek]);
-
-    // Hovering a button marked data-curious makes the robot peek with a question mark, at most once every 10 seconds
+    // The user counts as idle after a while with no mouse, scroll or keys
     useEffect(() => {
         if (reduceMotion) return;
-        let lastCurious = 0;
+        let timer;
 
-        const handleOver = event => {
-            if (!event.target.closest("[data-curious]")) return;
-            if (Date.now() - lastCurious < CURIOUS_COOLDOWN) return;
-            lastCurious = Date.now();
-            setPeek(current => current ? current : randomSpot(true));
+        const startTimer = _ => {
+            timer = setTimeout(() => setIdle(true), IDLE_TIME);
         };
 
-        document.addEventListener("mouseover", handleOver);
-        return () => document.removeEventListener("mouseover", handleOver);
+        const handleActivity = _ => {
+            setIdle(false);
+            // If the robot is out, it gets a fright and hides
+            setPeek(current => {
+                if (!current || current.startled) return current;
+                return { ...current, startled: true };
+            });
+            clearTimeout(timer);
+            startTimer();
+        };
+
+        ACTIVITY_EVENTS.forEach(name => window.addEventListener(name, handleActivity));
+        startTimer();
+
+        return () => {
+            clearTimeout(timer);
+            ACTIVITY_EVENTS.forEach(name => window.removeEventListener(name, handleActivity));
+        };
     }, [reduceMotion]);
 
+    // While idle, peeks at random times, waiting again once the robot has slid away
+    useEffect(() => {
+        if (!idle || peek) return;
+        const timer = setTimeout(() => {
+            setPeek(randomSpot(false));
+        }, randomBetween(2000, 8000));
+        return () => clearTimeout(timer);
+    }, [idle, peek]);
+
     if (!peek) return null;
-    return <EdgeRobot edge={peek.edge} offset={peek.offset} curious={peek.curious} onDone={() => setPeek(null)} />;
+    return <EdgeRobot edge={peek.edge} offset={peek.offset} curious={peek.curious} startled={peek.startled} onDone={() => setPeek(null)} />;
 };
 
 export default RandomPeek;

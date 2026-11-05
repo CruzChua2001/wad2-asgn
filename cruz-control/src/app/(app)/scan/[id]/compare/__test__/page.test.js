@@ -15,7 +15,7 @@ vi.mock("../../../scan-context", () => ({ useScan: vi.fn() }));
 
 const summary = (id, day, extra = {}) => ({ id, created_at: `2026-10-${day}T12:00:00Z`, domain: "example.com", github_repo: null, score: 0, grade: null, ...extra });
 const histories = [summary("new", 30), summary("old", 28), summary("third", 27)];
-const finding = (id, extra = {}) => ({ id, title: id, kind: "issue", severity: "high", checkId: "csp", details: {}, ...extra });
+const finding = (id, extra = {}) => ({ id, title: id, explain: `Explanation for ${id}.`, fix: `Fix for ${id}.`, source: "domain", kind: "issue", severity: "high", checkId: "csp", details: {}, ...extra });
 const full = (id, extra = {}) => ({ ...histories.find(scan => scan.id === id), project_id: "p1", domain_scans: { domain: "example.com", created_at: "2026-10-25T12:00:00Z" }, repo_scans: null, checks: [{ id: "csp", status: "ok" }], findings: [], ...extra });
 const serve = (scans = histories, overrides = {}) => api.get.mockImplementation(url => {
     if (url === "/api/project/p1/scan") return Promise.resolve({ data: scans });
@@ -35,7 +35,7 @@ test("loads history then only selected details, shows ordered scores and cache w
     render(<ComparePage />);
     expect(screen.getByRole("status")).toBeTruthy();
     expect(await screen.findByText("+25 points")).toBeTruthy();
-    expect(screen.getByRole("region", { name: "Scan B" }).textContent).toContain("Incomplete · No grade");
+    expect(screen.getByRole("region", { name: "Before" }).textContent).toContain("Incomplete · No grade");
     expect(screen.getByText(/Shared capture dates for/)).toBeTruthy();
     expect(api.get.mock.calls.map(([url]) => url).sort()).toEqual(["/api/project/p1/scan", "/api/scan/new", "/api/scan/old"].sort());
     expect(screen.queryByRole("button", { name: /Re-scan/ })).toBeNull();
@@ -49,7 +49,19 @@ test("renders issue statuses separately from recommendations and evidence change
     render(<ComparePage />);
     expect(await screen.findByRole("heading", { name: "Issues 4" })).toBeTruthy();
     for (const label of ["Newly detected (1)", "No longer detected (1)", "Still present (1)", "Still present, evidence changed (1)", "Good-practice recommendations (1)", "Cannot verify change (1)"]) expect(screen.getByRole("heading", { name: label.replace(/ \((\d+)\)/, " $1") })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "gone" }).getAttribute("href")).toBe("/scan/old?finding=gone");
+    const gone = screen.getByText("gone").closest("summary");
+    expect(gone.closest("details").open).toBe(false);
+    fireEvent.click(gone);
+    expect(gone.closest("details").open).toBe(true);
+    const panel = within(screen.getByRole("region", { name: "gone details" }));
+    expect(panel.getByText("Explanation for gone.")).toBeTruthy();
+    expect(panel.getByText("Fix for gone.")).toBeTruthy();
+    expect(panel.getByText(/Saved 28 Oct/)).toBeTruthy();
+    expect(panel.getByRole("heading", { name: "Why it matters" })).toBeTruthy();
+    expect(panel.getByRole("heading", { name: "Previous guidance" })).toBeTruthy();
+    expect(panel.getByText(/These details are from Before/)).toBeTruthy();
+    expect(panel.queryByRole("heading", { name: "What to do" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "gone" })).toBeNull();
     expect(screen.getByText("Compare evidence")).toBeTruthy();
 });
 
@@ -61,6 +73,61 @@ test("unknown coverage does not show a resolution", async () => {
     expect(screen.getByText(/One or both scans are incomplete/)).toBeTruthy();
 });
 
+test("finding dropdowns open independently and show explanations, fixes and technical details without navigation", async () => {
+    nav.query = "first=old&against=new";
+    const certificate = finding("cert", {
+        title: "Certificate expires soon", explain: "Visitors could see a warning when this certificate expires.",
+        fix: "1. Renew: Request a new certificate.\n2. Install: Replace the old certificate.",
+        details: { issuer: "Example CA", validTo: "2026-11-13T00:00:00Z", daysLeft: 8, keyBits: 2048, tlsVersion: "TLSv1.3" },
+        learnMore: { label: "Certificate guidance", url: "https://example.com/certificates" },
+    });
+    serve(histories, { new: { findings: [certificate, finding("second", { hosts: ["203.0.113.10"] })] } });
+    render(<ComparePage />);
+    await screen.findByRole("heading", { name: "Issues 2" });
+    const first = screen.getByText(certificate.title).closest("details");
+    const second = screen.getByText("second").closest("details");
+    expect(first.open).toBe(false);
+    expect(second.open).toBe(false);
+    expect(within(first.querySelector("summary")).getByText("View details")).toBeTruthy();
+    fireEvent.click(first.querySelector("summary"));
+    const panel = within(screen.getByRole("region", { name: `${certificate.title} details` }));
+    expect(panel.getByRole("heading", { name: "Why it matters" })).toBeTruthy();
+    expect(panel.getByRole("heading", { name: "What to do" })).toBeTruthy();
+    expect(panel.getByText(certificate.explain)).toBeTruthy();
+    expect(panel.getByText("Request a new certificate.")).toBeTruthy();
+    expect(panel.getByText("Replace the old certificate.")).toBeTruthy();
+    expect(panel.getByRole("link", { name: "Certificate guidance" }).getAttribute("href")).toBe(certificate.learnMore.url);
+    fireEvent.click(panel.getByText("Technical details"));
+    expect(panel.getByText("Example CA")).toBeTruthy();
+    expect(panel.getByText(/2048-bit/)).toBeTruthy();
+    fireEvent.click(second.querySelector("summary"));
+    expect(first.open).toBe(true);
+    expect(second.open).toBe(true);
+    expect(within(screen.getByRole("region", { name: "second details" })).getByText("203.0.113.10")).toBeTruthy();
+    fireEvent.click(first.querySelector("summary"));
+    expect(first.open).toBe(false);
+    expect(second.open).toBe(true);
+    expect(api.get).toHaveBeenCalledTimes(3);
+    expect(nav.push).not.toHaveBeenCalled();
+    expect(nav.replace).not.toHaveBeenCalled();
+    expect(screen.queryByRole("link", { name: "Back to comparison" })).toBeNull();
+});
+
+test("changed findings retain both saved evidence snapshots inside the dropdown", async () => {
+    serve(histories, {
+        old: { findings: [finding("port", { title: "SSH remains open", details: { port: 22, service: "SSH" }, hosts: ["203.0.113.1"] })] },
+        new: { findings: [finding("port", { title: "SSH remains open", details: { port: 22, service: "SSH" }, hosts: ["203.0.113.2"], learnMore: { url: "javascript:alert(1)", label: "Unsafe link" } })] },
+    });
+    render(<ComparePage />);
+    await screen.findByRole("heading", { name: "Still present, evidence changed 1" });
+    fireEvent.click(screen.getByText("SSH remains open").closest("summary"));
+    const panel = within(screen.getByRole("region", { name: "SSH remains open details" }));
+    fireEvent.click(panel.getByText("Compare evidence"));
+    expect(panel.getByText(/203.0.113.1/, { selector: "pre" })).toBeTruthy();
+    expect(panel.getByText(/203.0.113.2/, { selector: "pre" })).toBeTruthy();
+    expect(panel.queryByRole("link", { name: "Unsafe link" })).toBeNull();
+});
+
 test("same-scan URL selections are rejected without fetching details", async () => {
     nav.query = "first=new&against=new";
     serve();
@@ -69,28 +136,29 @@ test("same-scan URL selections are rejected without fetching details", async () 
     expect(api.get).toHaveBeenCalledTimes(1);
 });
 
-test("newer A and older B keep their own details and URL positions on refresh", async () => {
+test("reversed legacy links normalize Before/After and keep each card's details correct after refresh", async () => {
     nav.query = "first=old&against=third";
     serve(histories, { third: { score: 11 }, old: { score: 22 } });
     const { unmount } = render(<ComparePage />);
     await screen.findByRole("region", { name: "Comparison summary" });
-    expect(nav.replace).not.toHaveBeenCalled();
-    const a = within(screen.getByRole("region", { name: "Scan A" }));
-    const b = within(screen.getByRole("region", { name: "Scan B" }));
-    expect(a.getByRole("combobox").value).toBe("old");
-    expect(a.getByText("22")).toBeTruthy();
-    expect(a.getByText(/Saved 28 Oct/)).toBeTruthy();
-    expect(a.getByText("Later")).toBeTruthy();
-    expect(a.getByRole("link").getAttribute("href")).toBe("/scan/old");
-    expect(b.getByRole("combobox").value).toBe("third");
-    expect(b.getByText("11")).toBeTruthy();
-    expect(b.getByText("Earlier")).toBeTruthy();
-    expect(b.getByRole("link").getAttribute("href")).toBe("/scan/third");
+    expect(nav.replace).toHaveBeenCalledWith("/scan/new/compare?first=third&against=old", { scroll: false });
+    const before = within(screen.getByRole("region", { name: "Before" }));
+    const after = within(screen.getByRole("region", { name: "After" }));
+    expect(before.getByRole("combobox").value).toBe("third");
+    expect(before.getByText("11")).toBeTruthy();
+    expect(before.getByText(/Saved 27 Oct/)).toBeTruthy();
+    expect(before.getByRole("link").getAttribute("href")).toBe("/scan/third");
+    expect(after.getByRole("combobox").value).toBe("old");
+    expect(after.getByText("22")).toBeTruthy();
+    expect(after.getByText(/Saved 28 Oct/)).toBeTruthy();
+    expect(after.getByRole("link").getAttribute("href")).toBe("/scan/old");
+    expect(screen.queryByText("Earlier")).toBeNull();
+    expect(screen.queryByText("Later")).toBeNull();
     unmount();
     render(<ComparePage />);
     await screen.findByRole("region", { name: "Comparison summary" });
-    expect(screen.getByRole("combobox", { name: "Select scan A" }).value).toBe("old");
-    expect(screen.getByRole("combobox", { name: "Select scan B" }).value).toBe("third");
+    expect(screen.getByRole("combobox", { name: "Saved result for Before" }).value).toBe("third");
+    expect(screen.getByRole("combobox", { name: "Saved result for After" }).value).toBe("old");
 });
 
 test.each([{ scans: [] }, { scans: [histories[0]] }, { scans: [histories[0], summary("other", 28, { github_repo: "a/b" })] }])("fewer than two matching scans explains the next step: $scans", async ({ scans }) => {
@@ -106,6 +174,22 @@ test("a mismatched or deleted ID in the URL is rejected before fetching details"
     render(<ComparePage />);
     expect((await screen.findByRole("alert")).textContent).toMatch(/unavailable or has different targets/);
     expect(api.get).toHaveBeenCalledTimes(1);
+});
+
+test("an unavailable URL selection can be repaired through the chronological dropdowns", async () => {
+    nav.query = "first=new&against=deleted";
+    serve();
+    const { rerender } = render(<ComparePage />);
+    await screen.findByRole("alert");
+    fireEvent.change(screen.getByRole("combobox", { name: "Saved result for Before" }), { target: { value: "old" } });
+    rerender(<ComparePage />);
+    expect(api.get).toHaveBeenCalledTimes(1);
+    fireEvent.change(screen.getByRole("combobox", { name: "Saved result for After" }), { target: { value: "new" } });
+    rerender(<ComparePage />);
+    await screen.findByRole("region", { name: "Comparison summary" });
+    expect(screen.getByRole("combobox", { name: "Saved result for Before" }).value).toBe("old");
+    expect(screen.getByRole("combobox", { name: "Saved result for After" }).value).toBe("new");
+    expect(api.get).toHaveBeenCalledTimes(3);
 });
 
 test("history failure supports retry", async () => {
@@ -161,10 +245,10 @@ test("different historical targets are excluded from both selectors", async () =
 test("logging out clears displayed comparison evidence", async () => {
     serve(histories, { new: { findings: [finding("private-finding")] } });
     const { rerender } = render(<ComparePage />);
-    await screen.findByRole("link", { name: "private-finding" });
+    await screen.findByText("private-finding");
     useAuth.mockReturnValue({ status: "guest" });
     rerender(<ComparePage />);
-    expect(screen.queryByRole("link", { name: "private-finding" })).toBeNull();
+    expect(screen.queryByText("private-finding")).toBeNull();
 });
 
 test("slow previous selection cannot replace the latest pair", async () => {
@@ -173,9 +257,9 @@ test("slow previous selection cannot replace the latest pair", async () => {
     const normal = api.get.getMockImplementation();
     api.get.mockImplementation(url => url === "/api/scan/old" ? new Promise(resolve => { finish = resolve; }) : normal(url));
     const { rerender } = render(<ComparePage />);
-    await screen.findByRole("combobox", { name: "Select scan B" });
+    await screen.findByRole("combobox", { name: "Saved result for Before" });
     await waitFor(() => expect(finish).toBeTypeOf("function"));
-    fireEvent.change(screen.getByRole("combobox", { name: "Select scan B" }), { target: { value: "third" } });
+    fireEvent.change(screen.getByRole("combobox", { name: "Saved result for Before" }), { target: { value: "third" } });
     rerender(<ComparePage />);
     await screen.findByText("+20 points");
     await act(async () => finish({ data: full("old", { score: 24 }) }));
@@ -199,46 +283,45 @@ test("guests cannot request project comparison", () => {
     expect(api.get).not.toHaveBeenCalled();
 });
 
-test("History and filtered Compare share numbering and carry the exact source scan into A", async () => {
+test.each([["old", 2, "Before"], ["new", 4, "After"]])("History numbering stays consistent and marks source record %s", async (source, number, slot) => {
     const allScans = [...histories, summary("other-target", 29, { domain: "other.com" })];
     serve(allScans);
     const historyView = render(<HistoryPage />);
-    const link = await screen.findByRole("link", { name: "Compare scans for Scan #2" });
-    expect(screen.getByRole("link", { name: "View Scan #2" }).getAttribute("href")).toBe("/scan/old");
+    const link = await screen.findByRole("link", { name: "Compare scans for Scan #" + number });
+    expect(screen.getByRole("link", { name: "View Scan #" + number }).getAttribute("href")).toBe("/scan/" + source);
     nav.query = link.getAttribute("href").split("?")[1];
     historyView.unmount();
     render(<ComparePage />);
     await screen.findByRole("region", { name: "Comparison summary" });
-    const a = within(screen.getByRole("region", { name: "Scan A" }));
-    const b = within(screen.getByRole("region", { name: "Scan B" }));
-    expect(a.getByText("Scan #2")).toBeTruthy();
-    expect(a.getByRole("combobox").value).toBe("old");
-    expect(b.getByText("Scan #4")).toBeTruthy();
-    expect(b.getByRole("combobox").value).toBe("new");
-    expect(a.getByRole("combobox").selectedOptions[0].textContent).toMatch(/^Scan #2/);
-    expect([...a.getByRole("combobox").options].map(option => option.textContent.split(" · ")[0])).toEqual(["Scan #4", "Scan #2", "Scan #1"]);
-    expect(screen.getByText("Scan #2 is selected as Scan A. Choose another scan to compare.")).toBeTruthy();
-    expect(a.getByText("Selected from history")).toBeTruthy();
-    expect(b.queryByText("Selected from history")).toBeNull();
+    const before = within(screen.getByRole("region", { name: "Before" }));
+    const after = within(screen.getByRole("region", { name: "After" }));
+    expect(before.getByRole("combobox").value).toBe("old");
+    expect(before.getByRole("combobox").selectedOptions[0].textContent).toMatch(/^Scan #2/);
+    expect(after.getByRole("combobox").value).toBe("new");
+    expect(after.getByRole("combobox").selectedOptions[0].textContent).toMatch(/^Scan #4/);
+    expect([...before.getByRole("combobox").options].map(option => option.textContent.split(" · ")[0])).toEqual(["Scan #4", "Scan #2", "Scan #1"]);
+    expect(screen.getByText("From history: Scan #" + number + " is selected. You can change either selection.")).toBeTruthy();
+    expect(within(screen.getByRole("region", { name: slot })).getByText("Selected from history")).toBeTruthy();
+    expect(within(screen.getByRole("region", { name: slot === "Before" ? "After" : "Before" })).queryByText("Selected from history")).toBeNull();
 });
 
-test("History context survives changing B, clears on changing A, and stays cleared on returning A", async () => {
-    nav.query = "first=old&against=new&fromHistory=old";
+test("History context stays with its record and clears when that record is replaced", async () => {
+    nav.query = "first=old&against=new&fromHistory=new";
     serve();
     const { rerender } = render(<ComparePage />);
     await screen.findByRole("region", { name: "Comparison summary" });
-    fireEvent.change(screen.getByRole("combobox", { name: "Select scan B" }), { target: { value: "third" } });
+    fireEvent.change(screen.getByRole("combobox", { name: "Saved result for Before" }), { target: { value: "third" } });
     rerender(<ComparePage />);
     await screen.findByRole("region", { name: "Comparison summary" });
-    expect(new URLSearchParams(nav.query).get("fromHistory")).toBe("old");
-    expect(screen.getByText("Selected from history")).toBeTruthy();
-    fireEvent.change(screen.getByRole("combobox", { name: "Select scan A" }), { target: { value: "new" } });
+    expect(new URLSearchParams(nav.query).get("fromHistory")).toBe("new");
+    expect(within(screen.getByRole("region", { name: "After" })).getByText("Selected from history")).toBeTruthy();
+    fireEvent.change(screen.getByRole("combobox", { name: "Saved result for After" }), { target: { value: "old" } });
     rerender(<ComparePage />);
     await screen.findByRole("region", { name: "Comparison summary" });
     expect(new URLSearchParams(nav.query).has("fromHistory")).toBe(false);
     expect(screen.queryByText("Selected from history")).toBeNull();
-    expect(screen.queryByText(/is selected as Scan A/)).toBeNull();
-    fireEvent.change(screen.getByRole("combobox", { name: "Select scan A" }), { target: { value: "old" } });
+    expect(screen.queryByText(/From history: Scan #/)).toBeNull();
+    fireEvent.change(screen.getByRole("combobox", { name: "Saved result for After" }), { target: { value: "new" } });
     rerender(<ComparePage />);
     await screen.findByRole("region", { name: "Comparison summary" });
     expect(screen.queryByText("Selected from history")).toBeNull();
@@ -249,7 +332,7 @@ test.each(["", "first=new&against=old", "first=new&against=old&fromHistory=third
     serve();
     render(<ComparePage />);
     await screen.findByRole("region", { name: "Comparison summary" });
-    expect(screen.queryByText(/is selected as Scan A/)).toBeNull();
+    expect(screen.queryByText(/From history: Scan #/)).toBeNull();
     expect(screen.queryByText("Selected from history")).toBeNull();
 });
 
@@ -327,46 +410,67 @@ test("no repository shows not included while a missing website capture date stay
     expect(screen.getByText(/Compare two scans to see/)).toBeTruthy();
 });
 
-test("both selectors list all compatible scans and disable only the opposite selection", async () => {
+test("selectors prevent identical or reversed pairs while every chronological pair stays reachable", async () => {
+    nav.query = "first=old&against=new";
     serve();
     const { rerender } = render(<ComparePage />);
     await screen.findByRole("region", { name: "Comparison summary" });
-    const a = () => screen.getByRole("combobox", { name: "Select scan A" });
-    const b = () => screen.getByRole("combobox", { name: "Select scan B" });
-    expect(a().value).toBe("new");
-    expect(b().value).toBe("old");
-    for (const select of [a(), b()]) expect([...select.options].map(option => option.value)).toEqual(["new", "old", "third"]);
-    expect([...a().options].filter(option => option.disabled).map(option => option.value)).toEqual(["old"]);
-    expect([...b().options].filter(option => option.disabled).map(option => option.value)).toEqual(["new"]);
-    fireEvent.change(a(), { target: { value: "old" } });
+    const before = () => screen.getByRole("combobox", { name: "Saved result for Before" });
+    const after = () => screen.getByRole("combobox", { name: "Saved result for After" });
+    for (const select of [before(), after()]) expect([...select.options].map(option => option.value)).toEqual(["new", "old", "third"]);
+    expect([...before().options].filter(option => option.disabled).map(option => option.value)).toEqual(["new"]);
+    expect([...after().options].filter(option => option.disabled).map(option => option.value)).toEqual(["old", "third"]);
+    fireEvent.change(before(), { target: { value: "new" } });
+    fireEvent.change(after(), { target: { value: "third" } });
     expect(nav.replace).not.toHaveBeenCalled();
-    fireEvent.change(b(), { target: { value: "third" } });
+    fireEvent.change(before(), { target: { value: "third" } });
     rerender(<ComparePage />);
     await screen.findByRole("region", { name: "Comparison summary" });
-    expect(a().value).toBe("new");
-    expect(b().value).toBe("third");
-    fireEvent.change(a(), { target: { value: "old" } });
+    expect(before().value).toBe("third");
+    expect(after().value).toBe("new");
+    fireEvent.change(after(), { target: { value: "old" } });
     rerender(<ComparePage />);
     await screen.findByRole("region", { name: "Comparison summary" });
-    expect(b().value).toBe("third");
-    expect(nav.query).toBe("first=old&against=third");
+    expect(before().value).toBe("third");
+    expect(after().value).toBe("old");
+    expect(nav.query).toBe("first=third&against=old");
 });
 
-test("equal saved dates preserve the URL order and remain distinct selectable scans", async () => {
+test("equal saved dates use a deterministic display order and explain that actual chronology is unknown", async () => {
     nav.query = "first=old&against=new";
     const date = histories[0].created_at;
     serve([histories[0], { ...histories[1], created_at: date }], { old: { created_at: date } });
     render(<ComparePage />);
     await screen.findByRole("region", { name: "Comparison summary" });
-    expect(screen.getByRole("combobox", { name: "Select scan A" }).value).toBe("old");
-    expect(screen.getByRole("combobox", { name: "Select scan B" }).value).toBe("new");
-    expect(nav.replace).not.toHaveBeenCalled();
-    expect(screen.getAllByText("Same saved time")).toHaveLength(2);
+    expect(screen.getByRole("combobox", { name: "Saved result for Before" }).value).toBe("new");
+    expect(screen.getByRole("combobox", { name: "Saved result for After" }).value).toBe("old");
+    expect(nav.query).toBe("first=new&against=old");
+    expect(screen.getByText(/actual chronological order cannot be established/)).toBeTruthy();
     expect(screen.queryByText("Earlier")).toBeNull();
     expect(screen.queryByText("Later")).toBeNull();
 });
 
-test.each([false, true])("reversing A/B preserves the score and finding comparison (equal timestamps: %s)", async tied => {
+test("equal-time evidence uses the same deterministic Before/After order as the cards", async () => {
+    const date = histories[0].created_at;
+    serve([{ ...histories[1], created_at: date }, histories[0]], {
+        new: { score: 60, findings: [finding("header", { title: "Changed header", details: { header: "Content-Security-Policy", value: "before-value" } })] },
+        old: { created_at: date, score: 80, findings: [finding("header", { title: "Changed header", details: { header: "Content-Security-Policy", value: "after-value" } })] },
+    });
+    render(<ComparePage />);
+    await screen.findByText("+20 points");
+    expect(screen.getByRole("combobox", { name: "Saved result for Before" }).value).toBe("new");
+    expect(screen.getByRole("combobox", { name: "Saved result for After" }).value).toBe("old");
+    expect(screen.getByRole("heading", { name: "Score difference" })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "Score improved" })).toBeNull();
+    expect(screen.getByText(/actual chronological order cannot be established/)).toBeTruthy();
+    fireEvent.click(screen.getByText("Changed header").closest("summary"));
+    const panel = within(screen.getByRole("region", { name: "Changed header details" }));
+    fireEvent.click(panel.getByText("Compare evidence"));
+    expect(within(panel.getByText("Before").parentElement).getByText(/before-value/, { selector: "pre" })).toBeTruthy();
+    expect(within(panel.getByText("After").parentElement).getByText(/after-value/, { selector: "pre" })).toBeTruthy();
+});
+
+test.each([false, true])("reversed links preserve the calculation and inline finding evidence (equal timestamps: %s)", async tied => {
     const date = histories[0].created_at;
     const scans = tied ? histories.map(scan => scan.id === "old" ? { ...scan, created_at: date } : scan) : histories;
     serve(scans, {
@@ -376,15 +480,16 @@ test.each([false, true])("reversing A/B preserves the score and finding comparis
     nav.query = "first=new&against=old";
     const { rerender } = render(<ComparePage />);
     const before = (await screen.findByRole("region", { name: "Comparison summary" })).textContent;
-    const oldLink = screen.getByRole("link", { name: "old-only" }).getAttribute("href");
-    const newLink = screen.getByRole("link", { name: "new-only" }).getAttribute("href");
+    const evidence = title => screen.getByText(title).closest("details").textContent;
+    const oldEvidence = evidence("old-only");
+    const newEvidence = evidence("new-only");
     nav.query = "first=old&against=new";
     rerender(<ComparePage />);
     expect((await screen.findByRole("region", { name: "Comparison summary" })).textContent).toBe(before);
-    expect(screen.getByRole("link", { name: "old-only" }).getAttribute("href")).toBe(oldLink);
-    expect(screen.getByRole("link", { name: "new-only" }).getAttribute("href")).toBe(newLink);
-    expect(screen.getByRole("combobox", { name: "Select scan A" }).value).toBe("old");
-    expect(screen.getByRole("combobox", { name: "Select scan B" }).value).toBe("new");
+    expect(evidence("old-only")).toBe(oldEvidence);
+    expect(evidence("new-only")).toBe(newEvidence);
+    expect(screen.getByRole("combobox", { name: "Saved result for Before" }).value).toBe(tied ? "new" : "old");
+    expect(screen.getByRole("combobox", { name: "Saved result for After" }).value).toBe(tied ? "old" : "new");
 });
 
 test.each([
@@ -400,5 +505,15 @@ test.each([
     const count = summary.getByText("Newly detected").parentElement;
     expect(count.querySelector("dd").textContent).toBe("1");
     expect(screen.getByText(/unchanged score can still have changed findings/)).toBeTruthy();
-    expect(screen.getByText("How comparison works").parentElement.tagName).toBe("DETAILS");
+    const help = summary.getByRole("button", { name: "How comparison works" });
+    expect(help.getAttribute("aria-expanded")).toBe("false");
+    fireEvent.click(help);
+    expect(help.getAttribute("aria-expanded")).toBe("true");
+    const explanation = summary.getByRole("region", { name: "How comparison works explanation" });
+    expect(within(explanation).getByText(/check completed successfully in both scans/)).toBeTruthy();
+    fireEvent.click(help);
+    expect(help.getAttribute("aria-expanded")).toBe("false");
+    expect(summary.queryByRole("region", { name: "How comparison works explanation" })).toBeNull();
+    expect(summary.getByText(/No longer detected does not prove a fix/)).toBeTruthy();
+    expect(screen.queryByText(/without leaving this comparison/)).toBeNull();
 });

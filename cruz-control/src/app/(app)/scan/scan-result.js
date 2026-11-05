@@ -280,7 +280,10 @@ export const toResult = data => {
         scannedAt: scannedAt,
         scannedAgo: lastScanTime(scannedAt),
         projectId: data.project_id,
-        role: data.role
+        role: data.role,
+        // What I ticked on the Fix guide / Checklist tabs, and the AI guides saved for this scan
+        savedTicks: { fixed: data.progress?.fixed ?? {}, checklist: data.progress?.checklist ?? {} },
+        guides: data.guides ?? {},
     }
 }
 

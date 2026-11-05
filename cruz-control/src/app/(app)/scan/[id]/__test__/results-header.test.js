@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, expect, test, vi } from "vitest";
 import { useScan } from "../../scan-context";
-import ScanResultsLayout from "../layout";
+import ScanResultsLayout from "../results-layout";
 
 const nav = vi.hoisted(() => ({ push: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => nav, useParams: () => ({ id: "scan-1" }), usePathname: () => "/scan/scan-1/compare" }));

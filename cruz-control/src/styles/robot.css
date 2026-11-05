@@ -23,7 +23,7 @@
   z-index: 1;
 }
 
-/* Sits on the terminal's top edge and peeks into the free space above it.
+/* Sits on the terminal's top edge, at the left corner (the header is empty above it), and peeks up.
    The SVG sets the height: aspect-ratio here made Safari's box too tall when zoomed in */
 .robot {
   position: absolute;
@@ -33,7 +33,7 @@
 
 .robot-top {
   bottom: 100%;
-  right: 8%;
+  left: 0;
   margin-bottom: -6%;
 }
 
@@ -428,6 +428,13 @@
   }
 }
 
+/* Side by side: the top robot pops up over the header's bottom line (the header is z-index 2) */
+@media (min-width: 992px) {
+  .hero .hero-visual {
+    z-index: 3;
+  }
+}
+
 /* Below xl: no room beside the text for the side robot.
    visibility (not display: none) keeps its animation running, so it stays in step with the top robot */
 @media (max-width: 1199px) {
@@ -436,16 +443,28 @@
   }
 }
 
-/* Stacked layout: a smaller robot, and just enough room so it doesn't cover the hero text */
+/* The top robot is a bit smaller until the page is wide enough, so its antenna misses the Sign up button */
+@media (max-width: 1299px) {
+  .robot-top {
+    width: 38%;
+  }
+}
+
+/* Stacked layout: a smaller robot (and "!"), and just enough room so it doesn't cover the hero text */
 @media (max-width: 991px) {
   .hero-visual {
-    margin-top: 10%;
+    margin-top: min(13%, 88px);
   }
 
   .robot-top {
+    left: auto;
     right: 3%;
-    width: 32%;
+    width: 26%;
     margin-bottom: -4%;
+  }
+
+  .robot-top .robot-alert {
+    scale: .7;
   }
 }
 
@@ -729,6 +748,11 @@
   animation: edge-peek 5s ease-in-out forwards;
 }
 
+/* Startled: the user moved, so it wiggles and ducks back down */
+.edge-robot-startled .edge-robot-body {
+  animation: edge-startle .7s ease-in forwards;
+}
+
 .edge-robot .robot-head {
   animation: none;
 }
@@ -788,6 +812,30 @@
     transform: translateY(18%) rotate(0deg);
   }
   95%, 100% {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes edge-startle {
+  0% {
+    transform: translateY(18%) rotate(0deg);
+  }
+  10% {
+    transform: translateY(16%) rotate(-10deg);
+  }
+  20% {
+    transform: translateY(16%) rotate(10deg);
+  }
+  30% {
+    transform: translateY(17%) rotate(-7deg);
+  }
+  40% {
+    transform: translateY(18%) rotate(5deg);
+  }
+  50% {
+    transform: translateY(18%) rotate(0deg);
+  }
+  100% {
     transform: translateY(100%);
   }
 }

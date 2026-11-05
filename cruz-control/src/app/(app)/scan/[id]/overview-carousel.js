@@ -94,7 +94,8 @@ export default function OverviewCarousel({ slides, active, onChange, reduceMotio
     else if (info.offset.x > 40) go(-1);
   }
 
-  const roundButton = "grid h-8 w-8 flex-none cursor-pointer place-items-center rounded-full border border-line bg-surface-strong text-muted transition-colors hover:border-accent hover:text-accent max-md:h-7 max-md:w-7";
+  // Phones tap or swipe the tabs instead, so the arrows leave the tabs more room
+  const roundButton = "grid h-8 w-8 flex-none cursor-pointer place-items-center rounded-full border border-line bg-surface-strong text-muted transition-colors hover:border-accent hover:text-accent max-md:h-11 max-md:w-11 max-sm:hidden";
 
   return (
     <div
@@ -146,7 +147,7 @@ export default function OverviewCarousel({ slides, active, onChange, reduceMotio
                     <span className="truncate">{slide.label}</span>
                   </span>
                   {slide.summary && (
-                    <span className="flex min-h-7 min-w-0 items-center gap-2 text-sm text-ink max-md:min-h-0 max-md:text-xs">
+                    <span className="flex min-h-7 min-w-0 flex-wrap items-center gap-x-2 text-sm text-ink max-md:min-h-0 max-md:text-xs">
                       {slide.summary}
                     </span>
                   )}
