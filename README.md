@@ -8,11 +8,11 @@ Website Link: [cruz-control-wad2-app.vercel.app](https://cruz-control-wad2-app.v
 
 Team: 11
 
-| Team                                        | Members                                                         |
-| ------------------------------------------- | --------------------------------------------------------------- |
-| Foundation Team                   | Cruz<br />Jeffers                               |
-| Security Team                               | Jun Sheng<br />Ting Kang                                        |
-| AI Team                                     | Joyce<br />Liora                                                |
+| Team            | Members                                                         |
+| --------------- | --------------------------------------------------------------- |
+| Foundation Team | Cruz<br />Jeffers                               |
+| Security Team   | Jun Sheng<br />Ting Kang                                        |
+| AI Team         | Joyce<br />Liora                                                |
 
 <h2><wbr>
 
@@ -107,59 +107,59 @@ cd cruz-control && npm run build  # includes a pre-build that runs the test
 
 Website checks:
 
-- **Server software** — known bugs (CVEs) in the software the servers report
-- **Open ports** — risky services open to the internet: databases, Telnet, FTP, Remote Desktop, SSH
-- **Email & DNS** — missing SPF, DMARC and CAA records, and a weak DMARC policy (`p=none`)
-- **Certificate** — an expired, nearly expired, weak or self-signed HTTPS certificate
-- **Website security settings** — a missing HTTP→HTTPS redirect, a missing or too short HSTS
-  header, and missing CSP, X-Frame-Options and X-Content-Type-Options headers
+1. **Server software** — known bugs (CVEs) in the software the servers report
+2. **Open ports** — risky services open to the internet: databases, Telnet, FTP, Remote Desktop, SSH
+3. **Email & DNS** — missing SPF, DMARC and CAA records, and a weak DMARC policy (`p=none`)
+4. **Certificate** — an expired, nearly expired, weak or self-signed HTTPS certificate
+5. **Website security settings** — a missing HTTP→HTTPS redirect, a missing or too short HSTS
+   header, and missing CSP, X-Frame-Options and X-Content-Type-Options headers
 
 Repository checks:
 
-- **Secret files** — `.env` files, private keys and similar files committed to the repo
-  (public certificates like `fullchain.pem` and large `.key` files such as Keynote slides are skipped)
-- **Packages** — npm dependencies with known vulnerabilities
-- **Repo basics** — SECURITY.md, Dependabot (or Renovate), a lockfile, and whether the repo is archived
-- **Ignore rules** — a `.gitignore` that's missing, or doesn't cover `.env` or key files (and
-  `node_modules` when the repo has a `package.json`)
-- **README** — missing, or no setup or security information
-- **CI workflows** — GitHub Actions workflows that run text anyone can write, don't set
-  `permissions:`, or use other people's actions by tag instead of by commit
+1. **Secret files** — `.env` files, private keys and similar files committed to the repo
+   (public certificates like `fullchain.pem` and large `.key` files such as Keynote slides are skipped)
+2. **Packages** — npm dependencies with known vulnerabilities
+3. **Repo basics** — SECURITY.md, Dependabot (or Renovate), a lockfile, and whether the repo is archived
+4. **Ignore rules** — a `.gitignore` that's missing, or doesn't cover `.env` or key files (and
+   `node_modules` when the repo has a `package.json`)
+5. **README** — missing, or no setup or security information
+6. **CI workflows** — GitHub Actions workflows that run text anyone can write, don't set
+   `permissions:`, or use other people's actions by tag instead of by commit
 
 ## External Libraries
 
 Frontend libraries and outside components used for the look, animation and UI (Tailwind not included).
 
-| Library / source                                                                               | How it was used                                                                                                                             | Where                                                                                                                                                              |
-| ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [Motion](https://motion.dev) (`motion`)                                                       | Page and card entrance animations, tab and modal transitions, the robots, typing and text animations, all respecting `useReducedMotion()` | `(landing)/`, `scan/`, `scan/[id]/` (Overview, Report Card, Compare), `project/`, `project/[projectId]/history/`, `components/`, `components/robot/` |
-| [Swiper](https://swiperjs.com) (`swiper`)                                                     | Coverflow carousels for invites and projects (`EffectCoverflow`, `FreeMode`, `Mousewheel`, `Keyboard`)                              | `project/card-carousel.js`, `project/page.js`                                                                                                                    |
-| [ldrs](https://uiball.com/ldrs/)                                                                | Loaders: `Quantum` for the page loading overlay, `Hourglass` for buttons and sections                                                   | `components/loading-overlay.js`, `components/small-loader.js`                                                                                                  |
-| [React Icons](https://react-icons.github.io/react-icons/) (`react-icons`)                     | Lucide icons (`lu`) across the app; GitHub (`fa6`) and Google (`fc`) logos on the login buttons                                       | `(landing)/`, `(app)/layout.js`, `scan/`, `scan/[id]/` and its tabs, `project/`, `components/`, `components/auth/`, `components/ask-cruz/`                         |
-| [react-globe.gl](https://github.com/vasturiano/react-globe.gl) + [three.js](https://threejs.org) | 3D exposure globe with server points and arcs; `MeshPhongMaterial` from three for the globe's surface                                     | `scan/[id]/exposure-globe.js`                                                                                                                                    |
-| [d3-geo](https://d3js.org/d3-geo)                                                               | 2D server map: `geoNaturalEarth1` projection, `geoPath` for countries, `geoGraticule10` for the grid lines                            | `scan/[id]/server-map.js`                                                                                                                                        |
-| [Magic UI](https://magicui.design) Number Ticker                                                | Adapted for the counting-up numbers on the score and stats                                                                                  | `scan/[id]/number-ticker.js`                                                                                                                                     |
+| Library / source                                                                               | Components                                                                                                                                                                                                                                                                                                                                                                                                                                 | Where                                                                                                                                                                                                                                          |
+| ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Motion](https://motion.dev) (`motion`)                                                       | • `motion` elements for page and card entrances, tab and modal transitions, typing and text animations<br />• `AnimatePresence` for exit animations<br />• `useInView` to start animations when scrolled into view<br />• `useSpring` + `useMotionValue` for the number ticker<br />• `useReducedMotion` so every animation respects reduced motion                                                                       | • `(landing)/`<br />• `scan/`<br />• `scan/[id]/` (Overview, Report Card, Compare)<br />• `project/`<br />• `project/[projectId]/history/`<br />• `components/`<br />• `components/robot/`                                |
+| [Swiper](https://swiperjs.com) (`swiper`)                                                     | • `Swiper` + `SwiperSlide` coverflow carousels for invites and projects<br />• `EffectCoverflow`<br />• `FreeMode`<br />• `Mousewheel`<br />• `Keyboard`                                                                                                                                                                                                                                                                  | • `project/card-carousel.js`<br />• `project/page.js`                                                                                                                                                                                    |
+| [ldrs](https://uiball.com/ldrs/)                                                                | • `Quantum` for the page loading overlay<br />• `Hourglass` for buttons and sections                                                                                                                                                                                                                                                                                                                                                 | • `components/loading-overlay.js`<br />• `components/small-loader.js`                                                                                                                                                                    |
+| [React Icons](https://react-icons.github.io/react-icons/) (`react-icons`)                     | • Lucide icons (`lu`) across the app<br />• GitHub (`fa6`) and Google (`fc`) logos on the login buttons                                                                                                                                                                                                                                                                                                                            | • `(landing)/`<br />• `(app)/layout.js`<br />• `scan/`<br />• `scan/[id]/` and its tabs<br />• `project/`<br />• `components/`<br />• `components/auth/`<br />• `components/ask-cruz/`                                 |
+| [react-globe.gl](https://github.com/vasturiano/react-globe.gl) + [three.js](https://threejs.org) | • `Globe` for the 3D exposure globe with server points and arcs<br />• `MeshPhongMaterial` from three for the globe's surface                                                                                                                                                                                                                                                                                                        | • `scan/[id]/exposure-globe.js`                                                                                                                                                                                                             |
+| [d3-geo](https://d3js.org/d3-geo)                                                               | • `geoNaturalEarth1` projection for the 2D server map<br />• `geoPath` for countries<br />• `geoGraticule10` for the grid lines                                                                                                                                                                                                                                                                                                   | • `scan/[id]/server-map.js`                                                                                                                                                                                                                 |
+| [Magic UI](https://magicui.design)                                                              | • Number Ticker for the counting-up numbers on the score and stats<br />• `Terminal` for the scan terminal on the landing page and while scanning<br />• `Typing Animation` for the typed terminal lines<br />• Animated Theme Toggler for the circle reveal when switching themes<br />• `Ripple Button` for the main buttons (landing, nav, scan form, results header)<br />• `Text Animate` for the landing page headline | • `scan/[id]/number-ticker.js`<br />• `components/terminal.js`<br />• `components/typing-animation.js`<br />• `components/animated-theme-toggler.js`<br />• `components/ripple-button.js`<br />• `(landing)/text-animate.js` |
 
 ## Where AI was used
 
-| Where              | How                                                                                            | AI Used     | Name |
-| ------------------ | ---------------------------------------------------------------------------------------------- | ----------- | ---- |
-| Peeking Robot      | Used AI to generate the robot svg and css to give personality to the website with Claude Code. | Claude Code | Cruz |
-| Project pages      | Skeleton code (to generate all the functions and basic page layout)                            | Claude Code | Cruz |
-| Github Actions     | Auto deployment yml files was build                                                            | Claude Code | Cruz |
-| Supabase Migration | SQL to create, alter and update tables.                                                        | Claude Code | Cruz |
-| General Page Layout | Asked AI to generate a skeleton based off Ting Kang's [AI-generated prototype](https://claude.ai/artifact/DAwL5mxFKaCTParPmZuhsm) | Kiro | Jeffers |
-| 3D Globe | Consulted AI on how to generate an interactive 3D globe to map different servers | Kiro | Jeffers |
-| Store User's Fix Guide & Checklist progress in Supabase | Used AI to persistently store progress on Fix Guide/Checklist to Supabase such that navigating away does not reset them | Kiro | Jeffers |
-| Findings Card | Used AI to generate the initial baseline layout, specifically the technical details, score increment badge and expandable cards | Claude Code | Ting Kang |
-| Report Card | Used AI to generate the initial baseline layout as well as the animation | Claude Code | Ting Kang |
-| Exposure Scoring Formulas | Research with AI on how to weigh the scoring (based mainly on OpenSSF Scorecard's method and [internet.nl](https://internet.nl) for partial points for half-fixes) | Claude Code | Jun Sheng |
-| 2D Map | Researched with AI on how to draw the map as an inline SVG using the same files 3D globe used | Claude Code | Jun Sheng |
-| Overview Tab | Skeleton code (to generate all the functions and basic page layout) | Claude Code | Jun Sheng |
-| Report Card Tab | Skeleton code (to generate all the functions and basic page layout) | Claude Code | Jun Sheng |
-| Scan History | Used AI to extend the existing Express endpoint with saved website/repo targets and capture timestamps for History and Compare | Codex | Joyce |
-| Comparison Rules | Used AI to determine how 2 scans should be compared, identify repeated issues and avoid misleading results for incomplete checks | Codex | Joyce |
-| Fix Guide | Send AI the code from security team and then generate the feature's skeleton based on the security findings | Claude Code | Liora |
-| Take The Tour | Send AI the expectations of the feature based off the prototype and generate the feature's skeleton | Claude Code | Liora |
-| Chatbot | Use AI to generate the feature's skeleton and research the best AI API for chatbot | Claude Code, Gemini AI | Liora |
-| Checklist | Send AI the list to insert in the checklist and generate the feature's skeleton | Claude Code | Liora |
+| Where                                                   | How                                                                                                                                                               | AI Used                | Name      |
+| ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- | --------- |
+| Peeking Robot                                           | Used AI to generate the robot svg and css to give personality to the website with Claude Code.                                                                    | Claude Code            | Cruz      |
+| Project pages                                           | Skeleton code (to generate all the functions and basic page layout)                                                                                               | Claude Code            | Cruz      |
+| Github Actions                                          | Auto deployment yml files was build                                                                                                                               | Claude Code            | Cruz      |
+| Supabase Migration                                      | SQL to create, alter and update tables.                                                                                                                           | Claude Code            | Cruz      |
+| General Page Layout                                     | Asked AI to generate a skeleton based off Ting Kang's [AI-generated prototype](https://claude.ai/artifact/DAwL5mxFKaCTParPmZuhsm)                                  | Kiro                   | Jeffers   |
+| 3D Globe                                                | Consulted AI on how to generate an interactive 3D globe to map different servers                                                                                  | Kiro                   | Jeffers   |
+| Store User's Fix Guide & Checklist progress in Supabase | Used AI to persistently store progress on Fix Guide/Checklist to Supabase such that navigating away does not reset them                                           | Kiro                   | Jeffers   |
+| Findings Card                                           | Used AI to generate the initial baseline layout, specifically the technical details, score increment badge and expandable cards                                   | Claude Code            | Ting Kang |
+| Report Card                                             | Used AI to generate the initial baseline layout as well as the animation                                                                                          | Claude Code            | Ting Kang |
+| Exposure Scoring Formulas                               | Research with AI on how to weigh the scoring (based mainly on OpenSSF Scorecard's method and [internet.nl](https://internet.nl) for partial points for half-fixes) | Claude Code            | Jun Sheng |
+| 2D Map                                                  | Researched with AI on how to draw the map as an inline SVG using the same files 3D globe used                                                                     | Claude Code            | Jun Sheng |
+| Overview Tab                                            | Skeleton code (to generate all the functions and basic page layout)                                                                                               | Claude Code            | Jun Sheng |
+| Report Card Tab                                         | Skeleton code (to generate all the functions and basic page layout)                                                                                               | Claude Code            | Jun Sheng |
+| Scan History                                            | Used AI to extend the existing Express endpoint with saved website/repo targets and capture timestamps for History and Compare                                    | Codex                  | Joyce     |
+| Comparison Rules                                        | Used AI to determine how 2 scans should be compared, identify repeated issues and avoid misleading results for incomplete checks                                  | Codex                  | Joyce     |
+| Fix Guide                                               | Send AI the code from security team and then generate the feature's skeleton based on the security findings                                                       | Claude Code            | Liora     |
+| Take The Tour                                           | Send AI the expectations of the feature based off the prototype and generate the feature's skeleton                                                               | Claude Code            | Liora     |
+| Chatbot                                                 | Use AI to generate the feature's skeleton and research the best AI API for chatbot                                                                                | Claude Code, Gemini AI | Liora     |
+| Checklist                                               | Send AI the list to insert in the checklist and generate the feature's skeleton                                                                                   | Claude Code            | Liora     |
